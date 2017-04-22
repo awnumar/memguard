@@ -11,9 +11,6 @@ import (
 )
 
 var (
-	// Count of how many goroutines there are.
-	lockersCount int
-
 	// Let the goroutines know we're exiting.
 	isExiting = make(chan bool)
 
@@ -26,7 +23,6 @@ Protect spawns a goroutine that prevents the data from being swapped out to disk
 */
 func Protect(data []byte) {
 	// Increment counters since we're starting another goroutine.
-	lockersCount++ // Normal counter.
 	lockers.Add(1) // WaitGroup counter.
 
 	// Run as a goroutine so that callers don't have to be explicit.
@@ -61,11 +57,10 @@ func Protect(data []byte) {
 }
 
 // Cleanup instructs the goroutines to cleanup the memory they've been watching and waits for them to finish.
+// This can only be called at most once.
 func Cleanup() {
 	// Send the exit signal to all of the goroutines.
-	for n := 0; n < lockersCount; n++ {
-		isExiting <- true
-	}
+	close(isExiting)
 
 	// Wait for them all to finish.
 	lockers.Wait()
