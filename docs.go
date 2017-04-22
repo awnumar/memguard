@@ -1,5 +1,5 @@
 /*
-Package memguard is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary function too.
+Package memguard is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary functions too.
 
     // Declare a protected slice and copy into it.
     encryptionKey := memguard.MakeProtected(32)
