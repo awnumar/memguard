@@ -20,4 +20,4 @@ Multiple operating systems are supported, using `mlock` on Unix and `VirtualLock
 
 This library can be retrieved with `go get`.
 
-`go get github.com/libeclipse/memguard`
+`$ go get github.com/libeclipse/memguard`
