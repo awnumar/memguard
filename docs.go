@@ -1,7 +1,5 @@
-package memguard
-
 /*
-This library is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary function too.
+Package memguard is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary function too.
 
 Multiple operating systems are supported, using `mlock` on Unix and `VirtualLock` on Windows.
 
@@ -34,3 +32,4 @@ When you're about to exit, call cleanup first. This will wipe and then unlock al
         memory.SafeExit(0)
     }()
 */
+package memguard
