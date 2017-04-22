@@ -6,6 +6,10 @@ owners:
   email: awn@cryptolosophy.io
   homepage: https://cryptolosophy.io
 import:
+- package: github.com/GoKillers/libsodium-go
+  version: v0.4-beta
+  subpackages:
+  - sodium
 - package: golang.org/x/sys
   subpackages:
   - unix
