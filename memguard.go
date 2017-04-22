@@ -21,8 +21,15 @@ var (
 	lockers sync.WaitGroup
 )
 
-// Protect prevents memory from being paged to disk, follows it
-// around until program exit, then zeros it out and unlocks it.
+// Protect spawns a goroutine that prevents the data from being swapped out to disk,
+// and then waits around for the signal from Cleanup(). When this signal arrives,
+// the goroutine zeroes out the memory that it was protecting, and then unlocks it
+// before returning. Protect can be called multiple times with different pieces of data,
+// but the caller should be aware that the underlying kernel may impose its own limits
+// on the amount of memory that can be locked. For this reason, it is recommended to only
+// call this function on small, highly sensitive structures that contain, for example,
+// encryption keys. In the event of a limit being reached and attaining the lock fails,
+// a warning will be written to stdout and the goroutine will still wipe the memory on exit.
 func Protect(data []byte) {
 	// Increment counters since we're starting another goroutine.
 	lockersCount++ // Normal counter.
