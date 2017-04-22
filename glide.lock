@@ -1,6 +1,10 @@
-hash: 98b6a9bad2c353fd23aad9d366c1ce931f6fff9d7322f5429d04b9637d7a2a04
-updated: 2017-04-22T09:23:37.789680235+01:00
+hash: 29ee4bb88d44e5023c1468cd4885e4aa77699c63431c0c9cb37696a546ca13ad
+updated: 2017-04-22T20:11:29.414260071+01:00
 imports:
+- name: github.com/GoKillers/libsodium-go
+  version: 978177a9003394c81d6b9846c4531471fee7a895
+  subpackages:
+  - sodium
 - name: golang.org/x/sys
   version: d75a52659825e75fff6158388dddc6a5b04f9ba5
   subpackages:

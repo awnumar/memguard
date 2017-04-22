@@ -7,6 +7,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/GoKillers/libsodium-go/sodium"
 	"github.com/libeclipse/memguard/memlock"
 )
 
@@ -95,9 +96,7 @@ func Make(length int, capacity ...int) (b []byte) {
 
 // Wipe takes a byte slice and zeroes it out.
 func Wipe(b []byte) {
-	for i := 0; i < len(b); i++ {
-		b[i] = byte(0)
-	}
+	sodium.MemZero(b)
 }
 
 // CatchInterrupt starts a goroutine that monitors for interrupt signals and calls Cleanup() before exiting.
