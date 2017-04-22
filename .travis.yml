@@ -1,0 +1,15 @@
+language: go
+
+os:
+  - linux
+  - osx
+
+script:
+  - go build -v .
+  - go test -v ./memlock/...
+  - go test -v ./
+
+notifications:
+  email: false
+  slack:
+    secure: IIv9jaTE0rAL27LdjM6RNF/H6XXEWPMGTAFfhA//ryCtfgn2No0FoW/ZAdRe/T6HkgyQHuDS5cY0zscRsegvOmAyKINadi/l1R4xXM+qHJ8cyTy5ivcgheqRjK3Kvy0uj/kyEAv0vTowrjXNFadhUbyJIGoHOox4zznYGi7LXuofmsZ3XBnXhVgHzzVoXX0sITOF2XhR1D8cEOnMKB8sSAADwF+tA9CAs+PhatjnUNMzryIi3a6AXMOR6qqRSbxqiGmLn0s0y36dSYm0tvHAg0wE1b2q1KPKS/iKdn0GJ3XA6sytUGzJv24R2LwlA3le96Wqy4YiD/SLjQwNZt1ZTVHiiCpvPmL5PtGyk3JHTjLW+Y84eM+1pMJ48idyeVQnw6oVqpKos3EusHYhqgts6EhH6woQHIFhaALaeglaEA15ViKICCyxLAZnJjWsQydpEM3/K9cowf0nTyrsyciNUTFGYg8b3zSTNwZwfZvOwH6gAqi78Jwy1ZNM9jID3VilNx9DnRAiBOoBkvm3jtLyphJ+OCFTPpajf0ZFSzJ1DgDWXQZbHqhOVRcoSbv+8XIHEMDBDjgyA9vDMmmnEvt+jvpDz0imODOofZAa7TDPp9oAJOZ8Dxg82+lXnpr7VMPVukav64QXlTBQ9rW5Qs8mM81jqK3BMOHioIhYcvBFcRs=
