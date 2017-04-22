@@ -3,7 +3,7 @@ Package memguard is designed to allow you to easily handle sensitive values in m
 
     // Declare a protected slice and copy into it.
     encryptionKey := memguard.Make(32)  // Similar to calling make([]byte, 32)
-    copy(encryptionKey, generateRandomBytes(32)) // Copy secure value into the protected slice.
+    copy(encryptionKey, generateRandomBytes(32))
 
 Please note that it is important to never use append() with sensitive values. Only ever copy() into it.
 
