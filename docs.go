@@ -34,7 +34,7 @@ In order to handle most exit cases, do the following:
     memguard.CatchInterrupt()
     defer memguard.Cleanup()
 
-    // Anywhere where you would terminate.
+    // Anywhere you would terminate.
     memguard.SafeExit(0) // 0 is the status code.
 */
 package memguard
