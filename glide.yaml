@@ -1,0 +1,12 @@
+package: github.com/libeclipse/memguard
+homepage: https://github.com/libeclipse/memguard
+license: LGPL-3.0
+owners:
+- name: Awn
+  email: awn@cryptolosophy.io
+  homepage: https://cryptolosophy.io
+import:
+- package: golang.org/x/sys
+  subpackages:
+  - unix
+  - windows
