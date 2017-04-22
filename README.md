@@ -14,8 +14,6 @@
 
 This library is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary functions too.
 
-Multiple operating systems are supported, using `mlock` on Unix and `VirtualLock` on Windows.
-
 ## Installation
 
 This library can be retrieved with `go get`.
