@@ -2,12 +2,12 @@
 Package memguard is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary functions too.
 
     // Declare a protected slice and copy into it.
-    encryptionKey := memguard.MakeProtected(32)  // Similar to calling make([]byte, 32)
+    encryptionKey := memguard.Make(32)  // Similar to calling make([]byte, 32)
     copy(encryptionKey, generateRandomBytes(32)) // Copy secure value into the protected slice.
 
 Please note that it is important to never use append() with sensitive values. Only ever copy() into it.
 
-    b := memguard.MakeProtected(32)
+    b := memguard.Make(32)
 
     copy(b, []byte("some secure value")) // Correct.
 
@@ -28,13 +28,13 @@ When you're about to exit, call cleanup first. This will wipe and then unlock al
 
     memguard.Cleanup()
 
-It's useful to capture interrupts and signals and cleanup in that case too.
+In order to handle most exit cases, do the following:
 
-    c := make(chan os.Signal, 2)
-    signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-    go func() {
-        <-c
-        memory.SafeExit(0)
-    }()
+    // In the main function.
+    memguard.CatchInterrupt()
+    defer memguard.Cleanup()
+
+    // Anywhere where you would terminate.
+    memguard.SafeExit(0) // 0 is the status code.
 */
 package memguard

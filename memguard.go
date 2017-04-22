@@ -3,7 +3,9 @@ package memguard
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/libeclipse/memguard/memlock"
 )
@@ -69,10 +71,28 @@ func Cleanup() {
 	lockers.Wait()
 }
 
-// MakeProtected creates a byte slice of length l, but protects it before returning.
-func MakeProtected(l int) []byte {
+// Make creates a byte slice of specified length, but protects it before returning.
+// You can also specify an optional capacity, just like with the native make()
+// function. Note that the returned array is only properly protected up until
+// its length, and not its capacity.
+func Make(length int, capacity ...int) (b []byte) {
+	// Check if arguments are valid.
+	if len(capacity) > 1 {
+		panic("memguard.Make: too many arguments")
+	} else if len(capacity) > 0 {
+		if length > capacity[0] {
+			panic("memguard.Make: length larger than capacity")
+		}
+	}
+
 	// Create a byte slice of length l and protect it.
-	b := make([]byte, l)
+	if len(capacity) != 0 {
+		b = make([]byte, length, capacity[0])
+	} else {
+		b = make([]byte, length)
+	}
+
+	// Protect the byte slice.
 	Protect(b)
 
 	// Return the created slice.
@@ -84,6 +104,17 @@ func Wipe(b []byte) {
 	for i := 0; i < len(b); i++ {
 		b[i] = byte(0)
 	}
+}
+
+// CatchInterrupt starts a goroutine that monitors for interrupt
+// signals and calls Cleanup() before exiting.
+func CatchInterrupt() {
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		SafeExit(0)
+	}()
 }
 
 // SafeExit cleans up protected memory and then exits safely.

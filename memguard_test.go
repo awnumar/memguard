@@ -35,12 +35,19 @@ func TestLocking(t *testing.T) {
 	}
 }
 
-func TestMakeProtected(t *testing.T) {
-	b := MakeProtected(32)
+func TestMake(t *testing.T) {
+	b := Make(32)
 
 	// Test if its length is really 32.
 	if len(b) != 32 {
 		t.Error("len(b) != 32")
+	}
+
+	c := Make(32, 64)
+
+	// Test length and capacities.
+	if len(c) != 32 || cap(c) != 64 {
+		t.Error("length or capacity incorrect")
 	}
 }
 
