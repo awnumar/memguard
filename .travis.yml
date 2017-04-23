@@ -7,10 +7,8 @@ os:
 sudo: required
 
 before_install:
-    - wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.12.tar.gz -O /tmp/libsodium.tar.gz
-    - tar -zxvf /tmp/libsodium.tar.gz -C /tmp && cd /tmp/libsodium-1.0.12
-    - ./configure && make && make check && sudo make install
-    - cd /home/travis/gopath/src/github.com/libeclipse/memguard
+    - sudo add-apt-repository ppa:chris-lea/libsodium
+    - sudo apt-get update && sudo apt-get install libsodium-dev
 
 script:
     - go build -v .
