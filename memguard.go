@@ -1,7 +1,6 @@
 package memguard
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -28,18 +27,12 @@ func Protect(data []byte) {
 	// Run as a goroutine so that callers don't have to be explicit.
 	go func(b []byte) {
 		// Prevent memory from being paged to disk.
-		err := memlock.Lock(b)
-		if err != nil {
-			panic(fmt.Sprintf("memguard.Protect: Failed to lock %p [Err: %s]", &b, err))
-		}
+		memlock.Lock(b)
 
 		// Wait for the signal to let us know we're exiting.
 		<-isExiting
 
-		// Zero out the memory.
-		Wipe(b)
-
-		// Unlock memory. Fail silently.
+		// Unlock memory, wiping first.
 		memlock.Unlock(b)
 
 		// We're done. Decrement WaitGroup counter.
