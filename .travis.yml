@@ -8,10 +8,9 @@ sudo: required
 
 before_install:
     - sudo su
-    - add-apt-repository -y ppa:chris-lea/libsodium;
-    - echo "deb http://ppa.launchpad.net/chris-lea/libsodium/ubuntu trusty main" >> /etc/apt/sources.list;
-    - echo "deb-src http://ppa.launchpad.net/chris-lea/libsodium/ubuntu trusty main" >> /etc/apt/sources.list;
-    - apt-get update && sudo apt-get install libsodium-dev;
+    - wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.12.tar.gz
+    - tar -zxvf libsodium-1.0.12.tar.gz && cd libsodium-1.0.12
+    - ./configure && make && make check && make install
 
 script:
     - go build -v .
