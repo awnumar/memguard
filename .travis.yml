@@ -7,13 +7,15 @@ os:
 sudo: required
 
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libsodium-dev
+    - sudo add-apt-repository ppa:chris-lea/libsodium;
+    - sudo echo "deb http://ppa.launchpad.net/chris-lea/libsodium/ubuntu trusty main" >> /etc/apt/sources.list;
+    - sudo echo "deb-src http://ppa.launchpad.net/chris-lea/libsodium/ubuntu trusty main" >> /etc/apt/sources.list;
+    - sudo apt-get update && sudo apt-get install libsodium-dev;
 
 script:
-  - go build -v .
-  - go test -v ./memlock/...
-  - go test -v ./
+    - go build -v .
+    - go test -v ./memlock/...
+    - go test -v ./
 
 notifications:
   email: false
