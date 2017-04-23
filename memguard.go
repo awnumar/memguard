@@ -27,14 +27,10 @@ func Protect(data []byte) {
 
 	// Run as a goroutine so that callers don't have to be explicit.
 	go func(b []byte) {
-		// Monitor if we managed to lock b.
-		lockSuccess := true
-
 		// Prevent memory from being paged to disk.
 		err := memlock.Lock(b)
 		if err != nil {
-			lockSuccess = false
-			fmt.Printf("Warning: Failed to lock %p; will still zero it out on exit. [Err: %s]\n", &b, err)
+			panic(fmt.Sprintf("memguard.Protect: Failed to lock %p [Err: %s]", &b, err))
 		}
 
 		// Wait for the signal to let us know we're exiting.
@@ -43,13 +39,8 @@ func Protect(data []byte) {
 		// Zero out the memory.
 		Wipe(b)
 
-		// If we managed to lock earlier, unlock.
-		if lockSuccess {
-			err := memlock.Unlock(b)
-			if err != nil {
-				fmt.Printf("Warning: Failed to unlock %p [Err: %s]\n", &b, err)
-			}
-		}
+		// Unlock memory. Fail silently.
+		memlock.Unlock(b)
 
 		// We're done. Decrement WaitGroup counter.
 		lockers.Done()
