@@ -8,7 +8,7 @@ sudo: required
 
 before_install:
     - sudo add-apt-repository ppa:chris-lea/libsodium
-    - sudo apt-get update && sudo apt-get install libsodium-dev
+    - sudo apt-get update && sudo apt-get -y install libsodium-dev
 
 script:
     - go build -v .
