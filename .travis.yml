@@ -7,10 +7,9 @@ os:
 sudo: required
 
 before_install:
-    - sudo su
     - wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.12.tar.gz
     - tar -zxvf libsodium-1.0.12.tar.gz && cd libsodium-1.0.12
-    - ./configure && make && make check && make install
+    - ./configure && make && make check && sudo make install
 
 script:
     - go build -v .
