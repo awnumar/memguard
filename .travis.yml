@@ -4,7 +4,10 @@ os:
   - linux
   - osx
 
+sudo: required
+
 script:
+  - sudo apt-get install libsodium-dev
   - go build -v .
   - go test -v ./memlock/...
   - go test -v ./
