@@ -6,8 +6,11 @@ os:
 
 sudo: required
 
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libsodium-dev
+
 script:
-  - sudo apt-get install libsodium-dev
   - go build -v .
   - go test -v ./memlock/...
   - go test -v ./
