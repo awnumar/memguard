@@ -3,7 +3,7 @@
 package memlock
 
 /*
-#cgo pkg-config: libsodium
+#cgo LDFLAGS: -lsodium
 
 #include <stdlib.h>
 
