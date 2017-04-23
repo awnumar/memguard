@@ -7,8 +7,7 @@ os:
 sudo: required
 
 before_install:
-    - sudo add-apt-repository -y ppa:chris-lea/libsodium
-    - sudo apt-get update && sudo apt-get -y install libsodium-dev
+    - if [ $TRAVIS_OS_NAME = linux ]; then sudo add-apt-repository -y ppa:chris-lea/libsodium && sudo apt-get update && sudo apt-get -y install libsodium-dev; else brew install libsodium; fi
 
 script:
     - go build -v .
@@ -18,4 +17,4 @@ script:
 notifications:
   email: false
   slack:
-    secure: IIv9jaTE0rAL27LdjM6RNF/H6XXEWPMGTAFfhA//ryCtfgn2No0FoW/ZAdRe/T6HkgyQHuDS5cY0zscRsegvOmAyKINadi/l1R4xXM+qHJ8cyTy5ivcgheqRjK3Kvy0uj/kyEAv0vTowrjXNFadhUbyJIGoHOox4zznYGi7LXuofmsZ3XBnXhVgHzzVoXX0sITOF2XhR1D8cEOnMKB8sSAADwF+tA9CAs+PhatjnUNMzryIi3a6AXMOR6qqRSbxqiGmLn0s0y36dSYm0tvHAg0wE1b2q1KPKS/iKdn0GJ3XA6sytUGzJv24R2LwlA3le96Wqy4YiD/SLjQwNZt1ZTVHiiCpvPmL5PtGyk3JHTjLW+Y84eM+1pMJ48idyeVQnw6oVqpKos3EusHYhqgts6EhH6woQHIFhaALaeglaEA15ViKICCyxLAZnJjWsQydpEM3/K9cowf0nTyrsyciNUTFGYg8b3zSTNwZwfZvOwH6gAqi78Jwy1ZNM9jID3VilNx9DnRAiBOoBkvm3jtLyphJ+OCFTPpajf0ZFSzJ1DgDWXQZbHqhOVRcoSbv+8XIHEMDBDjgyA9vDMmmnEvt+jvpDz0imODOofZAa7TDPp9oAJOZ8Dxg82+lXnpr7VMPVukav64QXlTBQ9rW5Qs8mM81jqK3BMOHioIhYcvBFcRs=
+    secure: hQP7PFP4jC+5csuxeqIxAvfJJuPaSuhVknXMc0UPB1hRYbXHrKsYMxS520KFr6fA+jBpusp2yWkCRKXikFFbkcdMrK5omJ+uxWF7zZteB2ldZ0R9RUpWle1BuJqxcVxjSoDqEr58k3DyGyl34xNDGq1QWvwdgZVGqMwAEUeKS5Y/46rt+7Mm8iZ2p/xKYXaSd/XBw5IhaRaxEflWr4cMgq4ishCSfqMgtSD14A+VjNmjZy4myh3b8JiEoxQWmmY0a+zp9kM5AnsmI87pTYRkvir1bplviKWvfwrYjXXx1pa1QHHxGCJUlhgNzcxNMoM04qT5shXDojapitUX8e957qrie96/nOBBbb2YLuZsi+GG6aupfzbGY3xoz1MiPMoiup1QooBHfC1Biq7pso2cqXttDQT1mwet29C6D5g6z0KfTFmoYJqlSm79C62RSXrKKEGiXwKsCRuj0z6R84NwijtC1Zf6Um0T/ChF4dTgaA8CYR2WScz843wsSgkREXokhCdt9TcBYBZR8QREo6OmcmMgqiA80iiv0ozT99uqiaqzDDxHN7tTcq0fQs3a1xTgE6s88sCV3zP1VqzcvBW16z8IF94pLsu831FpZG11MPjgDeHxaSij6B8/7oeNTByUTtyjneTe9sVFps8MAko6KP/n0P61B72vo8mlNHL6Ne8=
