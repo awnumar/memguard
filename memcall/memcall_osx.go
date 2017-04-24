@@ -8,11 +8,18 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var initialised bool
+
 // Init initialises the environment. It must be called before anything esle.
 func Init() {
-	// Disable core dumps.
-	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
-		panic(fmt.Sprintf("memguard.memprot.Init(): could not set rlimit [Err: %s]", err))
+	if !initialised {
+		// Disable core dumps.
+		if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
+			panic(fmt.Sprintf("memguard.memprot.Init(): could not set rlimit [Err: %s]", err))
+		}
+
+		// We've initialised now.
+		initialised = true
 	}
 }
 

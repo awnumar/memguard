@@ -1,109 +1,120 @@
 package memguard
 
-import (
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
+import "github.com/libeclipse/memguard/memcall"
 
-	"github.com/libeclipse/memguard/memcall"
-)
-
-var (
-	// Let the goroutines know we're exiting.
-	isExiting = make(chan bool)
-
-	// Used to wait for goroutines to finish before exiting.
-	lockers sync.WaitGroup
-)
-
-/*
-Protect spawns a goroutine that prevents the data from being swapped out to disk, and then waits around for the signal from Cleanup(). When this signal arrives, the goroutine zeroes out the memory that it was protecting, and then unlocks it before returning. Protect can be called multiple times with different pieces of data, but the caller should be aware that the underlying kernel may impose its own limits on the amount of memory that can be locked. For this reason, it is recommended to only call this function on small, highly sensitive structures that contain, for example, encryption keys. In the event of a limit being reached and attaining the lock fails, a warning will be written to stdout and the goroutine will still wipe the memory on exit.
-*/
-func Protect(data []byte) {
-	// Increment counters since we're starting another goroutine.
-	lockers.Add(1) // WaitGroup counter.
-
-	// Run as a goroutine so that callers don't have to be explicit.
-	go func(b []byte) {
-		// Prevent memory from being paged to disk.
-		memcall.Lock(b)
-
-		// Wait for the signal to let us know we're exiting.
-		<-isExiting
-
-		// Wipe slice.
-		Wipe(b)
-
-		// Unlock memory.
-		memcall.Unlock(b)
-
-		// We're done. Decrement WaitGroup counter.
-		lockers.Done()
-	}(data)
+// LockedBuffer implements a buffer that stores the data.
+type LockedBuffer struct {
+	Buffer []byte
 }
 
-// Cleanup instructs the goroutines to cleanup the memory they've been watching and waits for them to finish.
-// This can only be called at most once.
-func Cleanup() {
-	// Send the exit signal to all of the goroutines.
-	close(isExiting)
+// New creates a new *LockedBuffer and returns it.
+func New(length int) *LockedBuffer {
+	// Allocate the new LockedBuffer.
+	b := new(LockedBuffer)
 
-	// Wait for them all to finish.
-	lockers.Wait()
-}
+	// Initialise the environment.
+	memcall.Init()
 
-/*
-Make creates a byte slice of specified length, but protects it before returning. You can also specify an optional capacity, just like with the native make() function. Note that the returned array is only properly protected up until its length, and not its capacity.
-*/
-func Make(length int, capacity ...int) (b []byte) {
-	// Check if arguments are valid.
-	if len(capacity) > 1 {
-		panic("memguard.Make: too many arguments")
-	} else if len(capacity) > 0 {
-		if length > capacity[0] {
-			panic("memguard.Make: length larger than capacity")
-		}
-	}
+	// Allocate and lock the buffer.
+	b.Buffer = memcall.Alloc(length)
+	memcall.Lock(b.Buffer)
 
-	// Create a byte slice of length l and protect it.
-	if len(capacity) != 0 {
-		b = make([]byte, length, capacity[0])
-	} else {
-		b = make([]byte, length)
-	}
-
-	// Protect the byte slice.
-	Protect(b)
-
-	// Return the created slice.
+	// Return a pointer to the LockedBuffer.
 	return b
 }
 
-// Wipe takes a byte slice and zeroes it out.
-func Wipe(b []byte) {
-	for i := 0; i < len(b); i++ {
-		b[i] = byte(0)
+// NewFromBytes creates a new *LockedBuffer from a byte slice,
+// attempting to destroy the old value before returning. It is
+// not as robust as New(), but sometimes it is necessary.
+func NewFromBytes(buf []byte) *LockedBuffer {
+	// Allocate the new LockedBuffer.
+	b := new(LockedBuffer)
+
+	// Initialise the environment.
+	memcall.Init()
+
+	// Allocate and lock the buffer.
+	b.Buffer = memcall.Alloc(len(buf))
+	memcall.Lock(b.Buffer)
+
+	// Unlock, copy over bytes, and lock again.
+	memcall.Protect(b.Buffer, false, true)
+	copy(b.Buffer, buf)
+	memcall.Protect(b.Buffer, false, false)
+
+	// Wipe the old bytes and set to nil.
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(0)
 	}
-	b = nil
-	_ = b
+
+	// Return a pointer to the LockedBuffer.
+	return b
 }
 
-// CatchInterrupt starts a goroutine that monitors for interrupt signals and calls Cleanup() before exiting.
-func CatchInterrupt() {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		SafeExit(0)
-	}()
+// AllowRead unlocks the LockedBuffer for reading. Care
+// should be taken to call Lock() after use.
+func (b *LockedBuffer) AllowRead() {
+	memcall.Protect(b.Buffer, true, false)
 }
 
-// SafeExit cleans up protected memory and then exits safely.
-func SafeExit(c int) {
-	// Cleanup protected memory.
-	Cleanup()
+// AllowWrite unlocks the LockedBuffer for writing. Care
+// should be taken to call Lock() after use.
+func (b *LockedBuffer) AllowWrite() {
+	memcall.Protect(b.Buffer, false, true)
+}
 
-	// Exit with a specified exit-code.
-	os.Exit(c)
+// AllowReadWrite unlocks the LockedBuffer for reading and
+// writing. Care should be taken to call Lock() after use.
+func (b *LockedBuffer) AllowReadWrite() {
+	memcall.Protect(b.Buffer, true, true)
+}
+
+// Lock locks the LockedBuffer. Subsequent reading or writing
+// attempts will trigger a SIGSEGV access violation and the
+// program will crash.
+func (b *LockedBuffer) Lock() {
+	memcall.Protect(b.Buffer, false, false)
+}
+
+// Copy copies bytes from a byte slice into a LockedBuffer,
+// preserving the original slice. This is insecure and so
+// Move() should be favoured generally.
+func (b *LockedBuffer) Copy(buf []byte) {
+	// Unlock, copy over bytes, and lock again.
+	memcall.Protect(b.Buffer, false, true)
+	copy(b.Buffer, buf)
+	memcall.Protect(b.Buffer, false, false)
+}
+
+// Move copies bytes from a byte slice into a LockedBuffer,
+// destroying the original slice.
+func (b *LockedBuffer) Move(buf []byte) {
+	// Copy buf into the LockedBuffer.
+	b.Copy(buf)
+
+	// Wipe the old bytes and set to nil.
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(0)
+	}
+}
+
+// Destroy is self explanatory. It wipes and destroys the
+// LockedBuffer. This function should be called on all secure
+// values before exiting.
+func (b *LockedBuffer) Destroy() {
+	// Allow write permissions on Buffer.
+	memcall.Protect(b.Buffer, false, true)
+
+	// Wipe and unallocate.
+	memcall.Free(b.Buffer)
+
+	// Unlock the slice.
+	memcall.Unlock(b.Buffer)
+}
+
+// WipeBytes zeroes out a byte slice.
+func WipeBytes(buf []byte) {
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(0)
+	}
 }
