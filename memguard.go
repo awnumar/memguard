@@ -6,7 +6,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/libeclipse/memguard/memlock"
+	"github.com/libeclipse/memguard/memcall"
 )
 
 var (
@@ -27,13 +27,16 @@ func Protect(data []byte) {
 	// Run as a goroutine so that callers don't have to be explicit.
 	go func(b []byte) {
 		// Prevent memory from being paged to disk.
-		memlock.Lock(b)
+		memcall.Lock(b)
 
 		// Wait for the signal to let us know we're exiting.
 		<-isExiting
 
-		// Unlock memory, wiping first.
-		memlock.Unlock(b)
+		// Wipe slice.
+		Wipe(b)
+
+		// Unlock memory.
+		memcall.Unlock(b)
 
 		// We're done. Decrement WaitGroup counter.
 		lockers.Done()
@@ -82,6 +85,7 @@ func Wipe(b []byte) {
 	for i := 0; i < len(b); i++ {
 		b[i] = byte(0)
 	}
+	b = nil
 }
 
 // CatchInterrupt starts a goroutine that monitors for interrupt signals and calls Cleanup() before exiting.
