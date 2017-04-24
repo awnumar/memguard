@@ -86,6 +86,7 @@ func Wipe(b []byte) {
 		b[i] = byte(0)
 	}
 	b = nil
+	_ = b
 }
 
 // CatchInterrupt starts a goroutine that monitors for interrupt signals and calls Cleanup() before exiting.
