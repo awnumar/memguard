@@ -15,7 +15,7 @@ build_script:
 - go build -v .
 
 test_script:
-    - go test -v ./memlock/...
+    - go test -v ./memcall/...
     - go test -v ./
 
 notifications:

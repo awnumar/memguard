@@ -4,14 +4,9 @@ os:
   - linux
   - osx
 
-sudo: required
-
-before_install:
-    - if [ $TRAVIS_OS_NAME = linux ]; then sudo add-apt-repository -y ppa:chris-lea/libsodium && sudo apt-get update && sudo apt-get -y install libsodium-dev; else brew install libsodium; fi
-
 script:
     - go build -v .
-    - go test -v ./memlock/...
+    - go test -v ./memcall/...
     - go test -v ./
 
 notifications:
