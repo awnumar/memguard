@@ -60,7 +60,20 @@ func Free(b []byte) {
 }
 
 // Protect modifies the PROT_ flags for a specified byte slice.
-func Protect(b []byte, prot int) {
+func Protect(b []byte, read, write bool) {
+	// Ascertain protection value from arguments.
+	var prot int
+	if read && write {
+		prot = unix.PROT_READ | unix.PROT_WRITE
+	} else if read {
+		prot = unix.PROT_READ
+	} else if write {
+		prot = unix.PROT_WRITE
+	} else {
+		prot = unix.PROT_NONE
+	}
+
+	// Change the protection value of the byte slice.
 	if err := unix.Mprotect(b, prot); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err))
 	}

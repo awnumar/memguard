@@ -61,7 +61,19 @@ func Free(b []byte) {
 }
 
 // Protect modifies the PROT_ flags for a specified byte slice.
-func Protect(b []byte, prot uint32) *uint32 {
+func Protect(b []byte, read, write bool) *uint32 {
+	// Ascertain protection value from arguments.
+	var prot int
+	if read && write {
+		prot = windows.PAGE_READWRITE
+	} else if read {
+		prot = windows.PAGE_READONLY
+	} else if write {
+		prot = windows.PAGE_WRITECOPY
+	} else {
+		prot = 0x01
+	}
+
 	var oldProtect uint32
 	if err := winapi.VirtualProtect(_getPtr(b), uintptr(len(b)), uint32(prot), &oldProtect); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err))
