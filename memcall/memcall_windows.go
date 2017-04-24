@@ -26,7 +26,7 @@ func Lock(b []byte) {
 }
 
 // Unlock is a wrapper for windows.VirtualUnlock()
-func Unlock(b []byte) error {
+func Unlock(b []byte) {
 	var _p0 unsafe.Pointer
 	if len(b) > 0 {
 		_p0 = unsafe.Pointer(&b[0])
