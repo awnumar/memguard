@@ -25,6 +25,10 @@ func Init() {
 
 // Lock is a wrapper for unix.Mlock(), with extra precautions.
 func Lock(b []byte) {
+	// Advise the kernel not to dump. Ignore failure.
+	unix.Madvise(b, 0x10)
+
+	// Call mlock.
 	if err := unix.Mlock(b); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Lock(): could not aquire lock on %p [Err: %s]", &b[0], err))
 	}
@@ -45,21 +49,12 @@ func Alloc(n int) []byte {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
 
-	// Advise the kernel not to dump. Ignore failure.
-	unix.Madvise(b, 0x10)
-
 	// Return the allocated memory.
 	return b
 }
 
-// Free wipes and unallocates the byte slice specified.
+// Free unallocates the byte slice specified.
 func Free(b []byte) {
-	// Wipe it first.
-	for i := 0; i < len(b); i++ {
-		b[i] = byte(0)
-	}
-
-	// Unallocate it.
 	if err := unix.Munmap(b); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err))
 	}

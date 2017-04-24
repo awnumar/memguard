@@ -43,21 +43,11 @@ func Alloc(n int) []byte {
 	return _getBytes(ptr, n, n)
 }
 
-// Free wipes and unallocates the byte slice specified.
+// Free unallocates the byte slice specified.
 func Free(b []byte) {
-	// Wipe it first.
-	for i := 0; i < len(b); i++ {
-		b[i] = byte(0)
-	}
-
-	// Unallocate it.
 	if err := winapi.VirtualFree(_getPtr(b), uintptr(len(b)), 0x8000); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err))
 	}
-
-	// Set it to nil.
-	b = nil
-	_ = b
 }
 
 // Protect modifies the PROT_ flags for a specified byte slice.
