@@ -12,7 +12,7 @@ import (
 )
 
 // Placeholder variable for when we need a valid pointer to zero bytes.
-var _zero uintpt
+var _zero uintptr
 
 // Init is included for compatibility between Unix and Windows. It is a No-Op function.
 func Init() {}
@@ -34,7 +34,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	ptr, err := winapi.VirtualAlloc(_zero, n, 0x00001000, 0x01)
+	ptr, err := winapi.VirtualAlloc(_zero, uintptr(n), 0x00001000, 0x01)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
@@ -51,7 +51,7 @@ func Free(b []byte) {
 	}
 
 	// Unallocate it.
-	if err != winapi.VirtualFree(_getPtr(b), uintptr(len(b)), 0x8000); err != nil {
+	if err := winapi.VirtualFree(_getPtr(b), uintptr(len(b)), 0x8000); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err))
 	}
 
@@ -67,7 +67,7 @@ func Protect(b []byte, prot uint32) *uint32 {
 		panic(fmt.Sprintf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err))
 	}
 	// Return the old value to the caller.
-	return oldProtect
+	return &oldProtect
 }
 
 func _getPtr(b []byte) uintptr {
@@ -85,6 +85,6 @@ func _getBytes(ptr uintptr, len int, cap int) []byte {
 		addr uintptr
 		len  int
 		cap  int
-	}{ptr, n, n}
+	}{ptr, len, cap}
 	return *(*[]byte)(unsafe.Pointer(&sl))
 }
