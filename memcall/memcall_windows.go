@@ -34,7 +34,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	ptr, err := winapi.VirtualAlloc(nil, n, 0x00001000, 0x01)
+	ptr, err := winapi.VirtualAlloc(_zero, n, 0x00001000, 0x01)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
@@ -70,7 +70,7 @@ func Protect(b []byte, prot uint32) *uint32 {
 	return oldProtect
 }
 
-func _getPtr(b []byte) {
+func _getPtr(b []byte) uintptr {
 	var _p0 unsafe.Pointer
 	if len(b) > 0 {
 		_p0 = unsafe.Pointer(&b[0])

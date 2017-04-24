@@ -1,4 +1,4 @@
-// +build !windows !darwin
+// +build darwin
 
 package memcall
 
@@ -33,13 +33,10 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	b, err := unix.Mmap(-1, 0, n, unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS)
+	b, err := unix.Mmap(-1, 0, n, unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
-
-	// Advise the kernel not to dump. Ignore failure.
-	unix.Madvise(b, 0x10)
 
 	// Return the allocated memory.
 	return b
