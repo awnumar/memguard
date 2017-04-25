@@ -45,7 +45,7 @@ func Alloc(n int) []byte {
 
 // Free unallocates the byte slice specified.
 func Free(b []byte) {
-	if err := winapi.VirtualFree(_getPtr(b), uintptr(len(b)), 0x8000); err != nil {
+	if err := winapi.VirtualFree(_getPtr(b), uintptr(0), 0x8000); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err))
 	}
 }
