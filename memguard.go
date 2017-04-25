@@ -1,120 +1,144 @@
 package memguard
 
 import (
-	"fmt"
 	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 
-	"github.com/libeclipse/memguard/memlock"
+	"github.com/libeclipse/memguard/memcall"
 )
 
 var (
-	// Let the goroutines know we're exiting.
-	isExiting = make(chan bool)
-
-	// Used to wait for goroutines to finish before exiting.
-	lockers sync.WaitGroup
+	// Grab the system page size.
+	pageSize = os.Getpagesize()
 )
 
-/*
-Protect spawns a goroutine that prevents the data from being swapped out to disk, and then waits around for the signal from Cleanup(). When this signal arrives, the goroutine zeroes out the memory that it was protecting, and then unlocks it before returning. Protect can be called multiple times with different pieces of data, but the caller should be aware that the underlying kernel may impose its own limits on the amount of memory that can be locked. For this reason, it is recommended to only call this function on small, highly sensitive structures that contain, for example, encryption keys. In the event of a limit being reached and attaining the lock fails, a warning will be written to stdout and the goroutine will still wipe the memory on exit.
-*/
-func Protect(data []byte) {
-	// Increment counters since we're starting another goroutine.
-	lockers.Add(1) // WaitGroup counter.
-
-	// Run as a goroutine so that callers don't have to be explicit.
-	go func(b []byte) {
-		// Monitor if we managed to lock b.
-		lockSuccess := true
-
-		// Prevent memory from being paged to disk.
-		err := memlock.Lock(b)
-		if err != nil {
-			lockSuccess = false
-			fmt.Printf("Warning: Failed to lock %p; will still zero it out on exit. [Err: %s]\n", &b, err)
-		}
-
-		// Wait for the signal to let us know we're exiting.
-		<-isExiting
-
-		// Zero out the memory.
-		Wipe(b)
-
-		// If we managed to lock earlier, unlock.
-		if lockSuccess {
-			err := memlock.Unlock(b)
-			if err != nil {
-				fmt.Printf("Warning: Failed to unlock %p [Err: %s]\n", &b, err)
-			}
-		}
-
-		// We're done. Decrement WaitGroup counter.
-		lockers.Done()
-	}(data)
+// LockedBuffer implements a buffer that stores the data.
+type LockedBuffer struct {
+	Buffer    []byte
+	mainSlice []byte
 }
 
-// Cleanup instructs the goroutines to cleanup the memory they've been watching and waits for them to finish.
-// This can only be called at most once.
-func Cleanup() {
-	// Send the exit signal to all of the goroutines.
-	close(isExiting)
+// New creates a new *LockedBuffer and returns it.
+func New(length int) *LockedBuffer {
+	// Allocate the new LockedBuffer
+	b := new(LockedBuffer)
 
-	// Wait for them all to finish.
-	lockers.Wait()
-}
+	// Round length to pageSize
+	roundedLength := _roundPage(length)
 
-/*
-Make creates a byte slice of specified length, but protects it before returning. You can also specify an optional capacity, just like with the native make() function. Note that the returned array is only properly protected up until its length, and not its capacity.
-*/
-func Make(length int, capacity ...int) (b []byte) {
-	// Check if arguments are valid.
-	if len(capacity) > 1 {
-		panic("memguard.Make: too many arguments")
-	} else if len(capacity) > 0 {
-		if length > capacity[0] {
-			panic("memguard.Make: length larger than capacity")
-		}
-	}
+	// Set Total Size with guard pages
+	totalSize := (2 * pageSize) + roundedLength
 
-	// Create a byte slice of length l and protect it.
-	if len(capacity) != 0 {
-		b = make([]byte, length, capacity[0])
-	} else {
-		b = make([]byte, length)
-	}
+	// Allocate it all
+	mainSlice := memcall.Alloc(totalSize)
 
-	// Protect the byte slice.
-	Protect(b)
+	//Lock the page that will hold our data
+	memcall.Lock(mainSlice[pageSize : pageSize+roundedLength])
 
-	// Return the created slice.
+	// Make the Guard Pages inaccessible
+	memcall.Protect(mainSlice[:pageSize], false, false)
+	memcall.Protect(mainSlice[pageSize+roundedLength:totalSize], false, false)
+
+	// Set the user pointer
+	b.Buffer = mainSlice[pageSize+roundedLength-length : pageSize+roundedLength]
+
+	// Save the address (needed when freeing)
+	b.mainSlice = mainSlice[:]
+
+	// Return a pointer to the LockedBuffer.
 	return b
 }
 
-// Wipe takes a byte slice and zeroes it out.
-func Wipe(b []byte) {
-	for i := 0; i < len(b); i++ {
-		b[i] = byte(0)
+// NewFromBytes creates a new *LockedBuffer from a byte slice,
+// attempting to destroy the old value before returning. It is
+// not as robust as New(), but sometimes it is necessary.
+func NewFromBytes(buf []byte) *LockedBuffer {
+	// Use New to create a Secured LockedBuffer
+	b := New(len(buf))
+
+	// Copy the bytes from the old slice
+	copy(b.Buffer, buf)
+
+	// Wipe the old bytes and set to nil
+	WipeBytes(buf)
+
+	// Return a pointer to the LockedBuffer.
+	return b
+}
+
+// AllowRead unlocks the LockedBuffer for reading. Care
+// should be taken to call Lock() after use.
+func (b *LockedBuffer) AllowRead() {
+	memcall.Protect(b.Buffer, true, false)
+}
+
+// AllowWrite unlocks the LockedBuffer for writing. Care
+// should be taken to call Lock() after use.
+func (b *LockedBuffer) AllowWrite() {
+	memcall.Protect(b.Buffer, false, true)
+}
+
+// AllowReadWrite unlocks the LockedBuffer for reading and
+// writing. Care should be taken to call Lock() after use.
+func (b *LockedBuffer) AllowReadWrite() {
+	memcall.Protect(b.Buffer, true, true)
+}
+
+// Lock locks the LockedBuffer. Subsequent reading or writing
+// attempts will trigger a SIGSEGV access violation and the
+// program will crash.
+func (b *LockedBuffer) Lock() {
+	memcall.Protect(b.Buffer, false, false)
+}
+
+// Copy copies bytes from a byte slice into a LockedBuffer,
+// preserving the original slice. This is insecure and so
+// Move() should be favoured generally.
+/*func (b *LockedBuffer) Copy(buf []byte) {
+	// Unlock, copy over bytes, and lock again.
+	memcall.Protect(b.Buffer, false, true)
+	copy(b.Buffer, buf)
+	memcall.Protect(b.Buffer, false, false)
+}
+
+// Move copies bytes from a byte slice into a LockedBuffer,
+// destroying the original slice.
+func (b *LockedBuffer) Move(buf []byte) {
+	// Copy buf into the LockedBuffer.
+	b.Copy(buf)
+
+	// Wipe the old bytes and set to nil.
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(0)
+	}
+}*/
+
+// Destroy is self explanatory. It wipes and destroys the
+// LockedBuffer. This function should be called on all secure
+// values before exiting.
+func (b *LockedBuffer) Destroy() {
+	// Get the rounded size of our data
+	roundedSize := len(b.mainSlice) - (pageSize * 2)
+
+	// Make all the main slice readable and writable
+	memcall.Protect(b.mainSlice, true, true)
+
+	// Wipe the pages that hold our data
+	WipeBytes(b.mainSlice[pageSize : pageSize+roundedSize])
+
+	// Unlock the pages that hold our data
+	memcall.Unlock(b.mainSlice[pageSize : pageSize+roundedSize])
+
+	// Free all the mainSlice
+	memcall.Free(b.mainSlice)
+}
+
+// WipeBytes zeroes out a byte slice.
+func WipeBytes(buf []byte) {
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(0)
 	}
 }
 
-// CatchInterrupt starts a goroutine that monitors for interrupt signals and calls Cleanup() before exiting.
-func CatchInterrupt() {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		SafeExit(0)
-	}()
-}
-
-// SafeExit cleans up protected memory and then exits safely.
-func SafeExit(c int) {
-	// Cleanup protected memory.
-	Cleanup()
-
-	// Exit with a specified exit-code.
-	os.Exit(c)
+func _roundPage(length int) int {
+	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }

@@ -6,6 +6,7 @@ owners:
   email: awn@cryptolosophy.io
   homepage: https://cryptolosophy.io
 import:
+- package: github.com/alexbrainman/winapi
 - package: golang.org/x/sys
   subpackages:
   - unix
