@@ -2,23 +2,19 @@ package memguard
 
 import (
 	"os"
+
 	"github.com/libeclipse/memguard/memcall"
+)
+
+var (
+	// Grab the system page size.
+	pageSize = os.Getpagesize()
 )
 
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
-	Buffer []byte
-	main_slice []byte
-}
-
-var page_size int
-
-func Init() {
-	page_size = os.Getpagesize()
-}
-
-func round_page(length int) int{
-	return (length + (page_size - 1)) & (^(page_size - 1)) 
+	Buffer    []byte
+	mainSlice []byte
 }
 
 // New creates a new *LockedBuffer and returns it.
@@ -26,27 +22,27 @@ func New(length int) *LockedBuffer {
 	// Allocate the new LockedBuffer
 	b := new(LockedBuffer)
 
-	// Round length to page_size
-	rounded_length := round_page(length)
+	// Round length to pageSize
+	roundedLength := _roundPage(length)
 
 	// Set Total Size with guard pages
-	total_size := page_size + rounded_length + page_size
+	totalSize := (2 * pageSize) + roundedLength
 
 	// Allocate it all
-	main_slice := memcall.Alloc(total_size)
+	mainSlice := memcall.Alloc(totalSize)
 
 	//Lock the page that will hold our data
-	memcall.Lock(main_slice[page_size:page_size + rounded_length])
+	memcall.Lock(mainSlice[pageSize : pageSize+roundedLength])
 
 	// Make the Guard Pages inaccessible
-	memcall.Protect(main_slice[:page_size], false, false)
-	memcall.Protect(main_slice[page_size + rounded_length: total_size], false, false)
+	memcall.Protect(mainSlice[:pageSize], false, false)
+	memcall.Protect(mainSlice[pageSize+roundedLength:totalSize], false, false)
 
 	// Set the user pointer
-	b.Buffer = main_slice[page_size + rounded_length - length:page_size + rounded_length]
+	b.Buffer = mainSlice[pageSize+roundedLength-length : pageSize+roundedLength]
 
 	// Save the address (needed when freeing)
-	b.main_slice = main_slice[:]
+	b.mainSlice = mainSlice[:]
 
 	// Return a pointer to the LockedBuffer.
 	return b
@@ -121,19 +117,19 @@ func (b *LockedBuffer) Move(buf []byte) {
 // values before exiting.
 func (b *LockedBuffer) Destroy() {
 	// Get the rounded size of our data
-	rounded_size := len(b.main_slice) - (page_size * 2)
+	roundedSize := len(b.mainSlice) - (pageSize * 2)
 
 	// Make all the main slice readable and writable
-	memcall.Protect(b.main_slice, true, true)
+	memcall.Protect(b.mainSlice, true, true)
 
 	// Wipe the pages that hold our data
-	WipeBytes(b.main_slice[page_size : page_size + rounded_size])
+	WipeBytes(b.mainSlice[pageSize : pageSize+roundedSize])
 
 	// Unlock the pages that hold our data
-	memcall.Unlock(b.main_slice[page_size : page_size + rounded_size])
+	memcall.Unlock(b.mainSlice[pageSize : pageSize+roundedSize])
 
-	// Free all the main_slice
-	memcall.Free(b.main_slice)
+	// Free all the mainSlice
+	memcall.Free(b.mainSlice)
 }
 
 // WipeBytes zeroes out a byte slice.
@@ -141,4 +137,8 @@ func WipeBytes(buf []byte) {
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(0)
 	}
+}
+
+func _roundPage(length int) int {
+	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }

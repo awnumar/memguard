@@ -4,7 +4,7 @@ package memcall
 
 import (
 	"fmt"
-	
+
 	"golang.org/x/sys/unix"
 )
 
@@ -18,7 +18,7 @@ func Init() {
 		if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
 			panic(fmt.Sprintf("memguard.memprot.Init(): could not set rlimit [Err: %s]", err))
 		}
-		
+
 		// We've initialised now.
 		initialised = true
 	}
@@ -45,7 +45,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ | unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS|0x00020000)
+	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS|0x00020000)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
