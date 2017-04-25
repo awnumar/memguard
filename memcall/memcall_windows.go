@@ -34,7 +34,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	ptr, err := winapi.VirtualAlloc(_zero, uintptr(n), 0x00002000, 0x01)
+	ptr, err := winapi.VirtualAlloc(_zero, uintptr(n), 0x00001000|0x00002000, 0x01)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
