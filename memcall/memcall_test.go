@@ -3,7 +3,7 @@ package memcall
 import "testing"
 
 func TestInit(t *testing.T) {
-	Init()
+	//Init()
 }
 
 func TestCycle(t *testing.T) {
