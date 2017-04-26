@@ -8,21 +8,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var initialised bool
-
-// Init initialises the environment. It must be called before anything esle.
-func Init() {
-	if !initialised {
-		// Disable core dumps.
-		if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
-			panic(fmt.Sprintf("memguard.memprot.Init(): could not set rlimit [Err: %s]", err))
-		}
-
-		// We've initialised now.
-		initialised = true
-	}
-}
-
 // Lock is a wrapper for unix.Mlock(), with extra precautions.
 func Lock(b []byte) {
 	if err := unix.Mlock(b); err != nil {
@@ -30,7 +15,7 @@ func Lock(b []byte) {
 	}
 }
 
-// Unlock is a wrapper for unix.Unlock.
+// Unlock is a wrapper for unix.Munlock().
 func Unlock(b []byte) {
 	if err := unix.Munlock(b); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Unlock(): could not free lock on %p [Err: %s]", &b[0], err))
@@ -39,8 +24,13 @@ func Unlock(b []byte) {
 
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
+	// Disable core dumps if we haven't already.
+	if !disabledCoreDumps {
+		_disableCoreDumps()
+	}
+
 	// Allocate the memory.
-	b, err := unix.Mmap(-1, 0, n, unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON)
+	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANON)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
@@ -73,5 +63,14 @@ func Protect(b []byte, read, write bool) {
 	// Change the protection value of the byte slice.
 	if err := unix.Mprotect(b, prot); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err))
+	}
+}
+
+var disabledCoreDumps bool
+
+func _disableCoreDumps() {
+	// Disable core dumps.
+	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
+		panic(fmt.Sprintf("memguard.memprot._disableCoreDumps(): could not set rlimit [Err: %s]", err))
 	}
 }

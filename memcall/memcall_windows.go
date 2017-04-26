@@ -14,9 +14,6 @@ import (
 // Placeholder variable for when we need a valid pointer to zero bytes.
 var _zero uintptr
 
-// Init is included for compatibility between Unix and Windows. It is a No-Op function.
-func Init() {}
-
 // Lock is a wrapper for windows.VirtualLock()
 func Lock(b []byte) {
 	if err := windows.VirtualLock(_getPtr(b), uintptr(len(b))); err != nil {
@@ -34,7 +31,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	ptr, err := winapi.VirtualAlloc(_zero, uintptr(n), 0x00001000|0x00002000, 0x01)
+	ptr, err := winapi.VirtualAlloc(_zero, uintptr(n), 0x00001000|0x00002000, 0x40)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
@@ -54,14 +51,12 @@ func Free(b []byte) {
 func Protect(b []byte, read, write bool) *uint32 {
 	// Ascertain protection value from arguments.
 	var prot int
-	if read && write {
-		prot = windows.PAGE_READWRITE
+	if write {
+		prot = 0x40 // PAGE_EXECUTE_READWRITE
 	} else if read {
-		prot = windows.PAGE_READONLY
-	} else if write {
-		prot = windows.PAGE_WRITECOPY
+		prot = 0x20 // PAGE_EXECUTE_READ
 	} else {
-		prot = 0x01
+		prot = 0x01 // PAGE_NOACCESS
 	}
 
 	var oldProtect uint32

@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"os"
+	"unsafe"
 
 	"github.com/libeclipse/memguard/memcall"
 )
@@ -9,6 +10,9 @@ import (
 var (
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
+
+	// Placeholder variable for when we need a valid pointer to zero bytes.
+	_zero uintptr
 )
 
 // LockedBuffer implements a buffer that stores the data.
@@ -17,31 +21,35 @@ type LockedBuffer struct {
 	mainSlice []byte
 }
 
-// New creates a new *LockedBuffer and returns it.
+// New creates a new *LockedBuffer and returns it. The
+// LockedBuffer is in the locked state.
 func New(length int) *LockedBuffer {
-	// Allocate the new LockedBuffer
+	// Allocate the new LockedBuffer.
 	b := new(LockedBuffer)
 
-	// Round length to pageSize
+	// Round length to pageSize.
 	roundedLength := _roundPage(length)
 
-	// Set Total Size with guard pages
+	// Set Total Size with guard pages.
 	totalSize := (2 * pageSize) + roundedLength
 
-	// Allocate it all
+	// Allocate it all.
 	mainSlice := memcall.Alloc(totalSize)
 
-	//Lock the page that will hold our data
+	//Lock the page that will hold our data.
 	memcall.Lock(mainSlice[pageSize : pageSize+roundedLength])
 
-	// Make the Guard Pages inaccessible
+	// Make the Guard Pages inaccessible.
 	memcall.Protect(mainSlice[:pageSize], false, false)
 	memcall.Protect(mainSlice[pageSize+roundedLength:totalSize], false, false)
 
-	// Set the user pointer
-	b.Buffer = mainSlice[pageSize+roundedLength-length : pageSize+roundedLength]
+	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
+	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&mainSlice[pageSize+roundedLength-length])), length, length)
 
-	// Save the address (needed when freeing)
+	// Lock this down yo.
+	b.Lock()
+
+	// Save the address (needed when freeing).
 	b.mainSlice = mainSlice[:]
 
 	// Return a pointer to the LockedBuffer.
@@ -55,11 +63,8 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 	// Use New to create a Secured LockedBuffer
 	b := New(len(buf))
 
-	// Copy the bytes from the old slice
-	copy(b.Buffer, buf)
-
-	// Wipe the old bytes and set to nil
-	WipeBytes(buf)
+	// Copy the bytes from buf, wiping the afterwards.
+	b.Move(buf)
 
 	// Return a pointer to the LockedBuffer.
 	return b
@@ -92,25 +97,22 @@ func (b *LockedBuffer) Lock() {
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
 // preserving the original slice. This is insecure and so
-// Move() should be favoured generally.
-/*func (b *LockedBuffer) Copy(buf []byte) {
-	// Unlock, copy over bytes, and lock again.
-	memcall.Protect(b.Buffer, false, true)
+// Move() should be favoured generally. The LockedBuffer
+// should be unlocked first, and relocked afterwards.
+func (b *LockedBuffer) Copy(buf []byte) {
 	copy(b.Buffer, buf)
-	memcall.Protect(b.Buffer, false, false)
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
-// destroying the original slice.
+// destroying the original slice. The LockedBuffer should be
+// unlocked first, and relocked afterwards.
 func (b *LockedBuffer) Move(buf []byte) {
 	// Copy buf into the LockedBuffer.
 	b.Copy(buf)
 
 	// Wipe the old bytes and set to nil.
-	for i := 0; i < len(buf); i++ {
-		buf[i] = byte(0)
-	}
-}*/
+	WipeBytes(buf)
+}
 
 // Destroy is self explanatory. It wipes and destroys the
 // LockedBuffer. This function should be called on all secure
@@ -141,4 +143,13 @@ func WipeBytes(buf []byte) {
 
 func _roundPage(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
+}
+
+func _getBytes(ptr uintptr, len int, cap int) []byte {
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{ptr, len, cap}
+	return *(*[]byte)(unsafe.Pointer(&sl))
 }
