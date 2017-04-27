@@ -23,7 +23,7 @@ type LockedBuffer struct {
 }
 
 // New creates a new *LockedBuffer and returns it. The
-// LockedBuffer is in an unlocked state state. Length
+// LockedBuffer is in an unlocked state. Length
 // must be > zero.
 func New(length int) *LockedBuffer {
 	// Panic if length < one.
@@ -35,7 +35,7 @@ func New(length int) *LockedBuffer {
 	b := new(LockedBuffer)
 
 	// Round length to pageSize.
-	roundedLength := _roundPage(length)
+	roundedLength := _roundToPageSize(length)
 
 	// Set Total Size with guard pages.
 	totalSize := (2 * pageSize) + roundedLength
@@ -129,8 +129,8 @@ func (b *LockedBuffer) Destroy() {
 	}
 
 	// Calculate information to describe all of this data.
-	ptr := unsafe.Pointer(uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr(pageSize+_roundPage(len(b.Buffer))) + uintptr(len(b.Buffer)))
-	totalSize := _roundPage(len(b.Buffer)) + (2 * pageSize)
+	ptr := unsafe.Pointer(uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr(pageSize+_roundToPageSize(len(b.Buffer))) + uintptr(len(b.Buffer)))
+	totalSize := _roundToPageSize(len(b.Buffer)) + (2 * pageSize)
 	allData := _getBytes(uintptr(ptr), totalSize, totalSize)
 
 	// Make all the main slice readable and writable.
@@ -141,7 +141,7 @@ func (b *LockedBuffer) Destroy() {
 	memcall.Unlock(b.Buffer)
 
 	// Free all of the memory related to this LockedBuffer.
-	memcall.Free(_getBytes(uintptr(ptr), totalSize, totalSize))
+	memcall.Free(allData)
 }
 
 // DestroyAll calls Destroy on all created LockedBuffers.
@@ -184,7 +184,7 @@ func DisableCoreDumps() {
 	memcall.DisableCoreDumps()
 }
 
-func _roundPage(length int) int {
+func _roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }
 
