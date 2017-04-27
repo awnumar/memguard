@@ -28,11 +28,6 @@ func Unlock(b []byte) {
 
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
-	// Disable core dumps if we haven't already.
-	if !disabledCoreDumps {
-		_disableCoreDumps()
-	}
-
 	// Allocate the memory.
 	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_ANONYMOUS|0x00020000)
 	if err != nil {
@@ -70,9 +65,8 @@ func Protect(b []byte, read, write bool) {
 	}
 }
 
-var disabledCoreDumps bool
-
-func _disableCoreDumps() {
+// DisableCoreDumps disables core dumps on Unix systems.
+func DisableCoreDumps() {
 	// Disable core dumps.
 	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
 		panic(fmt.Sprintf("memguard.memprot._disableCoreDumps(): could not set rlimit [Err: %s]", err))

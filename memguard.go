@@ -2,6 +2,8 @@ package memguard
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 	"unsafe"
 
 	"github.com/libeclipse/memguard/memcall"
@@ -11,19 +13,24 @@ var (
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
 
-	// Placeholder variable for when we need a valid pointer to zero bytes.
-	_zero uintptr
+	// Store pointers to all of the LockedBuffers.
+	allLockedBuffers []*LockedBuffer
 )
 
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
-	Buffer    []byte
-	mainSlice []byte
+	Buffer []byte
 }
 
 // New creates a new *LockedBuffer and returns it. The
-// LockedBuffer is in the locked state.
+// LockedBuffer is in an unlocked state state. Length
+// must be > zero.
 func New(length int) *LockedBuffer {
+	// Panic if length < one.
+	if length < 1 {
+		panic("memguard.New(): length must be > zero")
+	}
+
 	// Allocate the new LockedBuffer.
 	b := new(LockedBuffer)
 
@@ -46,11 +53,8 @@ func New(length int) *LockedBuffer {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&mainSlice[pageSize+roundedLength-length])), length, length)
 
-	// Lock this down yo.
-	b.Lock()
-
-	// Save the address (needed when freeing).
-	b.mainSlice = mainSlice[:]
+	// Append this LockedBuffer to allLockedBuffers.
+	allLockedBuffers = append(allLockedBuffers, b)
 
 	// Return a pointer to the LockedBuffer.
 	return b
@@ -60,7 +64,7 @@ func New(length int) *LockedBuffer {
 // attempting to destroy the old value before returning. It is
 // not as robust as New(), but sometimes it is necessary.
 func NewFromBytes(buf []byte) *LockedBuffer {
-	// Use New to create a Secured LockedBuffer
+	// Use New to create a Secured LockedBuffer.
 	b := New(len(buf))
 
 	// Copy the bytes from buf, wiping the afterwards.
@@ -70,20 +74,18 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 	return b
 }
 
-// AllowRead unlocks the LockedBuffer for reading. Care
-// should be taken to call Lock() after use.
+// AllowRead unlocks the LockedBuffer for reading.
 func (b *LockedBuffer) AllowRead() {
 	memcall.Protect(b.Buffer, true, false)
 }
 
-// AllowWrite unlocks the LockedBuffer for writing. Care
-// should be taken to call Lock() after use.
+// AllowWrite unlocks the LockedBuffer for writing.
 func (b *LockedBuffer) AllowWrite() {
 	memcall.Protect(b.Buffer, false, true)
 }
 
 // AllowReadWrite unlocks the LockedBuffer for reading and
-// writing. Care should be taken to call Lock() after use.
+// writing.
 func (b *LockedBuffer) AllowReadWrite() {
 	memcall.Protect(b.Buffer, true, true)
 }
@@ -118,20 +120,56 @@ func (b *LockedBuffer) Move(buf []byte) {
 // LockedBuffer. This function should be called on all secure
 // values before exiting.
 func (b *LockedBuffer) Destroy() {
-	// Get the rounded size of our data
-	roundedSize := len(b.mainSlice) - (pageSize * 2)
+	// Remove this one from global slice.
+	for i, v := range allLockedBuffers {
+		if v == b {
+			allLockedBuffers = append(allLockedBuffers[:i], allLockedBuffers[i+1:]...)
+			break
+		}
+	}
 
-	// Make all the main slice readable and writable
-	memcall.Protect(b.mainSlice, true, true)
+	// Calculate information to describe all of this data.
+	ptr := unsafe.Pointer(uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr(pageSize+_roundPage(len(b.Buffer))) + uintptr(len(b.Buffer)))
+	totalSize := _roundPage(len(b.Buffer)) + (2 * pageSize)
+	allData := _getBytes(uintptr(ptr), totalSize, totalSize)
 
-	// Wipe the pages that hold our data
-	WipeBytes(b.mainSlice[pageSize : pageSize+roundedSize])
+	// Make all the main slice readable and writable.
+	memcall.Protect(allData, true, true)
 
-	// Unlock the pages that hold our data
-	memcall.Unlock(b.mainSlice[pageSize : pageSize+roundedSize])
+	// Wipe and unlock the actual data.
+	WipeBytes(b.Buffer)
+	memcall.Unlock(b.Buffer)
 
-	// Free all the mainSlice
-	memcall.Free(b.mainSlice)
+	// Free all of the memory related to this LockedBuffer.
+	memcall.Free(_getBytes(uintptr(ptr), totalSize, totalSize))
+}
+
+// DestroyAll calls Destroy on all created LockedBuffers.
+func DestroyAll() {
+	for _, v := range allLockedBuffers {
+		v.Destroy()
+	}
+}
+
+// CatchInterrupt starts a goroutine that monitors for
+// interrupt signals and calls Cleanup() before exiting.
+func CatchInterrupt() {
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		SafeExit(0)
+	}()
+}
+
+// SafeExit exits the program with the specified return code,
+// but calls DestroyAll before doing so.
+func SafeExit(c int) {
+	// Cleanup protected memory.
+	DestroyAll()
+
+	// Exit with a specified exit-code.
+	os.Exit(c)
 }
 
 // WipeBytes zeroes out a byte slice.
@@ -139,6 +177,11 @@ func WipeBytes(buf []byte) {
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(0)
 	}
+}
+
+// DisableCoreDumps disables core dumps on Unix systems. On windows it is a no-op.
+func DisableCoreDumps() {
+	memcall.DisableCoreDumps()
 }
 
 func _roundPage(length int) int {

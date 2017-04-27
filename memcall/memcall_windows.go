@@ -67,6 +67,9 @@ func Protect(b []byte, read, write bool) *uint32 {
 	return &oldProtect
 }
 
+// DisableCoreDumps is included for compatibility reasons. On windows it is a no-op function.
+func DisableCoreDumps() {}
+
 func _getPtr(b []byte) uintptr {
 	var _p0 unsafe.Pointer
 	if len(b) > 0 {
