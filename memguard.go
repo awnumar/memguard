@@ -48,7 +48,7 @@ func New(length int) *LockedBuffer {
 
 	// Make the Guard Pages inaccessible.
 	memcall.Protect(mainSlice[:pageSize], false, false)
-	memcall.Protect(mainSlice[pageSize+roundedLength:totalSize], false, false)
+	memcall.Protect(mainSlice[pageSize+roundedLength:], false, false)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&mainSlice[pageSize+roundedLength-length])), length, length)
@@ -112,7 +112,7 @@ func (b *LockedBuffer) Move(buf []byte) {
 	// Copy buf into the LockedBuffer.
 	b.Copy(buf)
 
-	// Wipe the old bytes and set to nil.
+	// Wipe the old bytes.
 	WipeBytes(buf)
 }
 
@@ -198,4 +198,12 @@ func _getBytes(ptr uintptr, len int, cap int) []byte {
 		cap  int
 	}{ptr, len, cap}
 	return *(*[]byte)(unsafe.Pointer(&sl))
+}
+
+func _csprng(n int) []byte {
+	b := make([]byte, n)
+	if err := rand.Read(b); err != nil {
+		panic("memguard._csprng(): could not get random bytes")	
+	}
+	return b
 }
