@@ -142,6 +142,9 @@ func (b *LockedBuffer) Destroy() {
 
 	// Free all of the memory related to this LockedBuffer.
 	memcall.Free(allData)
+
+	// Set b.Buffer to nil.
+	b.Buffer = nil
 }
 
 // DestroyAll calls Destroy on all created LockedBuffers.
