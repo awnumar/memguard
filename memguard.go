@@ -42,17 +42,17 @@ func New(length int) *LockedBuffer {
 	totalSize := (2 * pageSize) + roundedLength
 
 	// Allocate it all.
-	mainSlice := memcall.Alloc(totalSize)
+	allData := memcall.Alloc(totalSize)
 
 	//Lock the page that will hold our data.
-	memcall.Lock(mainSlice[pageSize : pageSize+roundedLength])
+	memcall.Lock(allData[pageSize : pageSize+roundedLength])
 
 	// Make the Guard Pages inaccessible.
-	memcall.Protect(mainSlice[:pageSize], false, false)
-	memcall.Protect(mainSlice[pageSize+roundedLength:], false, false)
+	memcall.Protect(allData[:pageSize], false, false)
+	memcall.Protect(allData[pageSize+roundedLength:], false, false)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&mainSlice[pageSize+roundedLength-length])), length, length)
+	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&allData[pageSize+roundedLength-length])), length, length)
 
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffers = append(allLockedBuffers, b)
