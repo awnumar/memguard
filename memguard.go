@@ -116,7 +116,7 @@ func (b *LockedBuffer) Destroy() {
 
 	// Wipe and unlock the actual data.
 	WipeBytes(b.Buffer)
-	memcall.Unlock(allData[pageSize : pageSize+_roundToPageSize(len(b.Buffer))])
+	memcall.Unlock(b.Buffer)
 
 	// Free all of the memory related to this LockedBuffer.
 	memcall.Free(allData)
