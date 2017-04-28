@@ -1,6 +1,7 @@
 package memguard
 
 import (
+	"crypto/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -72,29 +73,6 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 
 	// Return a pointer to the LockedBuffer.
 	return b
-}
-
-// AllowRead unlocks the LockedBuffer for reading.
-func (b *LockedBuffer) AllowRead() {
-	memcall.Protect(b.Buffer, true, false)
-}
-
-// AllowWrite unlocks the LockedBuffer for writing.
-func (b *LockedBuffer) AllowWrite() {
-	memcall.Protect(b.Buffer, false, true)
-}
-
-// AllowReadWrite unlocks the LockedBuffer for reading and
-// writing.
-func (b *LockedBuffer) AllowReadWrite() {
-	memcall.Protect(b.Buffer, true, true)
-}
-
-// Lock locks the LockedBuffer. Subsequent reading or writing
-// attempts will trigger a SIGSEGV access violation and the
-// program will crash.
-func (b *LockedBuffer) Lock() {
-	memcall.Protect(b.Buffer, false, false)
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
@@ -202,8 +180,8 @@ func _getBytes(ptr uintptr, len int, cap int) []byte {
 
 func _csprng(n int) []byte {
 	b := make([]byte, n)
-	if err := rand.Read(b); err != nil {
-		panic("memguard._csprng(): could not get random bytes")	
+	if _, err := rand.Read(b); err != nil {
+		panic("memguard._csprng(): could not get random bytes")
 	}
 	return b
 }

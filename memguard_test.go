@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"unsafe"
 )
 
 func TestNew(t *testing.T) {
@@ -20,16 +21,6 @@ func TestNewFromBytes(t *testing.T) {
 	}
 }
 
-/* This is faling. Need to fix.
-func TestPermissions(t *testing.T) {
-	b := New(8)
-	b.AllowReadWrite()
-	b.AllowRead()
-	b.AllowWrite()
-	b.Lock()
-}
-*/
-
 func TestMove(t *testing.T) {
 	b, buf := New(16), []byte("yellow submarine")
 	b.Move(buf)
@@ -42,8 +33,48 @@ func TestMove(t *testing.T) {
 	}
 }
 
-func TestDestroyAll(t *testing.T)       {}
-func TestWipeBytes(t *testing.T)        {}
-func TestDisableCoreDumps(t *testing.T) {}
-func TestRoundPage(t *testing.T)        {}
-func TestGetBytes(t *testing.T)         {}
+func TestDestroyAll(t *testing.T) {
+	b := New(16)
+	c := New(16)
+
+	b.Buffer = []byte("yellow submarine")
+	c.Buffer = []byte("yellow submarine")
+
+	DestroyAll()
+}
+
+func TestWipeBytes(t *testing.T) {
+	b := []byte("yellow submarine")
+	WipeBytes(b)
+	if !bytes.Equal(b, make([]byte, 16)) {
+		t.Error("bytes not wiped; b =", b)
+	}
+}
+
+func TestDisableCoreDumps(t *testing.T) {
+	DisableCoreDumps()
+}
+
+func TestRoundPage(t *testing.T) {
+	if _roundToPageSize(pageSize) != pageSize {
+		t.Error("incorrect rounding;", _roundToPageSize(pageSize))
+	}
+
+	if _roundToPageSize(pageSize+1) != 2*pageSize {
+		t.Error("incorrect rounding;", _roundToPageSize(pageSize+1))
+	}
+}
+
+func TestGetBytes(t *testing.T) {
+	b := []byte("yellow submarine")
+
+	ptr := unsafe.Pointer(&b[0])
+	length := len(b)
+	bBytes := _getBytes(uintptr(ptr), length, length)
+
+	copy(bBytes, []byte("fellow submarine"))
+
+	if !bytes.Equal(b, bBytes) {
+		t.Error("pointer does not describe actual memory")
+	}
+}
