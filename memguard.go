@@ -1,6 +1,7 @@
 package memguard
 
 import (
+	"bytes"
 	"crypto/rand"
 	"os"
 	"os/signal"
@@ -22,7 +23,7 @@ var (
 type LockedBuffer struct {
 	Buffer []byte // The buffer that holds the secure data.
 
-	//canary []byte // A slice that holds the canary we set.
+	canary []byte // A slice that holds the canary we set.
 	memory []byte // A slice that holds all related memory.
 }
 
@@ -39,7 +40,7 @@ func New(length int) *LockedBuffer {
 	b := new(LockedBuffer)
 
 	// Round length to pageSize.
-	roundedLength := _roundToPageSize(length)
+	roundedLength := _roundToPageSize(length + 32)
 
 	// Set Total Size with guard pages.
 	totalSize := (2 * pageSize) + roundedLength
@@ -53,6 +54,10 @@ func New(length int) *LockedBuffer {
 	// Make the Guard Pages inaccessible.
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
+
+	// Generate and set the canary.
+	b.canary = _csprng(32)
+	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], b.canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length, length)
@@ -117,6 +122,11 @@ func (b *LockedBuffer) Destroy() {
 
 	// Make all the main slice readable and writable
 	memcall.Protect(b.memory, true, true)
+
+	// Verify the canary.
+	if !bytes.Equal(b.memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], b.canary) {
+		panic("memguard.Destroy(): buffer underflow detected; canary has changed")
+	}
 
 	// Wipe the pages that hold our data
 	WipeBytes(b.memory[pageSize : pageSize+roundedLength])
