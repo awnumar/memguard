@@ -144,6 +144,7 @@ func (b *LockedBuffer) Destroy() {
 	roundedLength := len(b.memory) - (pageSize * 2)
 
 	// Make all the main slice readable and writable.
+	b.AllowReadWrite()
 	memcall.Protect(b.memory, true, true)
 
 	// Verify the canary.
