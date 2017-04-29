@@ -20,7 +20,10 @@ var (
 
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
-	Buffer []byte
+	Buffer []byte // The buffer that holds the secure data.
+
+	//canary []byte // A slice that holds the canary we set.
+	memory []byte // A slice that holds all related memory.
 }
 
 // New creates a new *LockedBuffer and returns it. The
@@ -42,17 +45,20 @@ func New(length int) *LockedBuffer {
 	totalSize := (2 * pageSize) + roundedLength
 
 	// Allocate it all.
-	allData := memcall.Alloc(totalSize)
+	memory := memcall.Alloc(totalSize)
 
 	//Lock the page that will hold our data.
-	memcall.Lock(allData[pageSize : pageSize+roundedLength])
+	memcall.Lock(memory[pageSize : pageSize+roundedLength])
 
 	// Make the Guard Pages inaccessible.
-	memcall.Protect(allData[:pageSize], false, false)
-	memcall.Protect(allData[pageSize+roundedLength:], false, false)
+	memcall.Protect(memory[:pageSize], false, false)
+	memcall.Protect(memory[pageSize+roundedLength:], false, false)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&allData[pageSize+roundedLength-length])), length, length)
+	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length, length)
+
+	// Set memory to all related data so that we can retrieve it when destroying.
+	b.memory = memory
 
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffers = append(allLockedBuffers, b)
@@ -106,20 +112,20 @@ func (b *LockedBuffer) Destroy() {
 		}
 	}
 
-	// Calculate information to describe all of this data.
-	ptr := unsafe.Pointer(uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr(pageSize+_roundToPageSize(len(b.Buffer))) + uintptr(len(b.Buffer)))
-	totalSize := _roundToPageSize(len(b.Buffer)) + (2 * pageSize)
-	allData := _getBytes(uintptr(ptr), totalSize, totalSize)
+	// Get the rounded size of our data
+	roundedLength := len(b.memory) - (pageSize * 2)
 
-	// Make all the main slice readable and writable.
-	memcall.Protect(allData, true, true)
+	// Make all the main slice readable and writable
+	memcall.Protect(b.memory, true, true)
 
-	// Wipe and unlock the actual data.
-	WipeBytes(b.Buffer)
-	memcall.Unlock(b.Buffer)
+	// Wipe the pages that hold our data
+	WipeBytes(b.memory[pageSize : pageSize+roundedLength])
 
-	// Free all of the memory related to this LockedBuffer.
-	memcall.Free(allData)
+	// Unlock the pages that hold our data
+	memcall.Unlock(b.memory[pageSize : pageSize+roundedLength])
+
+	// Free all the main_slice
+	memcall.Free(b.memory)
 
 	// Set b.Buffer to nil.
 	b.Buffer = nil

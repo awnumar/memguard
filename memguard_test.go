@@ -10,7 +10,7 @@ import (
 func TestNew(t *testing.T) {
 	b := New(8)
 	if len(b.Buffer) != 8 || cap(b.Buffer) != 8 {
-		t.Error("length or capacity != required")
+		t.Error("length or capacity != required; len, cap =", len(b.Buffer), cap(b.Buffer))
 	}
 }
 
