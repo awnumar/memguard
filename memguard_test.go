@@ -7,6 +7,18 @@ import (
 	"unsafe"
 )
 
+func TestDestroyAll(t *testing.T) {
+	b := New(16)
+	c := New(16)
+
+	b.Buffer = []byte("yellow submarine")
+	c.Buffer = []byte("yellow submarine")
+
+	fmt.Println(b.Buffer, c.Buffer)
+
+	DestroyAll()
+}
+
 func TestNew(t *testing.T) {
 	b := New(8)
 	if len(b.Buffer) != 8 || cap(b.Buffer) != 8 {
@@ -31,16 +43,6 @@ func TestMove(t *testing.T) {
 	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
 		t.Error("bytes were't copied properly")
 	}
-}
-
-func TestDestroyAll(t *testing.T) {
-	b := New(16)
-	c := New(16)
-
-	b.Buffer = []byte("yellow submarine")
-	c.Buffer = []byte("yellow submarine")
-
-	DestroyAll()
 }
 
 func TestWipeBytes(t *testing.T) {
