@@ -17,13 +17,14 @@ var (
 
 	// Store pointers to all of the LockedBuffers.
 	allLockedBuffers []*LockedBuffer
+
+	// A slice that holds the canary we set.
+	canary = _csprng(32)
 )
 
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
 	Buffer []byte // The buffer that holds the secure data.
-
-	canary []byte // A slice that holds the canary we set.
 	memory []byte // A slice that holds all related memory.
 }
 
@@ -56,8 +57,7 @@ func New(length int) *LockedBuffer {
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
 
 	// Generate and set the canary.
-	b.canary = _csprng(32)
-	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], b.canary)
+	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length, length)
@@ -124,7 +124,7 @@ func (b *LockedBuffer) Destroy() {
 	memcall.Protect(b.memory, true, true)
 
 	// Verify the canary.
-	if !bytes.Equal(b.memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], b.canary) {
+	if !bytes.Equal(b.memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
 		panic("memguard.Destroy(): buffer underflow detected; canary has changed")
 	}
 
