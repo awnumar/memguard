@@ -7,21 +7,12 @@ import (
 	"unsafe"
 )
 
-func TestDestroyAll(t *testing.T) {
-	b := New(16)
-	c := New(16)
-
-	b.Buffer = []byte("yellow submarine")
-	c.Buffer = []byte("yellow submarine")
-
-	DestroyAll()
-}
-
 func TestNew(t *testing.T) {
 	b := New(8)
 	if len(b.Buffer) != 8 || cap(b.Buffer) != 8 {
 		t.Error("length or capacity != required; len, cap =", len(b.Buffer), cap(b.Buffer))
 	}
+	b.Destroy()
 }
 
 func TestNewFromBytes(t *testing.T) {
@@ -29,6 +20,7 @@ func TestNewFromBytes(t *testing.T) {
 	if !bytes.Equal(b.Buffer, []byte("test")) {
 		t.Error("b.Buffer != required")
 	}
+	b.Destroy()
 }
 
 func TestPermissions(t *testing.T) {
@@ -37,6 +29,7 @@ func TestPermissions(t *testing.T) {
 	b.AllowRead()
 	b.AllowWrite()
 	b.Lock()
+	b.Destroy()
 }
 
 func TestMove(t *testing.T) {
@@ -49,6 +42,17 @@ func TestMove(t *testing.T) {
 	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
 		t.Error("bytes were't copied properly")
 	}
+	b.Destroy()
+}
+
+func TestDestroyAll(t *testing.T) {
+	b := New(16)
+	c := New(16)
+
+	b.Copy([]byte("yellow submarine"))
+	c.Copy([]byte("yellow submarine"))
+
+	DestroyAll()
 }
 
 func TestWipeBytes(t *testing.T) {
