@@ -140,10 +140,10 @@ func (b *LockedBuffer) Destroy() {
 		}
 	}
 
-	// Get the rounded size of our data
+	// Get the rounded size of our data.
 	roundedLength := len(b.memory) - (pageSize * 2)
 
-	// Make all the main slice readable and writable
+	// Make all the main slice readable and writable.
 	memcall.Protect(b.memory, true, true)
 
 	// Verify the canary.
@@ -151,13 +151,13 @@ func (b *LockedBuffer) Destroy() {
 		panic("memguard.Destroy(): buffer underflow detected; canary has changed")
 	}
 
-	// Wipe the pages that hold our data
+	// Wipe the pages that hold our data.
 	WipeBytes(b.memory[pageSize : pageSize+roundedLength])
 
-	// Unlock the pages that hold our data
+	// Unlock the pages that hold our data.
 	memcall.Unlock(b.memory[pageSize : pageSize+roundedLength])
 
-	// Free all the main_slice
+	// Free all the main_slice.
 	memcall.Free(b.memory)
 
 	// Set b.Buffer to nil.
