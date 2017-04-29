@@ -14,8 +14,6 @@ func TestDestroyAll(t *testing.T) {
 	b.Buffer = []byte("yellow submarine")
 	c.Buffer = []byte("yellow submarine")
 
-	fmt.Println(b.Buffer, c.Buffer)
-
 	DestroyAll()
 }
 
@@ -31,6 +29,14 @@ func TestNewFromBytes(t *testing.T) {
 	if !bytes.Equal(b.Buffer, []byte("test")) {
 		t.Error("b.Buffer != required")
 	}
+}
+
+func TestPermissions(t *testing.T) {
+	b := New(8)
+	b.AllowReadWrite()
+	b.AllowRead()
+	b.AllowWrite()
+	b.Lock()
 }
 
 func TestMove(t *testing.T) {
