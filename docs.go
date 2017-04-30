@@ -26,8 +26,11 @@ When you're about to exit, call DestroyAll() first. This will wipe and then unlo
 
 In order to handle most exit cases, do the following:
 
-    // In the main function.
-    memguard.CatchInterrupt()
+    // In your main() function.
+    memguard.CatchInterrupt(func() {
+        // Over here put anything you want executing before
+        // program exit. (In case of an interrupt signal.)
+    })
     defer memguard.DestroyAll()
 
     // Anywhere you would terminate.

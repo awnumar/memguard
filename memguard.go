@@ -28,6 +28,10 @@ type LockedBuffer struct {
 	memory []byte // A slice that holds all related memory.
 }
 
+// ExitFunc is passed to CatchInterrupt and is executed by
+// CatchInterrupt before cleaning up memory and exiting.
+type ExitFunc func()
+
 // New creates a new *LockedBuffer and returns it. The
 // LockedBuffer is in an unlocked state. Length
 // must be > zero.
@@ -168,13 +172,15 @@ func DestroyAll() {
 }
 
 // CatchInterrupt starts a goroutine that monitors for
-// interrupt signals and calls Cleanup() before exiting.
-func CatchInterrupt() {
+// interrupt signals. It accepts a function of type ExitFunc
+// and executes that before calling SafeExit(0).
+func CatchInterrupt(f ExitFunc) {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
-		SafeExit(0)
+		<-c         // Wait for signal.
+		f()         // Execute user function.
+		SafeExit(0) // Exit securely.
 	}()
 }
 

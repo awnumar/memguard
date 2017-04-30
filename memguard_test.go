@@ -54,6 +54,12 @@ func TestDestroyAll(t *testing.T) {
 	DestroyAll()
 }
 
+func TestCatchInterrupt(t *testing.T) {
+	CatchInterrupt(func() {
+		return
+	})
+}
+
 func TestWipeBytes(t *testing.T) {
 	b := []byte("yellow submarine")
 	WipeBytes(b)
