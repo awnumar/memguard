@@ -20,6 +20,18 @@ When you do not know the length of the data in advance, you may have to allocate
     password := input() // Some arbitrary input function.
     lockedPassword := memguard.NewFromBytes(password)
 
+If a function that you're using requires an array, simply do:
+
+    key := memguard.NewFromBytes([]byte("secure encryption key"))
+
+    // keyArrayPtr will hold a pointer to the array.
+    // Make sure the size is the same! (21 in our case.)
+    // If you dereference this pointer and assign that
+    // value somewhere, then a copy will be made and placed
+    // in an unprotected memory location. Only every pass
+    // around the pointer instead of the value.
+    keyArrayPtr := (*[21]byte)(unsafe.Pointer(&key[0]))
+
 When you're about to exit, call DestroyAll() first. This will wipe and then unlock all protected data.
 
     memguard.DestroyAll()
