@@ -24,7 +24,12 @@ var (
 
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
-	Buffer []byte // The buffer that holds the secure data.
+	// The buffer that holds the secure data.
+	Buffer []byte
+
+	// Holds the current protection value of Buffer. Possible
+	// values are `ReadWrite`, `ReadOnly`, and `WriteOnly`.
+	State string
 }
 
 // ExitFunc is passed to CatchInterrupt and is executed by
@@ -65,6 +70,9 @@ func New(length int) *LockedBuffer {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length, length)
 
+	// Set the correct protection value to exported State field.
+	b.State = "ReadWrite"
+
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffers = append(allLockedBuffers, b)
 
@@ -86,11 +94,20 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 	return b
 }
 
+// Unlock reverses MakeWriteOnly and MakeReadOnly
+// and sets the buffer to the default access permissions.
+func (b *LockedBuffer) Unlock() {
+	memory := _getAllMemory(b)
+	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
+	b.State = "ReadWrite"
+}
+
 // MakeReadOnly makes the buffer read-only.
 // Anything else triggers a SIGSEGV violation.
 func (b *LockedBuffer) MakeReadOnly() {
 	memory := _getAllMemory(b)
 	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
+	b.State = "ReadOnly"
 }
 
 // MakeWriteOnly makes the buffer write-only.
@@ -98,13 +115,7 @@ func (b *LockedBuffer) MakeReadOnly() {
 func (b *LockedBuffer) MakeWriteOnly() {
 	memory := _getAllMemory(b)
 	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], false, true)
-}
-
-// Unlock reverses MakeWriteOnly and MakeReadOnly
-// and sets the buffer to the default access permissions.
-func (b *LockedBuffer) Unlock() {
-	memory := _getAllMemory(b)
-	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
+	b.State = "WriteOnly"
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,

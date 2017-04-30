@@ -25,9 +25,25 @@ func TestNewFromBytes(t *testing.T) {
 
 func TestPermissions(t *testing.T) {
 	b := New(8)
+	if b.State != "ReadWrite" {
+		t.Error("Unexpected State")
+	}
+
 	b.MakeReadOnly()
+	if b.State != "ReadOnly" {
+		t.Error("Unexpected State")
+	}
+
 	b.MakeWriteOnly()
+	if b.State != "WriteOnly" {
+		t.Error("Unexpected State")
+	}
+
 	b.Unlock()
+	if b.State != "ReadWrite" {
+		t.Error("Unexpected State")
+	}
+
 	b.Destroy()
 }
 
