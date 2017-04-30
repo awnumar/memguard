@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -12,14 +13,17 @@ import (
 )
 
 var (
+	// Generic mutex for access to allLockedBuffers.
+	mutex = &sync.Mutex{}
+
+	// Store pointers to all of the LockedBuffers.
+	allLockedBuffers []*LockedBuffer
+
 	// A slice that holds the canary we set.
 	canary = _csprng(32)
 
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
-
-	// Store pointers to all of the LockedBuffers.
-	allLockedBuffers []*LockedBuffer
 )
 
 // LockedBuffer implements a buffer that stores the data.
@@ -74,7 +78,9 @@ func New(length int) *LockedBuffer {
 	b.State = "ReadWrite"
 
 	// Append this LockedBuffer to allLockedBuffers.
+	mutex.Lock()
 	allLockedBuffers = append(allLockedBuffers, b)
+	mutex.Unlock()
 
 	// Return a pointer to the LockedBuffer.
 	return b
@@ -132,12 +138,14 @@ func (b *LockedBuffer) Move(buf []byte) {
 // values before exiting.
 func (b *LockedBuffer) Destroy() {
 	// Remove this one from global slice.
+	mutex.Lock()
 	for i, v := range allLockedBuffers {
 		if v == b {
 			allLockedBuffers = append(allLockedBuffers[:i], allLockedBuffers[i+1:]...)
 			break
 		}
 	}
+	mutex.Unlock()
 
 	// Get all of the memory related to this LockedBuffer.
 	memory := _getAllMemory(b)
@@ -168,8 +176,12 @@ func (b *LockedBuffer) Destroy() {
 
 // DestroyAll calls Destroy on all created LockedBuffers.
 func DestroyAll() {
+	mutex.Lock()
+	numberOfLockedBuffers := len(allLockedBuffers)
+	mutex.Unlock()
+
 	// Call destroy on each LockedBuffer.
-	for i := 0; i < len(allLockedBuffers); i++ {
+	for i := 0; i < numberOfLockedBuffers; i++ {
 		allLockedBuffers[0].Destroy()
 	}
 }
