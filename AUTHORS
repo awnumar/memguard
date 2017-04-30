@@ -10,8 +10,6 @@ Awn Umar <awn@cryptolosophy.io>
 
 dotcppfile <dotcppfile@gmail.com>
     - Guard pages.
-    - Pointer arithmetic.
-    - Analysing libsodium.
     - Various bug fixes and optimisations.
 
 Joseph Richey <joerichey@google.com>
