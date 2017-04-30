@@ -19,8 +19,8 @@ This library is designed to allow you to easily handle sensitive values in memor
 * Memory is allocated using system calls, thereby bypassing the Go runtime and preventing the GC from messing with it.
 * To prevent buffer overflows and underflows, the secure buffer is sandwiched between two protected guard pages. If these pages are accessed, a SIGSEGV violation is triggered.
 * The secure buffer is prepended with a random canary. If this value changes, the process will panic. This is designed to prevent buffer underflows.
-* All pages between the two guards are locked to prevent them being swapped to disk.
-* The secure buffer can be made read-only so that any attempted changes to it trigger a panic.
+* All pages between the two guards are locked to stop them from being swapped to disk.
+* The secure buffer can be made read or write-only so that any other action triggers a SIGSEGV violation.
 * When freeing, secure memory is wiped.
 * The API includes functions to disable system core dumps and catch signals.
 
