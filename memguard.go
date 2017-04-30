@@ -86,27 +86,22 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 	return b
 }
 
-// AllowRead unlocks the LockedBuffer for reading.
-func (b *LockedBuffer) AllowRead() {
+// MakeReadOnly makes the buffer read-only.
+// Anything else triggers a SIGSEGV violation.
+func (b *LockedBuffer) MakeReadOnly() {
 	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
 }
 
-// AllowWrite unlocks the LockedBuffer for writing.
-func (b *LockedBuffer) AllowWrite() {
+// MakeWriteOnly makes the buffer write-only.
+// Anything else triggers a SIGSEGV violation.
+func (b *LockedBuffer) MakeWriteOnly() {
 	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], false, true)
 }
 
-// AllowReadWrite unlocks the LockedBuffer for reading and
-// writing.
-func (b *LockedBuffer) AllowReadWrite() {
+// Unlock reverses MakeWriteOnly and MakeReadOnly
+// and sets the buffer to the default access permissions.
+func (b *LockedBuffer) Unlock() {
 	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
-}
-
-// Lock locks the LockedBuffer. Subsequent reading or writing
-// attempts will trigger a SIGSEGV access violation and the
-// program will crash.
-func (b *LockedBuffer) Lock() {
-	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], false, false)
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,

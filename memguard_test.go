@@ -25,10 +25,9 @@ func TestNewFromBytes(t *testing.T) {
 
 func TestPermissions(t *testing.T) {
 	b := New(8)
-	b.AllowReadWrite()
-	b.AllowRead()
-	b.AllowWrite()
-	//b.Lock() // Temp.
+	b.MakeReadOnly()
+	b.MakeWriteOnly()
+	b.Unlock()
 	b.Destroy()
 }
 
