@@ -25,7 +25,6 @@ var (
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
 	Buffer []byte // The buffer that holds the secure data.
-	memory []byte // A slice that holds all related memory.
 }
 
 // ExitFunc is passed to CatchInterrupt and is executed by
@@ -66,9 +65,6 @@ func New(length int) *LockedBuffer {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length, length)
 
-	// Set memory to all related data so that we can retrieve it when destroying.
-	b.memory = memory
-
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffers = append(allLockedBuffers, b)
 
@@ -93,19 +89,22 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 // MakeReadOnly makes the buffer read-only.
 // Anything else triggers a SIGSEGV violation.
 func (b *LockedBuffer) MakeReadOnly() {
-	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
+	memory := _getAllMemory(b)
+	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
 }
 
 // MakeWriteOnly makes the buffer write-only.
 // Anything else triggers a SIGSEGV violation.
 func (b *LockedBuffer) MakeWriteOnly() {
-	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], false, true)
+	memory := _getAllMemory(b)
+	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], false, true)
 }
 
 // Unlock reverses MakeWriteOnly and MakeReadOnly
 // and sets the buffer to the default access permissions.
 func (b *LockedBuffer) Unlock() {
-	memcall.Protect(b.memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
+	memory := _getAllMemory(b)
+	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
@@ -139,25 +138,28 @@ func (b *LockedBuffer) Destroy() {
 		}
 	}
 
+	// Get all of the memory related to this
+	memory := _getAllMemory(b)
+
 	// Get the rounded size of our data.
-	roundedLength := len(b.memory) - (pageSize * 2)
+	roundedLength := len(memory) - (pageSize * 2)
 
 	// Make all the main slice readable and writable.
-	memcall.Protect(b.memory, true, true)
+	memcall.Protect(memory, true, true)
 
 	// Verify the canary.
-	if !bytes.Equal(b.memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
+	if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
 		panic("memguard.Destroy(): buffer underflow detected; canary has changed")
 	}
 
 	// Wipe the pages that hold our data.
-	WipeBytes(b.memory[pageSize : pageSize+roundedLength])
+	WipeBytes(memory[pageSize : pageSize+roundedLength])
 
 	// Unlock the pages that hold our data.
-	memcall.Unlock(b.memory[pageSize : pageSize+roundedLength])
+	memcall.Unlock(memory[pageSize : pageSize+roundedLength])
 
 	// Free all the main_slice.
-	memcall.Free(b.memory)
+	memcall.Free(memory)
 
 	// Set b.Buffer to nil.
 	b.Buffer = nil
@@ -208,6 +210,13 @@ func DisableCoreDumps() {
 
 func _roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
+}
+
+func _getAllMemory(b *LockedBuffer) []byte {
+	bufLen, roundedBufLen := len(b.Buffer), _roundToPageSize(len(b.Buffer)+32)
+	memAddr := uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
+	memLen := (pageSize * 2) + roundedBufLen
+	return _getBytes(memAddr, memLen, memLen)
 }
 
 func _getBytes(ptr uintptr, len int, cap int) []byte {
