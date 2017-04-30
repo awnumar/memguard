@@ -29,17 +29,12 @@ func TestPermissions(t *testing.T) {
 		t.Error("Unexpected State")
 	}
 
-	b.MakeReadOnly()
+	b.ReadOnly()
 	if b.State != "ReadOnly" {
 		t.Error("Unexpected State")
 	}
 
-	b.MakeWriteOnly()
-	if b.State != "WriteOnly" {
-		t.Error("Unexpected State")
-	}
-
-	b.Unlock()
+	b.ReadWrite()
 	if b.State != "ReadWrite" {
 		t.Error("Unexpected State")
 	}

@@ -27,8 +27,8 @@ type LockedBuffer struct {
 	// The buffer that holds the secure data.
 	Buffer []byte
 
-	// Holds the current protection value of Buffer. Possible
-	// values are `ReadWrite`, `ReadOnly`, and `WriteOnly`.
+	// Holds the current protection value of Buffer.
+	// Possible values are `ReadWrite` and `ReadOnly`.
 	State string
 }
 
@@ -94,28 +94,20 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 	return b
 }
 
-// Unlock reverses MakeWriteOnly and MakeReadOnly
-// and sets the buffer to the default access permissions.
-func (b *LockedBuffer) Unlock() {
+// ReadWrite makes the buffer readable and writable.
+// This is the default state of new LockedBuffers.
+func (b *LockedBuffer) ReadWrite() {
 	memory := _getAllMemory(b)
 	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
 	b.State = "ReadWrite"
 }
 
-// MakeReadOnly makes the buffer read-only.
+// ReadOnly makes the buffer read-only.
 // Anything else triggers a SIGSEGV violation.
-func (b *LockedBuffer) MakeReadOnly() {
+func (b *LockedBuffer) ReadOnly() {
 	memory := _getAllMemory(b)
 	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
 	b.State = "ReadOnly"
-}
-
-// MakeWriteOnly makes the buffer write-only.
-// Anything else triggers a SIGSEGV violation.
-func (b *LockedBuffer) MakeWriteOnly() {
-	memory := _getAllMemory(b)
-	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], false, true)
-	b.State = "WriteOnly"
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
