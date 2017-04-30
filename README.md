@@ -32,4 +32,6 @@ You request a protected buffer, and MemGuard allocates it as follows:
 
 If the guard pages are accessed, the process will crash with a `SIGSEGV`. If the canary is found to have been edited, the process will panic. If anything goes wrong with protected memory, the process will also panic.
 
+This setup protects against both buffer overflows and underflows, and the swapping of sensitive memory to disk. 
+
 For a complete API reference, refer to [godoc](https://godoc.org/github.com/libeclipse/memguard).
