@@ -1,6 +1,8 @@
 /*
 Package memguard is designed to allow you to easily handle sensitive values in memory.
 
+Regarding concurrency, MemGuard itself is thread-safe but the returned LockedBuffers are not. Feel free to add your own Mutex locks and make them thread-safe in your own applications.
+
     // Declare a protected slice and move bytes into it.
     encryptionKey := memguard.New(32)
     encryptionKey.Move(generateRandomBytes(32))
