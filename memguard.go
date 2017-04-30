@@ -28,6 +28,9 @@ var (
 
 // LockedBuffer implements a buffer that stores the data.
 type LockedBuffer struct {
+	// Mutex for access to this struct.
+	sync.Mutex
+
 	// The buffer that holds the secure data.
 	Buffer []byte
 
@@ -103,6 +106,9 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 // ReadWrite makes the buffer readable and writable.
 // This is the default state of new LockedBuffers.
 func (b *LockedBuffer) ReadWrite() {
+	b.Lock()
+	defer b.Unlock()
+
 	memory := _getAllMemory(b)
 	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
 	b.State = "ReadWrite"
@@ -111,6 +117,9 @@ func (b *LockedBuffer) ReadWrite() {
 // ReadOnly makes the buffer read-only.
 // Anything else triggers a SIGSEGV violation.
 func (b *LockedBuffer) ReadOnly() {
+	b.Lock()
+	defer b.Unlock()
+
 	memory := _getAllMemory(b)
 	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
 	b.State = "ReadOnly"
@@ -120,6 +129,9 @@ func (b *LockedBuffer) ReadOnly() {
 // preserving the original slice. This is insecure and so
 // Move() should be favoured generally.
 func (b *LockedBuffer) Copy(buf []byte) {
+	b.Lock()
+	defer b.Unlock()
+
 	copy(b.Buffer, buf)
 }
 
@@ -146,6 +158,10 @@ func (b *LockedBuffer) Destroy() {
 		}
 	}
 	mutex.Unlock()
+
+	// Attain a Mutex lock to this LockedBuffer first.
+	b.Lock()
+	defer b.Unlock()
 
 	// Get all of the memory related to this LockedBuffer.
 	memory := _getAllMemory(b)

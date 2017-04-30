@@ -12,7 +12,7 @@
 
 ---
 
-This library is designed to allow you to easily handle sensitive values in memory. It supports all major operating systems and is written in pure Go.
+This is a thread-safe package, designed to allow you to easily handle sensitive values in memory. It supports all major operating systems and is written in pure Go.
 
 ## Features
 

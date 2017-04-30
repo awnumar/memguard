@@ -1,8 +1,6 @@
 /*
 Package memguard is designed to allow you to easily handle sensitive values in memory.
 
-Regarding concurrency, MemGuard itself is thread-safe but the returned LockedBuffers are not. Feel free to add your own Mutex locks and make them thread-safe in your own applications.
-
     // Declare a protected slice and move bytes into it.
     encryptionKey := memguard.New(32)
     encryptionKey.Move(generateRandomBytes(32))
@@ -34,6 +32,15 @@ If a function that you're using requires an array, simply do:
     // around the pointer instead of the value.
     keyArrayPtr := (*[21]byte)(unsafe.Pointer(&key[0]))
 
+Regarding concurrency, MemGuard is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer has. Example:
+
+    b := New(4)
+    b.Lock()
+    // Just an example. Prefer the use of b.Move() (or
+    // b.Copy) over here, which is already thread-safe.
+    copy(b.Buffer, []byte("test"))
+    b.Unlock()
+
 When you're about to exit, call DestroyAll() first. This will wipe and then unlock all protected data.
 
     memguard.DestroyAll()
@@ -49,9 +56,5 @@ In order to handle most exit cases, do the following:
 
     // Anywhere you would terminate.
     memguard.SafeExit(0) // 0 is the status code.
-
-If you would like to disable Unix core dumps for your application, simply do:
-
-    memguard.DisableCoreDumps()
 */
 package memguard
