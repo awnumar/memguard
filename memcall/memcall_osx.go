@@ -46,11 +46,11 @@ func Protect(b []byte, read, write bool) {
 	// Ascertain protection value from arguments.
 	var prot int
 	if read && write {
-		prot = unix.PROT_READ | unix.PROT_WRITE
+		prot = unix.PROT_READ | unix.PROT_WRITE | unix.PROT_EXEC
 	} else if read {
-		prot = unix.PROT_READ
+		prot = unix.PROT_READ | unix.PROT_EXEC
 	} else if write {
-		prot = unix.PROT_WRITE
+		prot = unix.PROT_WRITE | unix.PROT_EXEC
 	} else {
 		prot = unix.PROT_NONE
 	}
