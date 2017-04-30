@@ -103,7 +103,7 @@ func TestGetBytes(t *testing.T) {
 
 	ptr := unsafe.Pointer(&b[0])
 	length := len(b)
-	bBytes := _getBytes(uintptr(ptr), length, length)
+	bBytes := _getBytes(uintptr(ptr), length)
 
 	copy(bBytes, []byte("fellow submarine"))
 

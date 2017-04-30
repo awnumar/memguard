@@ -68,7 +68,7 @@ func New(length int) *LockedBuffer {
 	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length, length)
+	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
 	// Set the correct protection value to exported State field.
 	b.State = "ReadWrite"
@@ -87,7 +87,7 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 	// Use New to create a Secured LockedBuffer.
 	b := New(len(buf))
 
-	// Copy the bytes from buf, wiping the afterwards.
+	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
 
 	// Return a pointer to the LockedBuffer.
@@ -149,7 +149,7 @@ func (b *LockedBuffer) Destroy() {
 		}
 	}
 
-	// Get all of the memory related to this
+	// Get all of the memory related to this LockedBuffer.
 	memory := _getAllMemory(b)
 
 	// Get the rounded size of our data.
@@ -219,26 +219,30 @@ func DisableCoreDumps() {
 	memcall.DisableCoreDumps()
 }
 
+// Round a length to a multiple of the system page size.
 func _roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }
 
+// Get a slice that describes all memory related to a LockedBuffer.
 func _getAllMemory(b *LockedBuffer) []byte {
 	bufLen, roundedBufLen := len(b.Buffer), _roundToPageSize(len(b.Buffer)+32)
 	memAddr := uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
 	memLen := (pageSize * 2) + roundedBufLen
-	return _getBytes(memAddr, memLen, memLen)
+	return _getBytes(memAddr, memLen)
 }
 
-func _getBytes(ptr uintptr, len int, cap int) []byte {
+// Convert a pointer and length to a byte slice that describes that memory.
+func _getBytes(ptr uintptr, len int) []byte {
 	var sl = struct {
 		addr uintptr
 		len  int
 		cap  int
-	}{ptr, len, cap}
+	}{ptr, len, len}
 	return *(*[]byte)(unsafe.Pointer(&sl))
 }
 
+// Cryptographically Secure Pseudo-Random Number Generator.
 func _csprng(n int) []byte {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
