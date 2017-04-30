@@ -166,7 +166,12 @@ func (b *LockedBuffer) Destroy() {
 
 // DestroyAll calls Destroy on all created LockedBuffers.
 func DestroyAll() {
-	for _, v := range allLockedBuffers {
+	// Make a copy so that the loop doesn't mess up.
+	toDestroy := make([]*LockedBuffer, len(allLockedBuffers))
+	copy(toDestroy, allLockedBuffers)
+
+	// Call destroy on each LockedBuffer.
+	for _, v := range toDestroy {
 		v.Destroy()
 	}
 }
