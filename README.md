@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://cdn.rawgit.com/libeclipse/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
-  <p align="center">A library that handles sensitive values in memory.</p>
+  <p align="center">A pure Go library that handles sensitive values in memory.</p>
   <p align="center">
     <a href="https://travis-ci.org/libeclipse/memguard"><img src="https://travis-ci.org/libeclipse/memguard.svg?branch=master"></a>
     <a href="https://ci.appveyor.com/project/libeclipse/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/g6cg347cam7lli5m/branch/master?svg=true"></a>
@@ -12,24 +12,22 @@
 
 ---
 
-This library is designed to allow you to easily handle sensitive values in memory. The main functionality is to lock and watch portions of memory and wipe them on exit, but there are some supplementary functions too.
+This library is designed to allow you to easily handle sensitive values in memory. It supports all major operating systems and is written in pure Go.
+
+## Features
+
+* Memory is allocated using system calls, thereby bypassing the Go runtime and preventing the GC from messing with it.
+* To prevent buffer overflows and underflows, the secure buffer is sandwiched between two protected guard pages. If these pages are accessed, a SIGSEGV violation is triggered.
+* The secure buffer is prepended with a random canary. If this value changes, the process will panic. This is designed to prevent buffer underflows.
+* All pages between the two guards are locked to prevent them being swapped to disk.
+* The secure buffer can be made read-only so that any attempted changes to it trigger a panic.
+* When freeing, secure memory is wiped.
+* The API includes functions to disable system core dumps and catch signals.
+
+Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
+
+Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/libeclipse/memguard).
 
 ## Installation
 
-This library can be retrieved with `go get`.
-
 `$ go get github.com/libeclipse/memguard`
-
-## How it works
-
-You request a protected buffer, and MemGuard allocates it as follows:
-
-| Guard Page | Padding bytes | Canary | Requested Buffer | Guard Page |
-|:----------:|:-------------:|:------:|:----------------:|:----------:|
-| No Access | No SWAP | No SWAP | No SWAP | No Access|
-
-If the guard pages are accessed, the process will crash with a `SIGSEGV`. If the canary is found to have been edited, the process will panic. If anything goes wrong with protected memory, the process will also panic.
-
-This setup protects against both buffer overflows and underflows, and the swapping of sensitive memory to disk.
-
-For a complete API reference, refer to [godoc](https://godoc.org/github.com/libeclipse/memguard).
