@@ -2,10 +2,6 @@ package memcall
 
 import "testing"
 
-func TestInit(t *testing.T) {
-	//Init()
-}
-
 func TestCycle(t *testing.T) {
 	buffer := Alloc(32)
 	Protect(buffer, true, true)
