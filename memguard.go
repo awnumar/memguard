@@ -112,15 +112,13 @@ func (b *LockedBuffer) ReadOnly() {
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
 // preserving the original slice. This is insecure and so
-// Move() should be favoured generally. The LockedBuffer
-// should be unlocked first, and relocked afterwards.
+// Move() should be favoured generally.
 func (b *LockedBuffer) Copy(buf []byte) {
 	copy(b.Buffer, buf)
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
-// destroying the original slice. The LockedBuffer should be
-// unlocked first, and relocked afterwards.
+// destroying the original slice.
 func (b *LockedBuffer) Move(buf []byte) {
 	// Copy buf into the LockedBuffer.
 	b.Copy(buf)
