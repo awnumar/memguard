@@ -12,14 +12,14 @@ import (
 )
 
 var (
+	// A slice that holds the canary we set.
+	canary = _csprng(32)
+
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
 
 	// Store pointers to all of the LockedBuffers.
 	allLockedBuffers []*LockedBuffer
-
-	// A slice that holds the canary we set.
-	canary = _csprng(32)
 )
 
 // LockedBuffer implements a buffer that stores the data.
@@ -166,13 +166,9 @@ func (b *LockedBuffer) Destroy() {
 
 // DestroyAll calls Destroy on all created LockedBuffers.
 func DestroyAll() {
-	// Make a copy so that the loop doesn't mess up.
-	toDestroy := make([]*LockedBuffer, len(allLockedBuffers))
-	copy(toDestroy, allLockedBuffers)
-
 	// Call destroy on each LockedBuffer.
-	for _, v := range toDestroy {
-		v.Destroy()
+	for i := 0; i < len(allLockedBuffers); i++ {
+		allLockedBuffers[0].Destroy()
 	}
 }
 

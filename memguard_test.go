@@ -28,7 +28,7 @@ func TestPermissions(t *testing.T) {
 	b.AllowReadWrite()
 	b.AllowRead()
 	b.AllowWrite()
-	b.Lock()
+	//b.Lock() // Temp.
 	b.Destroy()
 }
 
