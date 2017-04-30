@@ -21,3 +21,15 @@ This library is designed to allow you to easily handle sensitive values in memor
 This library can be retrieved with `go get`.
 
 `$ go get github.com/libeclipse/memguard`
+
+## How it works
+
+You request a protected buffer, and MemGuard allocates it as follows:
+
+| Guard Page | Padding bytes | Canary | Requested Buffer | Guard Page |
+|:----------:|:-------------:|:------:|:----------------:|:----------:|
+| No Access | No SWAP | No SWAP | No SWAP | No Access|
+
+If the guard pages are accessed, the process will crash with a `SIGSEGV`. If the canary is found to have been edited, the process will panic. If anything goes wrong with protected memory, the process will also panic.
+
+For a complete API reference, refer to [godoc](https://godoc.org/github.com/libeclipse/memguard).
