@@ -13,14 +13,12 @@ import (
 )
 
 var (
-	// Mutex for the DestroyAll function.
-	destroyAllMutex = &sync.Mutex{}
-
-	// Generic mutex for access to allLockedBuffers.
+	// Store pointers to all of the LockedBuffers.
+	allLockedBuffers      []*LockedBuffer
 	allLockedBuffersMutex = &sync.Mutex{}
 
-	// Store pointers to all of the LockedBuffers.
-	allLockedBuffers []*LockedBuffer
+	// Mutex for the DestroyAll function.
+	destroyAllMutex = &sync.Mutex{}
 
 	// A slice that holds the canary we set.
 	canary = _csprng(32)
@@ -55,22 +53,22 @@ func New(length int) *LockedBuffer {
 		panic("memguard.New(): length must be > zero")
 	}
 
-	// Allocate the new LockedBuffer.
+	// Allocate a new LockedBuffer.
 	b := new(LockedBuffer)
 
-	// Round length to pageSize.
+	// Round length + 32 bytes for the canary to a multiple of the page size..
 	roundedLength := _roundToPageSize(length + 32)
 
-	// Set Total Size with guard pages.
+	// Calculate the total size of memory including the guard pages.
 	totalSize := (2 * pageSize) + roundedLength
 
 	// Allocate it all.
 	memory := memcall.Alloc(totalSize)
 
-	//Lock the page that will hold our data.
+	// Lock the pages that will hold the sensitive data.
 	memcall.Lock(memory[pageSize : pageSize+roundedLength])
 
-	// Make the Guard Pages inaccessible.
+	// Make the guard pages inaccessible.
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
 
@@ -172,10 +170,10 @@ func (b *LockedBuffer) Destroy() {
 		// Get all of the memory related to this LockedBuffer.
 		memory := _getAllMemory(b)
 
-		// Get the rounded size of our data.
+		// Get the total size of all the pages between the guards.
 		roundedLength := len(memory) - (pageSize * 2)
 
-		// Make all the main slice readable and writable.
+		// Make all of the memory readable and writable.
 		memcall.Protect(memory, true, true)
 
 		// Verify the canary.
@@ -189,8 +187,11 @@ func (b *LockedBuffer) Destroy() {
 		// Unlock the pages that hold our data.
 		memcall.Unlock(memory[pageSize : pageSize+roundedLength])
 
-		// Free all the main_slice.
+		// Free all related memory.
 		memcall.Free(memory)
+
+		// Set the State back to an empty string.
+		b.State = ""
 
 		// Set b.Buffer to nil.
 		b.Buffer = nil
@@ -201,6 +202,7 @@ func (b *LockedBuffer) Destroy() {
 func DestroyAll() {
 	// Only allow one routine to DestroyAll at a time.
 	destroyAllMutex.Lock()
+	defer destroyAllMutex.Unlock()
 
 	// Get a Mutex lock on allLockedBuffers, and get the length.
 	allLockedBuffersMutex.Lock()
@@ -212,9 +214,6 @@ func DestroyAll() {
 	for _, v := range toDestroy {
 		v.Destroy()
 	}
-
-	// Unlock the destroyAll mutex.
-	destroyAllMutex.Unlock()
 }
 
 // CatchInterrupt starts a goroutine that monitors for
