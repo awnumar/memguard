@@ -4,8 +4,9 @@ Package memguard is designed to allow you to easily handle sensitive values in m
     // Declare a protected slice and move bytes into it.
     encryptionKey := memguard.New(32)
     encryptionKey.Move(generateRandomBytes(32))
+    Encrypt(encryptionKey.Buffer, plaintext)
 
-Please note that it is important to never use append() or to assign values directly. Only ever copy() values into protected slices.
+Please note that it is important to never use append() or to assign values directly:
 
     b := memguard.New(32)
 
