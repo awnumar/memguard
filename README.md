@@ -30,4 +30,20 @@ Full documentation and a complete overview of the API can be found [here](https:
 
 ## Installation
 
-`$ go get github.com/libeclipse/memguard`
+The simplest way to install the library is to `go get` it:
+
+```
+$ go get github.com/libeclipse/memguard
+```
+
+If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/libeclipse/memguard/releases/latest). Then go ahead and run:
+
+```
+go install -v ./
+```
+
+The releases are cryptographically signed with my public-key, which can be found on my [keybase](https://keybase.io/awn). The fingerprint is `5469 F4B9 688C 3FEE E105 0CA3 FAEE B039 F313 3EA8`. To import it directly into GPG, run:
+
+```
+$ curl https://keybase.io/awn/pgp_keys.asc | gpg --import
+```
