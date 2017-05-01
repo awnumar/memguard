@@ -42,7 +42,7 @@ If you would prefer a signed release that you can verify and manually compile yo
 go install -v ./
 ```
 
-The releases are cryptographically signed with my public-key, which can be found on my [keybase](https://keybase.io/awn). The fingerprint is `5469 F4B9 688C 3FEE E105 0CA3 FAEE B039 F313 3EA8`. To import it directly into GPG, run:
+The releases are cryptographically signed with my public-key, which can be found on my [keybase](https://keybase.io/awn). To import it directly into GPG, run:
 
 ```
 $ curl https://keybase.io/awn/pgp_keys.asc | gpg --import
