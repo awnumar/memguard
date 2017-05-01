@@ -63,6 +63,10 @@ func TestDestroyAll(t *testing.T) {
 	c.Copy([]byte("yellow submarine"))
 
 	DestroyAll()
+
+	if b.Buffer != nil || c.Buffer != nil {
+		t.Error("expected buffers to be nil")
+	}
 }
 
 func TestCatchInterrupt(t *testing.T) {

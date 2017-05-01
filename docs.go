@@ -32,7 +32,7 @@ If a function that you're using requires an array, simply do:
     // around the pointer instead of the value.
     keyArrayPtr := (*[21]byte)(unsafe.Pointer(&key[0]))
 
-Regarding concurrency, MemGuard is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer has. Example:
+Regarding concurrency, the MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer has. For example:
 
     b := New(4)
     b.Lock()

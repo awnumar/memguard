@@ -148,7 +148,8 @@ func (b *LockedBuffer) Move(buf []byte) {
 
 // Destroy is self explanatory. It wipes and destroys the
 // LockedBuffer. This function should be called on all secure
-// values before exiting.
+// values before exiting. If the LockedBuffer has already been
+// destroyed, then nothing happens and the function returns.
 func (b *LockedBuffer) Destroy() {
 	// Remove this one from global slice.
 	var exists bool
@@ -199,6 +200,7 @@ func (b *LockedBuffer) Destroy() {
 }
 
 // DestroyAll calls Destroy on all created LockedBuffers.
+// This function can be called even if no LockedBuffers exist.
 func DestroyAll() {
 	// Only allow one routine to DestroyAll at a time.
 	destroyAllMutex.Lock()
