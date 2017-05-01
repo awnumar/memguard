@@ -1,0 +1,16 @@
+# This is the official list of MemGuard authors for copyright purposes.
+
+# Names should be added to this file as
+#	Name or Organization <email address> contribution
+#		Contribution
+# The email address is not required for organizations.
+
+Awn Umar <awn@cryptolosophy.io>
+    - Main developer.
+
+dotcppfile <dotcppfile@gmail.com>
+    - Implemented guard pages.
+    - Various bug fixes and optimisations.
+
+Joseph Richey <joerichey@google.com>
+    - Suggested using system calls for memory allocation.

@@ -2,66 +2,111 @@ package memguard
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
+	"unsafe"
 )
 
-func TestLocking(t *testing.T) {
-	// Declare two slices to test on.
-	dataOne := []byte("yellow submarine")
-	dataTwo := []byte("yellow submarine")
+func TestNew(t *testing.T) {
+	b := New(8)
+	if len(b.Buffer) != 8 || cap(b.Buffer) != 8 {
+		t.Error("length or capacity != required; len, cap =", len(b.Buffer), cap(b.Buffer))
+	}
+	b.Destroy()
+}
 
-	// Lock them.
-	Protect(dataOne)
-	Protect(dataTwo)
+func TestNewFromBytes(t *testing.T) {
+	b := NewFromBytes([]byte("test"))
+	if !bytes.Equal(b.Buffer, []byte("test")) {
+		t.Error("b.Buffer != required")
+	}
+	b.Destroy()
+}
 
-	// Check if they're zeroed out. They shouldn't be.
-	if bytes.Equal(dataOne, make([]byte, 16)) || bytes.Equal(dataOne, make([]byte, 16)) {
-		t.Error("Ctitical error: memory zeroed out early")
+func TestPermissions(t *testing.T) {
+	b := New(8)
+	if b.State != "ReadWrite" {
+		t.Error("Unexpected State")
 	}
 
-	// Cleanup.
-	Cleanup()
-
-	// Check if data is zeroed out.
-	for _, v := range dataOne {
-		if v != 0 {
-			t.Error("Didn't zero out memory; dataOne =", dataOne)
-		}
+	b.ReadOnly()
+	if b.State != "ReadOnly" {
+		t.Error("Unexpected State")
 	}
-	for _, v := range dataTwo {
-		if v != 0 {
-			t.Error("Didn't zero out memory; dataTwo =", dataTwo)
-		}
+
+	b.ReadWrite()
+	if b.State != "ReadWrite" {
+		t.Error("Unexpected State")
+	}
+
+	b.Destroy()
+}
+
+func TestMove(t *testing.T) {
+	b, buf := New(16), []byte("yellow submarine")
+	b.Move(buf)
+	if !bytes.Equal(buf, make([]byte, 16)) {
+		fmt.Println(buf)
+		t.Error("expected buf to be nil")
+	}
+	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
+		t.Error("bytes were't copied properly")
+	}
+	b.Destroy()
+}
+
+func TestDestroyAll(t *testing.T) {
+	b := New(16)
+	c := New(16)
+
+	b.Copy([]byte("yellow submarine"))
+	c.Copy([]byte("yellow submarine"))
+
+	DestroyAll()
+
+	if b.Buffer != nil || c.Buffer != nil {
+		t.Error("expected buffers to be nil")
 	}
 }
 
-func TestMake(t *testing.T) {
-	b := Make(32)
+func TestCatchInterrupt(t *testing.T) {
+	CatchInterrupt(func() {
+		return
+	})
+}
 
-	// Test if its length is really 32.
-	if len(b) != 32 {
-		t.Error("len(b) != 32")
-	}
-
-	c := Make(32, 64)
-
-	// Test length and capacities.
-	if len(c) != 32 || cap(c) != 64 {
-		t.Error("length or capacity incorrect")
+func TestWipeBytes(t *testing.T) {
+	b := []byte("yellow submarine")
+	WipeBytes(b)
+	if !bytes.Equal(b, make([]byte, 16)) {
+		t.Error("bytes not wiped; b =", b)
 	}
 }
 
-func TestWipe(t *testing.T) {
-	// Declare specimen byte slice.
+func TestDisableCoreDumps(t *testing.T) {
+	DisableCoreDumps()
+}
+
+func TestRoundPage(t *testing.T) {
+	if _roundToPageSize(pageSize) != pageSize {
+		t.Error("incorrect rounding;", _roundToPageSize(pageSize))
+	}
+
+	if _roundToPageSize(pageSize+1) != 2*pageSize {
+		t.Error("incorrect rounding;", _roundToPageSize(pageSize+1))
+	}
+}
+
+func TestGetBytes(t *testing.T) {
 	b := []byte("yellow submarine")
 
-	// Call wipe.
-	Wipe(b)
+	ptr := unsafe.Pointer(&b[0])
+	length := len(b)
+	bBytes := _getBytes(uintptr(ptr), length)
 
-	// Check if it's wiped.
-	for _, v := range b {
-		if v != 0 {
-			t.Error("Didn't zero out memory; b =", b)
-		}
+	copy(bBytes, []byte("fellow submarine"))
+
+	if !bytes.Equal(b, bBytes) {
+		t.Error("pointer does not describe actual memory")
 	}
 }
