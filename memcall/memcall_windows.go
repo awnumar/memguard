@@ -47,7 +47,7 @@ func Free(b []byte) {
 	}
 }
 
-// Protect modifies the PROT_ flags for a specified byte slice.
+// Protect modifies the Memory Protection Constants for a specified byte slice.
 func Protect(b []byte, read, write bool) {
 	// Ascertain protection value from arguments.
 	var prot int

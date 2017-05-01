@@ -27,12 +27,13 @@ var (
 	pageSize = os.Getpagesize()
 )
 
-// LockedBuffer implements a buffer that stores the data.
+// LockedBuffer implements a structure that holds protected values.
 type LockedBuffer struct {
-	// Mutex for access to this struct.
+	// Exposed mutex for implementing thread-safety
+	// both within and outside of the API.
 	sync.Mutex
 
-	// The buffer that holds the secure data.
+	// Buffer holds the secure values themselves.
 	Buffer []byte
 
 	// Holds the current protection value of Buffer.
@@ -40,13 +41,16 @@ type LockedBuffer struct {
 	State string
 }
 
-// ExitFunc is passed to CatchInterrupt and is executed by
-// CatchInterrupt before cleaning up memory and exiting.
+/*
+ExitFunc is a function type that takes no arguments and returns
+no values. It is passed to CatchInterrupt which executes it before
+terminating the application securely.
+*/
 type ExitFunc func()
 
 // New creates a new *LockedBuffer and returns it. The
 // LockedBuffer's state is `ReadWrite`. Length
-// must be > zero.
+// must be greater than zero.
 func New(length int) *LockedBuffer {
 	// Panic if length < one.
 	if length < 1 {
@@ -92,7 +96,7 @@ func New(length int) *LockedBuffer {
 
 // NewFromBytes creates a new *LockedBuffer from a byte slice,
 // attempting to destroy the old value before returning. It is
-// not as robust as New(), but sometimes it is necessary.
+// identicle to calling New() followed by Move().
 func NewFromBytes(buf []byte) *LockedBuffer {
 	// Use New to create a Secured LockedBuffer.
 	b := New(len(buf))
@@ -115,8 +119,8 @@ func (b *LockedBuffer) ReadWrite() {
 	b.State = "ReadWrite"
 }
 
-// ReadOnly makes the buffer read-only.
-// Anything else triggers a SIGSEGV violation.
+// ReadOnly makes the buffer read-only. After setting
+// this, any other action will trigger a SIGSEGV violation.
 func (b *LockedBuffer) ReadOnly() {
 	b.Lock()
 	defer b.Unlock()
@@ -127,8 +131,8 @@ func (b *LockedBuffer) ReadOnly() {
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
-// preserving the original slice. This is insecure and so
-// Move() should be favoured generally.
+// preserving the original slice. This is insecure, and so
+// Move() should be favoured unless you have a specific need.
 func (b *LockedBuffer) Copy(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
@@ -137,7 +141,7 @@ func (b *LockedBuffer) Copy(buf []byte) {
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
-// destroying the original slice.
+// wiping the original slice afterwards.
 func (b *LockedBuffer) Move(buf []byte) {
 	// Copy buf into the LockedBuffer.
 	b.Copy(buf)
@@ -146,10 +150,13 @@ func (b *LockedBuffer) Move(buf []byte) {
 	WipeBytes(buf)
 }
 
-// Destroy is self explanatory. It wipes and destroys the
-// LockedBuffer. This function should be called on all secure
-// values before exiting. If the LockedBuffer has already been
-// destroyed, then nothing happens and the function returns.
+/*
+Destroy verifies that everything went well, wipes the Buffer,
+and then unlocks and frees all related memory. This function
+should be called on all LockedBuffers before exiting. If the
+LockedBuffer has already been destroyed, then nothing happens
+and the function returns.
+*/
 func (b *LockedBuffer) Destroy() {
 	// Remove this one from global slice.
 	var exists bool
@@ -199,8 +206,8 @@ func (b *LockedBuffer) Destroy() {
 	}
 }
 
-// DestroyAll calls Destroy on all created LockedBuffers.
-// This function can be called even if no LockedBuffers exist.
+// DestroyAll calls Destroy on all LockedBuffers. This
+// function can be called even if no LockedBuffers exist.
 func DestroyAll() {
 	// Only allow one routine to DestroyAll at a time.
 	destroyAllMutex.Lock()
@@ -218,9 +225,15 @@ func DestroyAll() {
 	}
 }
 
-// CatchInterrupt starts a goroutine that monitors for
-// interrupt signals. It accepts a function of type ExitFunc
-// and executes that before calling SafeExit(0).
+/*
+CatchInterrupt starts a goroutine that monitors for
+interrupt signals. It accepts a function of type ExitFunc
+and executes that before calling SafeExit(0).
+
+	memguard.CatchInterrupt(func() {
+		fmt.Println("Interrupt signal received. Exiting...")
+	})
+*/
 func CatchInterrupt(f ExitFunc) {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

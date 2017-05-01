@@ -1,61 +1,59 @@
 /*
 Package memguard is designed to allow you to easily handle sensitive values in memory.
 
+The general working cycle is easy to follow:
+
     // Declare a protected slice and move bytes into it.
     encryptionKey := memguard.New(32)
     encryptionKey.Move(generateRandomBytes(32))
+
+    // Use the buffer wherever you need it.
     Encrypt(encryptionKey.Buffer, plaintext)
 
-Please note that it is important to never use append() or to assign values directly:
+    // Destroy it after you're done.
+    encryptionKey.Destroy()
+
+As you'll have noted, the example above does not append or assign the key to the buffer, but rather it uses the built-in API function `Move()`.
 
     b := memguard.New(32)
 
     b.Move([]byte("...")) // Correct.
     b.Copy([]byte("...")) // Less correct; original buffer isn't wiped.
 
-    b = []byte("some secure value")            // WRONG
-    b = append(b, []byte("some secure value")) // WRONG
+    b.Buffer = []byte("some secure value")            // WRONG
+    b.Buffer = append(b, []byte("some secure value")) // WRONG
 
-When you do not know the length of the data in advance, you may have to allocate first and then protect, even though this is not generally the best way of doing things. An example is accepting user input.
+If a function that you're using requires an array, you can cast the Buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
-    password := input() // Some arbitrary input function.
-    lockedPassword := memguard.NewFromBytes(password)
+    key := memguard.NewFromBytes([]byte("yellow submarine"))
 
-If a function that you're using requires an array, simply do:
+    // Make sure that the size of the array matches the size of the Buffer.
+    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer[0]))
 
-    key := memguard.NewFromBytes([]byte("secure encryption key"))
-
-    // keyArrayPtr will hold a pointer to the array.
-    // Make sure the size is the same! (21 in our case.)
-    // If you dereference this pointer and assign that
-    // value somewhere, then a copy will be made and placed
-    // in an unprotected memory location. Only every pass
-    // around the pointer instead of the value.
-    keyArrayPtr := (*[21]byte)(unsafe.Pointer(&key[0]))
-
-Regarding concurrency, the MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer has. For example:
+The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer exposes. Do not use the mutex when calling a function that is part of the MemGuard API. For example:
 
     b := New(4)
     b.Lock()
-    // Just an example. Prefer the use of b.Move() (or
-    // b.Copy) over here, which is already thread-safe.
     copy(b.Buffer, []byte("test"))
     b.Unlock()
 
-When you're about to exit, call DestroyAll() first. This will wipe and then unlock all protected data.
+    c := New(4)
+    c.Lock()
+    c.Copy([]byte("test")) // This will deadlock.
+    c.Unlock()
 
-    memguard.DestroyAll()
+When terminating your application, care should be taken to securely cleanup everything.
 
-In order to handle most exit cases, do the following:
-
-    // In your main() function.
+    // Start a listener that will wait for interrupt signals and catch them.
     memguard.CatchInterrupt(func() {
-        // Over here put anything you want executing before
-        // program exit. (In case of an interrupt signal.)
+        // Over here put anything you want executing before program exit.
+        fmt.Println("Interrupt signal received. Exiting...")
     })
+
+    // Defer a DestroyAll() in your main() function.
     defer memguard.DestroyAll()
 
-    // Anywhere you would terminate.
+    // Use memguard.SafeExit() instead of os.Exit().
     memguard.SafeExit(0) // 0 is the status code.
 */
 package memguard
