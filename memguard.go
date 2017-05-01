@@ -13,8 +13,11 @@ import (
 )
 
 var (
+	// Mutex for the DestroyAll function.
+	destroyAllMutex = &sync.Mutex{}
+
 	// Generic mutex for access to allLockedBuffers.
-	mutex = &sync.Mutex{}
+	allLockedBuffersMutex = &sync.Mutex{}
 
 	// Store pointers to all of the LockedBuffers.
 	allLockedBuffers []*LockedBuffer
@@ -81,9 +84,9 @@ func New(length int) *LockedBuffer {
 	b.State = "ReadWrite"
 
 	// Append this LockedBuffer to allLockedBuffers.
-	mutex.Lock()
+	allLockedBuffersMutex.Lock()
 	allLockedBuffers = append(allLockedBuffers, b)
-	mutex.Unlock()
+	allLockedBuffersMutex.Unlock()
 
 	// Return a pointer to the LockedBuffer.
 	return b
@@ -150,56 +153,68 @@ func (b *LockedBuffer) Move(buf []byte) {
 // values before exiting.
 func (b *LockedBuffer) Destroy() {
 	// Remove this one from global slice.
-	mutex.Lock()
+	var exists bool
+	allLockedBuffersMutex.Lock()
 	for i, v := range allLockedBuffers {
 		if v == b {
 			allLockedBuffers = append(allLockedBuffers[:i], allLockedBuffers[i+1:]...)
+			exists = true
 			break
 		}
 	}
-	mutex.Unlock()
+	allLockedBuffersMutex.Unlock()
 
-	// Attain a Mutex lock to this LockedBuffer first.
-	b.Lock()
-	defer b.Unlock()
+	if exists {
+		// Attain a Mutex lock to this LockedBuffer first.
+		b.Lock()
+		defer b.Unlock()
 
-	// Get all of the memory related to this LockedBuffer.
-	memory := _getAllMemory(b)
+		// Get all of the memory related to this LockedBuffer.
+		memory := _getAllMemory(b)
 
-	// Get the rounded size of our data.
-	roundedLength := len(memory) - (pageSize * 2)
+		// Get the rounded size of our data.
+		roundedLength := len(memory) - (pageSize * 2)
 
-	// Make all the main slice readable and writable.
-	memcall.Protect(memory, true, true)
+		// Make all the main slice readable and writable.
+		memcall.Protect(memory, true, true)
 
-	// Verify the canary.
-	if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
-		panic("memguard.Destroy(): buffer underflow detected; canary has changed")
+		// Verify the canary.
+		if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
+			panic("memguard.Destroy(): buffer underflow detected; canary has changed")
+		}
+
+		// Wipe the pages that hold our data.
+		WipeBytes(memory[pageSize : pageSize+roundedLength])
+
+		// Unlock the pages that hold our data.
+		memcall.Unlock(memory[pageSize : pageSize+roundedLength])
+
+		// Free all the main_slice.
+		memcall.Free(memory)
+
+		// Set b.Buffer to nil.
+		b.Buffer = nil
 	}
-
-	// Wipe the pages that hold our data.
-	WipeBytes(memory[pageSize : pageSize+roundedLength])
-
-	// Unlock the pages that hold our data.
-	memcall.Unlock(memory[pageSize : pageSize+roundedLength])
-
-	// Free all the main_slice.
-	memcall.Free(memory)
-
-	// Set b.Buffer to nil.
-	b.Buffer = nil
 }
 
 // DestroyAll calls Destroy on all created LockedBuffers.
 func DestroyAll() {
-	mutex.Lock()
-	numberOfLockedBuffers := len(allLockedBuffers)
-	mutex.Unlock()
+	// Only allow one routine to DestroyAll at a time.
+	destroyAllMutex.Lock()
+
+	// Get a Mutex lock on allLockedBuffers, and get the length.
+	allLockedBuffersMutex.Lock()
+	toDestroy := make([]*LockedBuffer, len(allLockedBuffers))
+	copy(toDestroy, allLockedBuffers)
+	allLockedBuffersMutex.Unlock()
 
 	// Call destroy on each LockedBuffer.
-	for i := 0; i < numberOfLockedBuffers; i++ {
-		allLockedBuffers[0].Destroy()
+	for _, v := range toDestroy {
+		v.Destroy()
 	}
+
+	// Unlock the destroyAll mutex.
+	destroyAllMutex.Unlock()
 }
 
 // CatchInterrupt starts a goroutine that monitors for
