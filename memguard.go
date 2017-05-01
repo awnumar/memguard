@@ -45,7 +45,7 @@ type LockedBuffer struct {
 type ExitFunc func()
 
 // New creates a new *LockedBuffer and returns it. The
-// LockedBuffer is in an unlocked state. Length
+// LockedBuffer's state is `ReadWrite`. Length
 // must be > zero.
 func New(length int) *LockedBuffer {
 	// Panic if length < one.
