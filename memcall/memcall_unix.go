@@ -15,7 +15,7 @@ func Lock(b []byte) {
 
 	// Call mlock.
 	if err := unix.Mlock(b); err != nil {
-		panic(fmt.Sprintf("memguard.memcall.Lock(): could not aquire lock on %p [Err: %s]", &b[0], err))
+		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p [Err: %s]", &b[0], err))
 	}
 }
 
