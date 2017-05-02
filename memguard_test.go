@@ -26,17 +26,17 @@ func TestNewFromBytes(t *testing.T) {
 
 func TestPermissions(t *testing.T) {
 	b := New(8)
-	if b.State != "ReadWrite" {
+	if b.Permissions != "ReadWrite" {
 		t.Error("Unexpected State")
 	}
 
 	b.ReadOnly()
-	if b.State != "ReadOnly" {
+	if b.Permissions != "ReadOnly" {
 		t.Error("Unexpected State")
 	}
 
 	b.ReadWrite()
-	if b.State != "ReadWrite" {
+	if b.Permissions != "ReadWrite" {
 		t.Error("Unexpected State")
 	}
 
@@ -67,6 +67,27 @@ func TestDestroyAll(t *testing.T) {
 
 	if b.Buffer != nil || c.Buffer != nil {
 		t.Error("expected buffers to be nil")
+	}
+}
+
+func TestDestroyedFlag(t *testing.T) {
+	b := New(4)
+	b.Destroy()
+
+	if err := b.Copy([]byte("test")); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if err := b.Move([]byte("test")); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if err := b.ReadOnly(); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if err := b.ReadWrite(); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
 	}
 }
 

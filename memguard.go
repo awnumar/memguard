@@ -39,9 +39,13 @@ type LockedBuffer struct {
 	// Buffer holds the secure values themselves.
 	Buffer []byte
 
-	// Holds the current protection value of Buffer.
+	// Holds the current permissions of Buffer.
 	// Possible values are `ReadWrite` and `ReadOnly`.
-	State string
+	Permissions string
+
+	// A boolean option indicating whether this
+	// LockedBuffer has been destroyed.
+	Destroyed bool
 }
 
 /*
@@ -86,7 +90,7 @@ func New(length int) *LockedBuffer {
 	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
 	// Set the correct protection value to exported State field.
-	b.State = "ReadWrite"
+	b.Permissions = "ReadWrite"
 
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffersMutex.Lock()
@@ -113,44 +117,65 @@ func NewFromBytes(buf []byte) *LockedBuffer {
 
 // ReadWrite makes the buffer readable and writable.
 // This is the default state of new LockedBuffers.
-func (b *LockedBuffer) ReadWrite() {
+func (b *LockedBuffer) ReadWrite() error {
 	b.Lock()
 	defer b.Unlock()
 
-	memory := _getAllMemory(b)
-	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
-	b.State = "ReadWrite"
+	if !b.Destroyed {
+		memory := _getAllMemory(b)
+		memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
+		b.Permissions = "ReadWrite"
+		return nil
+	}
+
+	return ErrDestroyed
 }
 
 // ReadOnly makes the buffer read-only. After setting
 // this, any other action will trigger a SIGSEGV violation.
-func (b *LockedBuffer) ReadOnly() {
+func (b *LockedBuffer) ReadOnly() error {
 	b.Lock()
 	defer b.Unlock()
 
-	memory := _getAllMemory(b)
-	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
-	b.State = "ReadOnly"
+	if !b.Destroyed {
+		memory := _getAllMemory(b)
+		memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
+		b.Permissions = "ReadOnly"
+		return nil
+	}
+
+	return ErrDestroyed
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
 // preserving the original slice. This is insecure, and so
 // Move() should be favoured unless you have a specific need.
-func (b *LockedBuffer) Copy(buf []byte) {
+func (b *LockedBuffer) Copy(buf []byte) error {
 	b.Lock()
 	defer b.Unlock()
 
-	copy(b.Buffer, buf)
+	if !b.Destroyed {
+		copy(b.Buffer, buf)
+		return nil
+	}
+
+	return ErrDestroyed
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
 // wiping the original slice afterwards.
-func (b *LockedBuffer) Move(buf []byte) {
+func (b *LockedBuffer) Move(buf []byte) error {
 	// Copy buf into the LockedBuffer.
-	b.Copy(buf)
+	err := b.Copy(buf)
+	if err != nil {
+		return err
+	}
 
 	// Wipe the old bytes.
 	WipeBytes(buf)
+
+	// Everything went well.
+	return nil
 }
 
 /*
@@ -201,10 +226,11 @@ func (b *LockedBuffer) Destroy() {
 		// Free all related memory.
 		memcall.Free(memory)
 
-		// Set the State back to an empty string.
-		b.State = ""
+		// Set the metadata appropriately.
+		b.Permissions = ""
+		b.Destroyed = true
 
-		// Set b.Buffer to nil.
+		// Set the buffer to nil.
 		b.Buffer = nil
 	}
 }
