@@ -59,10 +59,10 @@ type ExitFunc func()
 // New creates a new *LockedBuffer and returns it. The
 // LockedBuffer's state is `ReadWrite`. Length
 // must be greater than zero.
-func New(length int) *LockedBuffer {
+func New(length int) (*LockedBuffer, error) {
 	// Panic if length < one.
 	if length < 1 {
-		panic("memguard.New(): length must be > zero")
+		return nil, ErrZeroLength
 	}
 
 	// Allocate a new LockedBuffer.
@@ -99,21 +99,24 @@ func New(length int) *LockedBuffer {
 	allLockedBuffersMutex.Unlock()
 
 	// Return a pointer to the LockedBuffer.
-	return b
+	return b, nil
 }
 
 // NewFromBytes creates a new *LockedBuffer from a byte slice,
 // attempting to destroy the old value before returning. It is
 // identicle to calling New() followed by Move().
-func NewFromBytes(buf []byte) *LockedBuffer {
+func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	// Use New to create a Secured LockedBuffer.
-	b := New(len(buf))
+	b, err := New(len(buf))
+	if err != nil {
+		return nil, err
+	}
 
 	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
 
 	// Return a pointer to the LockedBuffer.
-	return b
+	return b, nil
 }
 
 // ReadWrite makes the buffer readable and writable.
