@@ -91,6 +91,10 @@ func TestConcurrent(t *testing.T) {
 	b := New(4)
 	for i := 0; i < 4; i++ {
 		go func() {
+			CatchInterrupt(func() {
+				return
+			})
+
 			b.ReadOnly()
 			b.ReadWrite()
 

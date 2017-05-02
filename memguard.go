@@ -13,6 +13,9 @@ import (
 )
 
 var (
+	// Are we listening for interrupts?
+	monInterrupt bool
+
 	// Store pointers to all of the LockedBuffers.
 	allLockedBuffers      []*LockedBuffer
 	allLockedBuffersMutex = &sync.Mutex{}
@@ -213,7 +216,7 @@ func DestroyAll() {
 	destroyAllMutex.Lock()
 	defer destroyAllMutex.Unlock()
 
-	// Get a Mutex lock on allLockedBuffers, and get the length.
+	// Get a Mutex lock on allLockedBuffers, and get a copy.
 	allLockedBuffersMutex.Lock()
 	toDestroy := make([]*LockedBuffer, len(allLockedBuffers))
 	copy(toDestroy, allLockedBuffers)
@@ -233,15 +236,21 @@ and executes that before calling SafeExit(0).
 	memguard.CatchInterrupt(func() {
 		fmt.Println("Interrupt signal received. Exiting...")
 	})
+
+If CatchInterrupt is called multiple times, only the first
+call is executed and all subsequent calls are ignored.
 */
 func CatchInterrupt(f ExitFunc) {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c         // Wait for signal.
-		f()         // Execute user function.
-		SafeExit(0) // Exit securely.
-	}()
+	if !monInterrupt {
+		monInterrupt = true
+		c := make(chan os.Signal, 2)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-c         // Wait for signal.
+			f()         // Execute user function.
+			SafeExit(0) // Exit securely.
+		}()
+	}
 }
 
 // SafeExit exits the program with the specified return code,
