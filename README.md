@@ -42,7 +42,7 @@ If you would prefer a signed release that you can verify and manually compile yo
 $ go install -v ./
 ```
 
-The releases are cryptographically signed. My PGP public-key can be found on my [keybase](https://keybase.io/awn). To import it directly into GPG, run:
+The releases are cryptographically signed with my PGP key, which can be found on my [keybase](https://keybase.io/awn). To import it directly into GPG, run:
 
 ```
 $ curl https://keybase.io/awn/pgp_keys.asc | gpg --import
