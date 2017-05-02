@@ -5,7 +5,7 @@ os:
   - osx
 
 script:
-    - go build -v .
+    - go build -race -v .
     - go test -v ./memcall/...
     - go test -v ./
 

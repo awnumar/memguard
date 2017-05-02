@@ -12,7 +12,7 @@ install:
 - go version
 
 build_script:
-- go build -v .
+- go build -race -v .
 
 test_script:
     - go test -v ./memcall/...
