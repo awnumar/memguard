@@ -88,6 +88,14 @@ func TestDestroyAll(t *testing.T) {
 	if b.Buffer != nil || c.Buffer != nil {
 		t.Error("expected buffers to be nil")
 	}
+
+	if b.Permissions != "" || c.Permissions != "" {
+		t.Error("expected permissions to be empty")
+	}
+
+	if !b.Destroyed || !c.Destroyed {
+		t.Error("expected destroy flag to be set")
+	}
 }
 
 func TestDestroyedFlag(t *testing.T) {
