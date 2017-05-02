@@ -6,8 +6,8 @@ os:
 
 script:
     - go build -race -v .
-    - go test -v ./memcall/...
-    - go test -v ./
+    - go test -race -v ./memcall/...
+    - go test -race -v ./
 
 notifications:
   email: false
