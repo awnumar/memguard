@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"bytes"
-	"crypto/rand"
 	"os"
 	"os/signal"
 	"sync"
@@ -24,7 +23,7 @@ var (
 	destroyAllMutex = &sync.Mutex{}
 
 	// A slice that holds the canary we set.
-	canary = _csprng(32)
+	canary = csprng(32)
 
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
@@ -39,9 +38,14 @@ type LockedBuffer struct {
 	// Buffer holds the secure values themselves.
 	Buffer []byte
 
-	// Holds the current protection value of Buffer.
+	// Holds the current permissions of Buffer.
 	// Possible values are `ReadWrite` and `ReadOnly`.
-	State string
+	Permissions string
+
+	// A boolean option indicating whether this
+	// LockedBuffer has been destroyed. No API
+	// calls succeed on a destroyed buffer.
+	Destroyed bool
 }
 
 /*
@@ -54,17 +58,17 @@ type ExitFunc func()
 // New creates a new *LockedBuffer and returns it. The
 // LockedBuffer's state is `ReadWrite`. Length
 // must be greater than zero.
-func New(length int) *LockedBuffer {
+func New(length int) (*LockedBuffer, error) {
 	// Panic if length < one.
 	if length < 1 {
-		panic("memguard.New(): length must be > zero")
+		return nil, ErrZeroLength
 	}
 
 	// Allocate a new LockedBuffer.
 	b := new(LockedBuffer)
 
 	// Round length + 32 bytes for the canary to a multiple of the page size..
-	roundedLength := _roundToPageSize(length + 32)
+	roundedLength := roundToPageSize(length + 32)
 
 	// Calculate the total size of memory including the guard pages.
 	totalSize := (2 * pageSize) + roundedLength
@@ -83,10 +87,10 @@ func New(length int) *LockedBuffer {
 	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
+	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
 	// Set the correct protection value to exported State field.
-	b.State = "ReadWrite"
+	b.Permissions = "ReadWrite"
 
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffersMutex.Lock()
@@ -94,63 +98,87 @@ func New(length int) *LockedBuffer {
 	allLockedBuffersMutex.Unlock()
 
 	// Return a pointer to the LockedBuffer.
-	return b
+	return b, nil
 }
 
 // NewFromBytes creates a new *LockedBuffer from a byte slice,
 // attempting to destroy the old value before returning. It is
 // identicle to calling New() followed by Move().
-func NewFromBytes(buf []byte) *LockedBuffer {
+func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	// Use New to create a Secured LockedBuffer.
-	b := New(len(buf))
+	b, err := New(len(buf))
+	if err != nil {
+		return nil, err
+	}
 
 	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
 
 	// Return a pointer to the LockedBuffer.
-	return b
+	return b, nil
 }
 
 // ReadWrite makes the buffer readable and writable.
 // This is the default state of new LockedBuffers.
-func (b *LockedBuffer) ReadWrite() {
+func (b *LockedBuffer) ReadWrite() error {
 	b.Lock()
 	defer b.Unlock()
 
-	memory := _getAllMemory(b)
-	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
-	b.State = "ReadWrite"
+	if !b.Destroyed {
+		memory := getAllMemory(b)
+		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, true)
+		b.Permissions = "ReadWrite"
+		return nil
+	}
+
+	return ErrDestroyed
 }
 
 // ReadOnly makes the buffer read-only. After setting
 // this, any other action will trigger a SIGSEGV violation.
-func (b *LockedBuffer) ReadOnly() {
+func (b *LockedBuffer) ReadOnly() error {
 	b.Lock()
 	defer b.Unlock()
 
-	memory := _getAllMemory(b)
-	memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
-	b.State = "ReadOnly"
+	if !b.Destroyed {
+		memory := getAllMemory(b)
+		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, false)
+		b.Permissions = "ReadOnly"
+		return nil
+	}
+
+	return ErrDestroyed
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
 // preserving the original slice. This is insecure, and so
 // Move() should be favoured unless you have a specific need.
-func (b *LockedBuffer) Copy(buf []byte) {
+func (b *LockedBuffer) Copy(buf []byte) error {
 	b.Lock()
 	defer b.Unlock()
 
-	copy(b.Buffer, buf)
+	if !b.Destroyed {
+		copy(b.Buffer, buf)
+		return nil
+	}
+
+	return ErrDestroyed
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
 // wiping the original slice afterwards.
-func (b *LockedBuffer) Move(buf []byte) {
+func (b *LockedBuffer) Move(buf []byte) error {
 	// Copy buf into the LockedBuffer.
-	b.Copy(buf)
+	err := b.Copy(buf)
+	if err != nil {
+		return err
+	}
 
 	// Wipe the old bytes.
 	WipeBytes(buf)
+
+	// Everything went well.
+	return nil
 }
 
 /*
@@ -179,7 +207,7 @@ func (b *LockedBuffer) Destroy() {
 		defer b.Unlock()
 
 		// Get all of the memory related to this LockedBuffer.
-		memory := _getAllMemory(b)
+		memory := getAllMemory(b)
 
 		// Get the total size of all the pages between the guards.
 		roundedLength := len(memory) - (pageSize * 2)
@@ -201,10 +229,11 @@ func (b *LockedBuffer) Destroy() {
 		// Free all related memory.
 		memcall.Free(memory)
 
-		// Set the State back to an empty string.
-		b.State = ""
+		// Set the metadata appropriately.
+		b.Permissions = ""
+		b.Destroyed = true
 
-		// Set b.Buffer to nil.
+		// Set the buffer to nil.
 		b.Buffer = nil
 	}
 }
@@ -273,36 +302,4 @@ func WipeBytes(buf []byte) {
 // DisableCoreDumps disables core dumps on Unix systems. On windows it is a no-op.
 func DisableCoreDumps() {
 	memcall.DisableCoreDumps()
-}
-
-// Round a length to a multiple of the system page size.
-func _roundToPageSize(length int) int {
-	return (length + (pageSize - 1)) & (^(pageSize - 1))
-}
-
-// Get a slice that describes all memory related to a LockedBuffer.
-func _getAllMemory(b *LockedBuffer) []byte {
-	bufLen, roundedBufLen := len(b.Buffer), _roundToPageSize(len(b.Buffer)+32)
-	memAddr := uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
-	memLen := (pageSize * 2) + roundedBufLen
-	return _getBytes(memAddr, memLen)
-}
-
-// Convert a pointer and length to a byte slice that describes that memory.
-func _getBytes(ptr uintptr, len int) []byte {
-	var sl = struct {
-		addr uintptr
-		len  int
-		cap  int
-	}{ptr, len, len}
-	return *(*[]byte)(unsafe.Pointer(&sl))
-}
-
-// Cryptographically Secure Pseudo-Random Number Generator.
-func _csprng(n int) []byte {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		panic("memguard._csprng(): could not get random bytes")
-	}
-	return b
 }

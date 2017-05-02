@@ -30,7 +30,7 @@ Full documentation and a complete overview of the API can be found [here](https:
 
 ## Installation
 
-The simplest way to install the library is to `go get` it:
+Although we do recommend using a release, the simplest way to install the library is to `go get` it:
 
 ```
 $ go get github.com/libeclipse/memguard
