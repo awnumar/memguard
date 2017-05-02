@@ -3,6 +3,7 @@ package memguard
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"testing"
 	"unsafe"
 )
@@ -81,6 +82,29 @@ func TestWipeBytes(t *testing.T) {
 	if !bytes.Equal(b, make([]byte, 16)) {
 		t.Error("bytes not wiped; b =", b)
 	}
+}
+
+func TestConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	b := New(4)
+	for i := 0; i < 4; i++ {
+		go func() {
+			b.ReadOnly()
+			b.ReadWrite()
+
+			b.Move([]byte("Test"))
+			b.Copy([]byte("test"))
+
+			WipeBytes(b.Buffer)
+
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+	b.Destroy()
 }
 
 func TestDisableCoreDumps(t *testing.T) {
