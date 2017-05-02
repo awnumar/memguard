@@ -39,7 +39,7 @@ $ go get github.com/libeclipse/memguard
 If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/libeclipse/memguard/releases/latest). Then go ahead and run:
 
 ```
-go install -v ./
+$ go install -v ./
 ```
 
 The releases are cryptographically signed. My PGP public-key can be found on my [keybase](https://keybase.io/awn). To import it directly into GPG, run:
