@@ -157,12 +157,12 @@ func TestDisableCoreDumps(t *testing.T) {
 }
 
 func TestRoundPage(t *testing.T) {
-	if _roundToPageSize(pageSize) != pageSize {
-		t.Error("incorrect rounding;", _roundToPageSize(pageSize))
+	if roundToPageSize(pageSize) != pageSize {
+		t.Error("incorrect rounding;", roundToPageSize(pageSize))
 	}
 
-	if _roundToPageSize(pageSize+1) != 2*pageSize {
-		t.Error("incorrect rounding;", _roundToPageSize(pageSize+1))
+	if roundToPageSize(pageSize+1) != 2*pageSize {
+		t.Error("incorrect rounding;", roundToPageSize(pageSize+1))
 	}
 }
 
@@ -171,7 +171,7 @@ func TestGetBytes(t *testing.T) {
 
 	ptr := unsafe.Pointer(&b[0])
 	length := len(b)
-	bBytes := _getBytes(uintptr(ptr), length)
+	bBytes := getBytes(uintptr(ptr), length)
 
 	copy(bBytes, []byte("fellow submarine"))
 

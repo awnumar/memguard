@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"bytes"
-	"crypto/rand"
 	"os"
 	"os/signal"
 	"sync"
@@ -24,7 +23,7 @@ var (
 	destroyAllMutex = &sync.Mutex{}
 
 	// A slice that holds the canary we set.
-	canary = _csprng(32)
+	canary = csprng(32)
 
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
@@ -69,7 +68,7 @@ func New(length int) (*LockedBuffer, error) {
 	b := new(LockedBuffer)
 
 	// Round length + 32 bytes for the canary to a multiple of the page size..
-	roundedLength := _roundToPageSize(length + 32)
+	roundedLength := roundToPageSize(length + 32)
 
 	// Calculate the total size of memory including the guard pages.
 	totalSize := (2 * pageSize) + roundedLength
@@ -88,7 +87,7 @@ func New(length int) (*LockedBuffer, error) {
 	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.Buffer = _getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
+	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
 	// Set the correct protection value to exported State field.
 	b.Permissions = "ReadWrite"
@@ -126,8 +125,8 @@ func (b *LockedBuffer) ReadWrite() error {
 	defer b.Unlock()
 
 	if !b.Destroyed {
-		memory := _getAllMemory(b)
-		memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, true)
+		memory := getAllMemory(b)
+		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, true)
 		b.Permissions = "ReadWrite"
 		return nil
 	}
@@ -142,8 +141,8 @@ func (b *LockedBuffer) ReadOnly() error {
 	defer b.Unlock()
 
 	if !b.Destroyed {
-		memory := _getAllMemory(b)
-		memcall.Protect(memory[pageSize:pageSize+_roundToPageSize(len(b.Buffer)+32)], true, false)
+		memory := getAllMemory(b)
+		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, false)
 		b.Permissions = "ReadOnly"
 		return nil
 	}
@@ -208,7 +207,7 @@ func (b *LockedBuffer) Destroy() {
 		defer b.Unlock()
 
 		// Get all of the memory related to this LockedBuffer.
-		memory := _getAllMemory(b)
+		memory := getAllMemory(b)
 
 		// Get the total size of all the pages between the guards.
 		roundedLength := len(memory) - (pageSize * 2)
@@ -303,36 +302,4 @@ func WipeBytes(buf []byte) {
 // DisableCoreDumps disables core dumps on Unix systems. On windows it is a no-op.
 func DisableCoreDumps() {
 	memcall.DisableCoreDumps()
-}
-
-// Round a length to a multiple of the system page size.
-func _roundToPageSize(length int) int {
-	return (length + (pageSize - 1)) & (^(pageSize - 1))
-}
-
-// Get a slice that describes all memory related to a LockedBuffer.
-func _getAllMemory(b *LockedBuffer) []byte {
-	bufLen, roundedBufLen := len(b.Buffer), _roundToPageSize(len(b.Buffer)+32)
-	memAddr := uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
-	memLen := (pageSize * 2) + roundedBufLen
-	return _getBytes(memAddr, memLen)
-}
-
-// Convert a pointer and length to a byte slice that describes that memory.
-func _getBytes(ptr uintptr, len int) []byte {
-	var sl = struct {
-		addr uintptr
-		len  int
-		cap  int
-	}{ptr, len, len}
-	return *(*[]byte)(unsafe.Pointer(&sl))
-}
-
-// Cryptographically Secure Pseudo-Random Number Generator.
-func _csprng(n int) []byte {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		panic("memguard._csprng(): could not get random bytes")
-	}
-	return b
 }
