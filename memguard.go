@@ -44,7 +44,8 @@ type LockedBuffer struct {
 	Permissions string
 
 	// A boolean option indicating whether this
-	// LockedBuffer has been destroyed.
+	// LockedBuffer has been destroyed. No API
+	// calls succeed on a destroyed buffer.
 	Destroyed bool
 }
 
