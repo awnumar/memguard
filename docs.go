@@ -20,8 +20,8 @@ As you'll have noted, the example above does not append or assign the key to the
     b.Move([]byte("...")) // Correct.
     b.Copy([]byte("...")) // Less correct; original buffer isn't wiped.
 
-    b.Buffer = []byte("some secure value")            // WRONG
-    b.Buffer = append(b, []byte("some secure value")) // WRONG
+    b.Buffer = []byte("...")                   // WRONG
+    b.Buffer = append(b.Buffer, []byte("...")) // WRONG
 
 If a function that you're using requires an array, you can cast the Buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
