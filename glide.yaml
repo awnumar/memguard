@@ -1,6 +1,6 @@
 package: github.com/libeclipse/memguard
 homepage: https://github.com/libeclipse/memguard
-license: LGPL-3.0
+license: Apache-2.0
 owners:
 - name: Awn
   email: awn@cryptolosophy.io
