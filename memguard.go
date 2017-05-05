@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"os"
 	"os/signal"
 	"sync"
@@ -255,6 +256,49 @@ func DestroyAll() {
 	for _, v := range toDestroy {
 		v.Destroy()
 	}
+}
+
+// Equal compares the contents of two LockedBuffers in constant time.
+func Equal(a, b *LockedBuffer) (bool, error) {
+	a.Lock()
+	defer a.Unlock()
+	b.Lock()
+	defer b.Unlock()
+
+	if !a.Destroyed && !b.Destroyed {
+		if equal := subtle.ConstantTimeCompare(a.Buffer, b.Buffer); equal == 1 {
+			return true, nil
+		}
+
+		return false, nil
+	}
+
+	return false, ErrDestroyed
+}
+
+// Duplicate takes a LockedBuffer as an argument and creates
+// a new one with the same contents and permissions.
+func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	if !b.Destroyed {
+		// Create new LockedBuffer.
+		newBuf, _ := New(len(b.Buffer))
+
+		// Copy bytes into it.
+		newBuf.Copy(b.Buffer)
+
+		// Set permissions accordingly.
+		if b.Permissions == "ReadOnly" {
+			newBuf.ReadOnly()
+		}
+
+		// Return duplicated.
+		return newBuf, nil
+	}
+
+	return nil, ErrDestroyed
 }
 
 /*
