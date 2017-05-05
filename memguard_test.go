@@ -43,7 +43,25 @@ func TestNewFromBytes(t *testing.T) {
 }
 
 func TestEqualTo(t *testing.T) {
+	a, _ := NewFromBytes([]byte("test"))
 
+	equal, err := a.EqualTo([]byte("test"))
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	if !equal {
+		t.Error("should be equal")
+	}
+
+	equal, err = a.EqualTo([]byte("toast"))
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	if equal {
+		t.Error("should not be equal")
+	}
 }
 
 func TestPermissions(t *testing.T) {
