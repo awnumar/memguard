@@ -210,15 +210,15 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 }
 
 // Trim shortens a LockedBuffer to a specified size,
-// preserving permissions and contents. It gives precedence
-// to bytes with the lowest index.
+// preserving permissions and contents. The returned
+// buffer is equal to `b.Buffer[:size]`.
 func (b *LockedBuffer) Trim(size int) error {
 	b.Lock()
 	defer b.Unlock()
 
 	if !b.Destroyed {
 		// Create new LockedBuffer.
-		newBuf, _ := NewFromBytes(b.Buffer)
+		newBuf, _ := NewFromBytes(b.Buffer[:size])
 
 		// Set permissions accordingly.
 		if b.ReadOnly {

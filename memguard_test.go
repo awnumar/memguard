@@ -42,6 +42,10 @@ func TestNewFromBytes(t *testing.T) {
 	c.Destroy()
 }
 
+func TestEqualTo(t *testing.T) {
+
+}
+
 func TestPermissions(t *testing.T) {
 	b, _ := New(8)
 	if b.ReadOnly {
@@ -115,6 +119,26 @@ func TestDestroyedFlag(t *testing.T) {
 	}
 
 	if err := b.MarkAsReadWrite(); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if _, err := b.EqualTo([]byte("test")); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if err := b.Trim(10); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if _, err := Duplicate(b); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if _, err := Equal(b, new(LockedBuffer)); err == nil {
+		t.Error("expected ErrDestroyed; got nil")
+	}
+
+	if _, _, err := Split(b, 10); err == nil {
 		t.Error("expected ErrDestroyed; got nil")
 	}
 }
