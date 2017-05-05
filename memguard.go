@@ -222,7 +222,9 @@ func (b *LockedBuffer) Trim(size int) error {
 
 		// Set permissions accordingly.
 		if b.ReadOnly {
-			newBuf.MarkAsReadOnly()
+			memory := getAllMemory(newBuf)
+			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(newBuf.Buffer)+32)], true, false)
+			newBuf.ReadOnly = true
 		}
 
 		// Destroy old and set b.
@@ -324,7 +326,9 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 
 		// Set permissions accordingly.
 		if b.ReadOnly {
-			newBuf.MarkAsReadOnly()
+			memory := getAllMemory(newBuf)
+			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(newBuf.Buffer)+32)], true, false)
+			newBuf.ReadOnly = true
 		}
 
 		// Return duplicated.
@@ -365,8 +369,13 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 		secondBuf, _ := NewFromBytes(b.Buffer[offset:])
 
 		if b.ReadOnly {
-			firstBuf.MarkAsReadOnly()
-			secondBuf.MarkAsReadOnly()
+			memory := getAllMemory(firstBuf)
+			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(firstBuf.Buffer)+32)], true, false)
+			firstBuf.ReadOnly = true
+
+			memory = getAllMemory(secondBuf)
+			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(secondBuf.Buffer)+32)], true, false)
+			secondBuf.ReadOnly = true
 		}
 
 		b.Destroy()
