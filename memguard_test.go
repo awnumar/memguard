@@ -44,17 +44,17 @@ func TestNewFromBytes(t *testing.T) {
 
 func TestPermissions(t *testing.T) {
 	b, _ := New(8)
-	if b.Permissions != "ReadWrite" {
+	if b.ReadOnly {
 		t.Error("Unexpected State")
 	}
 
-	b.ReadOnly()
-	if b.Permissions != "ReadOnly" {
+	b.MarkAsReadOnly()
+	if !b.ReadOnly {
 		t.Error("Unexpected State")
 	}
 
-	b.ReadWrite()
-	if b.Permissions != "ReadWrite" {
+	b.MarkAsReadWrite()
+	if b.ReadOnly {
 		t.Error("Unexpected State")
 	}
 
@@ -89,7 +89,7 @@ func TestDestroyAll(t *testing.T) {
 		t.Error("expected buffers to be nil")
 	}
 
-	if b.Permissions != "" || c.Permissions != "" {
+	if b.ReadOnly || c.ReadOnly {
 		t.Error("expected permissions to be empty")
 	}
 
@@ -110,11 +110,11 @@ func TestDestroyedFlag(t *testing.T) {
 		t.Error("expected ErrDestroyed; got nil")
 	}
 
-	if err := b.ReadOnly(); err == nil {
+	if err := b.MarkAsReadOnly(); err == nil {
 		t.Error("expected ErrDestroyed; got nil")
 	}
 
-	if err := b.ReadWrite(); err == nil {
+	if err := b.MarkAsReadWrite(); err == nil {
 		t.Error("expected ErrDestroyed; got nil")
 	}
 }
@@ -144,8 +144,8 @@ func TestConcurrent(t *testing.T) {
 				return
 			})
 
-			b.ReadOnly()
-			b.ReadWrite()
+			b.MarkAsReadOnly()
+			b.MarkAsReadWrite()
 
 			b.Move([]byte("Test"))
 			b.Copy([]byte("test"))

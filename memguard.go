@@ -39,11 +39,11 @@ type LockedBuffer struct {
 	// Buffer holds the secure values themselves.
 	Buffer []byte
 
-	// Holds the current permissions of Buffer.
-	// Possible values are `ReadWrite` and `ReadOnly`.
-	Permissions string
+	// A boolean flag indicating if this memory has
+	// been marked as ReadOnly by a call to b.ReadOnly()
+	ReadOnly bool
 
-	// A boolean option indicating whether this
+	// A boolean flag indicating whether this
 	// LockedBuffer has been destroyed. No API
 	// calls succeed on a destroyed buffer.
 	Destroyed bool
@@ -90,9 +90,6 @@ func New(length int) (*LockedBuffer, error) {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
-	// Set the correct protection value to exported State field.
-	b.Permissions = "ReadWrite"
-
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffersMutex.Lock()
 	allLockedBuffers = append(allLockedBuffers, b)
@@ -119,32 +116,48 @@ func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	return b, nil
 }
 
-// ReadWrite makes the buffer readable and writable.
+// EqualTo compares a LockedBuffer to a byte slice in constant time.
+func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	if !b.Destroyed {
+		if equal := subtle.ConstantTimeCompare(b.Buffer, buf); equal == 1 {
+			return true, nil
+		}
+
+		return false, nil
+	}
+
+	return false, ErrDestroyed
+}
+
+// MarkAsReadWrite makes the buffer readable and writable.
 // This is the default state of new LockedBuffers.
-func (b *LockedBuffer) ReadWrite() error {
+func (b *LockedBuffer) MarkAsReadWrite() error {
 	b.Lock()
 	defer b.Unlock()
 
 	if !b.Destroyed {
 		memory := getAllMemory(b)
 		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, true)
-		b.Permissions = "ReadWrite"
+		b.ReadOnly = false
 		return nil
 	}
 
 	return ErrDestroyed
 }
 
-// ReadOnly makes the buffer read-only. After setting
+// MarkAsReadOnly makes the buffer read-only. After setting
 // this, any other action will trigger a SIGSEGV violation.
-func (b *LockedBuffer) ReadOnly() error {
+func (b *LockedBuffer) MarkAsReadOnly() error {
 	b.Lock()
 	defer b.Unlock()
 
 	if !b.Destroyed {
 		memory := getAllMemory(b)
 		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, false)
-		b.Permissions = "ReadOnly"
+		b.ReadOnly = true
 		return nil
 	}
 
@@ -155,11 +168,19 @@ func (b *LockedBuffer) ReadOnly() error {
 // preserving the original slice. This is insecure, and so
 // Move() should be favoured unless you have a specific need.
 func (b *LockedBuffer) Copy(buf []byte) error {
+	return b.CopyAt(buf, 0)
+}
+
+// CopyAt copies bytes from a byte slice into a LockedBuffer,
+// preserving the original slice. This is insecure, and so
+// Move() should be favoured unless you have a specific need.
+// It also takes an offset, and starts copying at that index.
+func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 	b.Lock()
 	defer b.Unlock()
 
 	if !b.Destroyed {
-		copy(b.Buffer, buf)
+		copy(b.Buffer[offset:], buf)
 		return nil
 	}
 
@@ -169,9 +190,15 @@ func (b *LockedBuffer) Copy(buf []byte) error {
 // Move copies bytes from a byte slice into a LockedBuffer,
 // wiping the original slice afterwards.
 func (b *LockedBuffer) Move(buf []byte) error {
+	return b.MoveAt(buf, 0)
+}
+
+// MoveAt copies bytes from a byte slice into a LockedBuffer,
+// wiping the original slice afterwards. It also takes an
+// offset, and starts copying at that index.
+func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 	// Copy buf into the LockedBuffer.
-	err := b.Copy(buf)
-	if err != nil {
+	if err := b.CopyAt(buf, offset); err != nil {
 		return err
 	}
 
@@ -180,6 +207,30 @@ func (b *LockedBuffer) Move(buf []byte) error {
 
 	// Everything went well.
 	return nil
+}
+
+// Trim shortens a LockedBuffer to a specified size,
+// preserving permissions and contents. It gives precedence
+// to bytes with the lowest index.
+func (b *LockedBuffer) Trim(size int) error {
+	b.Lock()
+	defer b.Unlock()
+
+	if !b.Destroyed {
+		// Create new LockedBuffer.
+		newBuf, _ := NewFromBytes(b.Buffer)
+
+		// Set permissions accordingly.
+		if b.ReadOnly {
+			newBuf.MarkAsReadOnly()
+		}
+
+		// Destroy old and set b.
+		b.Destroy()
+		b = newBuf
+	}
+
+	return ErrDestroyed
 }
 
 /*
@@ -231,7 +282,7 @@ func (b *LockedBuffer) Destroy() {
 		memcall.Free(memory)
 
 		// Set the metadata appropriately.
-		b.Permissions = ""
+		b.ReadOnly = false
 		b.Destroyed = true
 
 		// Set the buffer to nil.
@@ -258,7 +309,33 @@ func DestroyAll() {
 	}
 }
 
+// Duplicate takes a LockedBuffer as an argument and creates
+// a new one with the same contents and permissions.
+func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	if !b.Destroyed {
+		// Create new LockedBuffer.
+		newBuf, _ := New(len(b.Buffer))
+
+		// Copy bytes into it.
+		newBuf.Copy(b.Buffer)
+
+		// Set permissions accordingly.
+		if b.ReadOnly {
+			newBuf.MarkAsReadOnly()
+		}
+
+		// Return duplicated.
+		return newBuf, nil
+	}
+
+	return nil, ErrDestroyed
+}
+
 // Equal compares the contents of two LockedBuffers in constant time.
+// The LockedBuffers' respective permissions are ignored.
 func Equal(a, b *LockedBuffer) (bool, error) {
 	a.Lock()
 	defer a.Unlock()
@@ -276,29 +353,28 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	return false, ErrDestroyed
 }
 
-// Duplicate takes a LockedBuffer as an argument and creates
-// a new one with the same contents and permissions.
-func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
+// Split takes a LockedBuffer and splits it at a specified offset.
+// It then returns the two created LockedBuffers. The permissions
+// of the original are copied over, and the original is destroyed.
+func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	b.Lock()
 	defer b.Unlock()
 
 	if !b.Destroyed {
-		// Create new LockedBuffer.
-		newBuf, _ := New(len(b.Buffer))
+		firstBuf, _ := NewFromBytes(b.Buffer[:offset])
+		secondBuf, _ := NewFromBytes(b.Buffer[offset:])
 
-		// Copy bytes into it.
-		newBuf.Copy(b.Buffer)
-
-		// Set permissions accordingly.
-		if b.Permissions == "ReadOnly" {
-			newBuf.ReadOnly()
+		if b.ReadOnly {
+			firstBuf.MarkAsReadOnly()
+			secondBuf.MarkAsReadOnly()
 		}
 
-		// Return duplicated.
-		return newBuf, nil
+		b.Destroy()
+
+		return firstBuf, secondBuf, nil
 	}
 
-	return nil, ErrDestroyed
+	return nil, nil, ErrDestroyed
 }
 
 /*
