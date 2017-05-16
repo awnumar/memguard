@@ -64,7 +64,7 @@ func TestEqualTo(t *testing.T) {
 	}
 }
 
-func TestPermissions(t *testing.T) {
+func TestReadOnly(t *testing.T) {
 	b, _ := New(8)
 	if b.ReadOnly {
 		t.Error("Unexpected State")
@@ -81,6 +81,13 @@ func TestPermissions(t *testing.T) {
 	}
 
 	b.Destroy()
+}
+
+func TestReadOnlyFlag(t *testing.T) {
+	b, _ := New(8)
+	b.MarkAsReadOnly()
+
+	// TODO
 }
 
 func TestMove(t *testing.T) {

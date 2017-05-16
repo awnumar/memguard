@@ -179,12 +179,17 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		copy(b.Buffer[offset:], buf)
-		return nil
+	if b.Destroyed {
+		return ErrDestroyed
 	}
 
-	return ErrDestroyed
+	if b.ReadOnly {
+		return ErrReadOnly
+	}
+
+	copy(b.Buffer[offset:], buf)
+
+	return nil
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
@@ -211,7 +216,8 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 
 // Trim shortens a LockedBuffer to a specified size,
 // preserving permissions and contents. The returned
-// buffer is equal to `b.Buffer[:size]`.
+// buffer is equal to `b.Buffer[:size]`. This can be
+// called on a LockedBuffer that is marked ReadOnly.
 func (b *LockedBuffer) Trim(size int) error {
 	b.Lock()
 	defer b.Unlock()
@@ -360,6 +366,7 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 // Split takes a LockedBuffer and splits it at a specified offset.
 // It then returns the two created LockedBuffers. The permissions
 // of the original are copied over, and the original is destroyed.
+// This can be called with a LockedBuffer that is marked ReadOnly.
 func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	b.Lock()
 	defer b.Unlock()
