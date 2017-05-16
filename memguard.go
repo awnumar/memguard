@@ -62,7 +62,7 @@ type ExitFunc func()
 func New(length int) (*LockedBuffer, error) {
 	// Panic if length < one.
 	if length < 1 {
-		return nil, ErrZeroLength
+		return nil, ErrInvalidLength
 	}
 
 	// Allocate a new LockedBuffer.

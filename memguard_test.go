@@ -19,7 +19,7 @@ func TestNew(t *testing.T) {
 	b.Destroy()
 
 	c, err := New(0)
-	if err == nil {
+	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	c.Destroy()
@@ -36,7 +36,7 @@ func TestNewFromBytes(t *testing.T) {
 	b.Destroy()
 
 	c, err := NewFromBytes([]byte(""))
-	if err == nil {
+	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	c.Destroy()
@@ -124,40 +124,40 @@ func TestDestroyedFlag(t *testing.T) {
 	b, _ := New(4)
 	b.Destroy()
 
-	if err := b.Copy([]byte("test")); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if err := b.Copy([]byte("test")); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if err := b.Move([]byte("test")); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if err := b.Move([]byte("test")); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if err := b.MarkAsReadOnly(); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if err := b.MarkAsReadOnly(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if err := b.MarkAsReadWrite(); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if err := b.MarkAsReadWrite(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if _, err := b.EqualTo([]byte("test")); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if _, err := b.EqualTo([]byte("test")); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if err := b.Trim(10); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if err := b.Trim(10); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if _, err := Duplicate(b); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if _, err := Duplicate(b); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if _, err := Equal(b, new(LockedBuffer)); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if _, err := Equal(b, new(LockedBuffer)); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	if _, _, err := Split(b, 10); err == nil {
-		t.Error("expected ErrDestroyed; got nil")
+	if _, _, err := Split(b, 10); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 }
 

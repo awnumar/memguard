@@ -2,8 +2,8 @@ package memguard
 
 import "errors"
 
-// ErrZeroLength is returned when a LockedBuffer of smaller than one bytes is requested.
-var ErrZeroLength = errors.New("memguard.Err: length of buffer must be non-zero")
+// ErrInvalidLength is returned when a LockedBuffer of smaller than one byte is requested.
+var ErrInvalidLength = errors.New("memguard.Err: length of buffer must be greater than zero")
 
 // ErrDestroyed is returned when a function is called on a destroyed LockedBuffer.
 var ErrDestroyed = errors.New("memguard.Err: buffer is destroyed")
