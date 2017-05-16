@@ -271,7 +271,7 @@ func (b *LockedBuffer) Destroy() {
 
 		// Verify the canary.
 		if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
-			panic("memguard.Destroy(): buffer underflow detected; canary has changed")
+			panic("memguard.Destroy(): buffer underflow detected")
 		}
 
 		// Wipe the pages that hold our data.
