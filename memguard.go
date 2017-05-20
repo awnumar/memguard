@@ -121,15 +121,15 @@ func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		if equal := subtle.ConstantTimeCompare(b.Buffer, buf); equal == 1 {
-			return true, nil
-		}
-
-		return false, nil
+	if b.Destroyed {
+		return false, ErrDestroyed
 	}
 
-	return false, ErrDestroyed
+	if equal := subtle.ConstantTimeCompare(b.Buffer, buf); equal == 1 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // MarkAsReadWrite makes the buffer readable and writable.
@@ -138,14 +138,18 @@ func (b *LockedBuffer) MarkAsReadWrite() error {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		memory := getAllMemory(b)
-		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, true)
-		b.ReadOnly = false
-		return nil
+	if b.Destroyed {
+		return ErrDestroyed
 	}
 
-	return ErrDestroyed
+	// Mark the memory as readable and writable.
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memcall.Protect(memoryToMark, true, true)
+
+	// Tell everyone about the change we made.
+	b.ReadOnly = false
+
+	return nil
 }
 
 // MarkAsReadOnly makes the buffer read-only. After setting
@@ -154,19 +158,24 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		memory := getAllMemory(b)
-		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, false)
-		b.ReadOnly = true
-		return nil
+	if b.Destroyed {
+		return ErrDestroyed
 	}
 
-	return ErrDestroyed
+	// Mark the memory as read-only.
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memcall.Protect(memoryToMark, true, false)
+
+	// Tell everyone about the change we made.
+	b.ReadOnly = true
+
+	return nil
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
 // preserving the original slice. This is insecure, and so
 // Move() should be favoured unless you have a specific need.
+// You should aim to call WipeBytes(buf) as soon as possible.
 func (b *LockedBuffer) Copy(buf []byte) error {
 	return b.CopyAt(buf, 0)
 }
@@ -175,6 +184,7 @@ func (b *LockedBuffer) Copy(buf []byte) error {
 // preserving the original slice. This is insecure, and so
 // Move() should be favoured unless you have a specific need.
 // It also takes an offset, and starts copying at that index.
+// You should aim to call WipeBytes(buf) as soon as possible.
 func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 	b.Lock()
 	defer b.Unlock()
@@ -222,23 +232,25 @@ func (b *LockedBuffer) Trim(size int) error {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		// Create new LockedBuffer.
-		newBuf, _ := NewFromBytes(b.Buffer[:size])
-
-		// Set permissions accordingly.
-		if b.ReadOnly {
-			memory := getAllMemory(newBuf)
-			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(newBuf.Buffer)+32)], true, false)
-			newBuf.ReadOnly = true
-		}
-
-		// Destroy old and set b.
-		b.Destroy()
-		b = newBuf
+	if b.Destroyed {
+		return ErrDestroyed
 	}
 
-	return ErrDestroyed
+	// Create new LockedBuffer.
+	newBuf, _ := NewFromBytes(b.Buffer[:size])
+
+	// Set permissions accordingly.
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		newBuf.ReadOnly = true
+	}
+
+	// Destroy old and set b.
+	b.Destroy()
+	b = newBuf
+
+	return nil
 }
 
 /*
@@ -323,25 +335,25 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		// Create new LockedBuffer.
-		newBuf, _ := New(len(b.Buffer))
-
-		// Copy bytes into it.
-		newBuf.Copy(b.Buffer)
-
-		// Set permissions accordingly.
-		if b.ReadOnly {
-			memory := getAllMemory(newBuf)
-			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(newBuf.Buffer)+32)], true, false)
-			newBuf.ReadOnly = true
-		}
-
-		// Return duplicated.
-		return newBuf, nil
+	if b.Destroyed {
+		return nil, ErrDestroyed
 	}
 
-	return nil, ErrDestroyed
+	// Create new LockedBuffer.
+	newBuf, _ := New(len(b.Buffer))
+
+	// Copy bytes into it.
+	newBuf.Copy(b.Buffer)
+
+	// Set permissions accordingly.
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		newBuf.ReadOnly = true
+	}
+
+	// Return duplicated.
+	return newBuf, nil
 }
 
 // Equal compares the contents of two LockedBuffers in constant time.
@@ -352,15 +364,15 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	if !a.Destroyed && !b.Destroyed {
-		if equal := subtle.ConstantTimeCompare(a.Buffer, b.Buffer); equal == 1 {
-			return true, nil
-		}
-
-		return false, nil
+	if a.Destroyed || b.Destroyed {
+		return false, ErrDestroyed
 	}
 
-	return false, ErrDestroyed
+	if equal := subtle.ConstantTimeCompare(a.Buffer, b.Buffer); equal == 1 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // Split takes a LockedBuffer and splits it at a specified offset.
@@ -371,26 +383,26 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		firstBuf, _ := NewFromBytes(b.Buffer[:offset])
-		secondBuf, _ := NewFromBytes(b.Buffer[offset:])
-
-		if b.ReadOnly {
-			memory := getAllMemory(firstBuf)
-			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(firstBuf.Buffer)+32)], true, false)
-			firstBuf.ReadOnly = true
-
-			memory = getAllMemory(secondBuf)
-			memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(secondBuf.Buffer)+32)], true, false)
-			secondBuf.ReadOnly = true
-		}
-
-		b.Destroy()
-
-		return firstBuf, secondBuf, nil
+	if b.Destroyed {
+		return nil, nil, ErrDestroyed
 	}
 
-	return nil, nil, ErrDestroyed
+	firstBuf, _ := NewFromBytes(b.Buffer[:offset])
+	secondBuf, _ := NewFromBytes(b.Buffer[offset:])
+
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(firstBuf)[pageSize : pageSize+roundToPageSize(len(firstBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		firstBuf.ReadOnly = true
+
+		memoryToMark = getAllMemory(secondBuf)[pageSize : pageSize+roundToPageSize(len(secondBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		secondBuf.ReadOnly = true
+	}
+
+	b.Destroy()
+
+	return firstBuf, secondBuf, nil
 }
 
 /*
