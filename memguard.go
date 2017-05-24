@@ -386,10 +386,6 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 		return nil, ErrDestroyed
 	}
 
-	if b.ReadOnly {
-		return nil, ErrReadOnly
-	}
-
 	// Create new LockedBuffer and copy over the old.
 	newBuf, _ := New(size)
 	newBuf.Copy(b.Buffer[offset : offset+size])
