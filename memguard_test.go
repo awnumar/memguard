@@ -110,6 +110,7 @@ func TestMove(t *testing.T) {
 
 func TestTrim(t *testing.T) {
 	b, _ := NewFromBytes([]byte("xxxxyyyy"))
+	b.MarkAsReadOnly()
 
 	c, err := Trim(b, 2, 4)
 	if err != nil {
@@ -118,6 +119,17 @@ func TestTrim(t *testing.T) {
 
 	if !bytes.Equal(c.Buffer, []byte("xxyy")) {
 		t.Error("unexpected value:", c.Buffer)
+	}
+
+	if !c.ReadOnly {
+		t.Error("unexpected state")
+	}
+
+	c.Destroy()
+	b.Destroy()
+
+	if _, err := Trim(b, 2, 4); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 }
 
