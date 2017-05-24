@@ -62,6 +62,12 @@ func TestEqualTo(t *testing.T) {
 	if equal {
 		t.Error("should not be equal")
 	}
+
+	a.Destroy()
+
+	if equal, err := a.EqualTo([]byte("test")); equal || err != ErrDestroyed {
+		t.Error("unexpected return values with destroyed LockedBuffer")
+	}
 }
 
 func TestReadOnly(t *testing.T) {
@@ -91,6 +97,8 @@ func TestReadOnlyFlag(t *testing.T) {
 	if err != ErrReadOnly {
 		t.Error("expected ErrReadOnly")
 	}
+
+	b.Destroy()
 }
 
 func TestMove(t *testing.T) {
