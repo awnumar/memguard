@@ -224,35 +224,6 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 	return nil
 }
 
-// Trim shortens a LockedBuffer to a specified size,
-// preserving permissions and contents. The returned
-// buffer is equal to `b.Buffer[:size]`. This can be
-// called on a LockedBuffer that is marked ReadOnly.
-func (b *LockedBuffer) Trim(size int) error {
-	b.Lock()
-	defer b.Unlock()
-
-	if b.Destroyed {
-		return ErrDestroyed
-	}
-
-	// Create new LockedBuffer.
-	newBuf, _ := NewFromBytes(b.Buffer[:size])
-
-	// Set permissions accordingly.
-	if b.ReadOnly {
-		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
-		memcall.Protect(memoryToMark, true, false)
-		newBuf.ReadOnly = true
-	}
-
-	// Destroy old and set b.
-	b.Destroy()
-	b = newBuf
-
-	return nil
-}
-
 /*
 Destroy verifies that everything went well, wipes the Buffer,
 and then unlocks and frees all related memory. This function
@@ -375,9 +346,9 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	return false, nil
 }
 
-// Split takes a LockedBuffer and splits it at a specified offset.
-// It then returns the two created LockedBuffers. The permissions
-// of the original are copied over, and the original is destroyed.
+// Split takes a LockedBuffer and splits it at a specified offset,
+// then returning the two created LockedBuffers. The permissions
+// of the original are copied over, and the original is preserved.
 // This can be called with a LockedBuffer that is marked ReadOnly.
 func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	b.Lock()
@@ -400,9 +371,38 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 		secondBuf.ReadOnly = true
 	}
 
-	b.Destroy()
-
 	return firstBuf, secondBuf, nil
+}
+
+// Trim shortens a LockedBuffer to a specified size. The returned
+// `LockedBuffer.Buffer` is equal to `b.Buffer[offset:offset+size]`.
+// This can be called with a LockedBuffer that is marked ReadOnly.
+// The permissions of the original LockedBuffer are also copied over.
+func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.Destroyed {
+		return nil, ErrDestroyed
+	}
+
+	if b.ReadOnly {
+		return nil, ErrReadOnly
+	}
+
+	// Create new LockedBuffer and copy over the old.
+	newBuf, _ := New(size)
+	newBuf.Copy(b.Buffer[offset : offset+size])
+
+	// Copy over permissions.
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		newBuf.ReadOnly = true
+	}
+
+	// Return the new LockedBuffer.
+	return newBuf, nil
 }
 
 /*

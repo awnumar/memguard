@@ -87,7 +87,10 @@ func TestReadOnlyFlag(t *testing.T) {
 	b, _ := New(8)
 	b.MarkAsReadOnly()
 
-	// TODO
+	err := b.Move([]byte("test"))
+	if err != ErrReadOnly {
+		t.Error("expected ErrReadOnly")
+	}
 }
 
 func TestMove(t *testing.T) {
@@ -103,6 +106,19 @@ func TestMove(t *testing.T) {
 		t.Error("bytes were't copied properly")
 	}
 	b.Destroy()
+}
+
+func TestTrim(t *testing.T) {
+	b, _ := NewFromBytes([]byte("xxxxyyyy"))
+
+	c, err := Trim(b, 2, 4)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	if !bytes.Equal(c.Buffer, []byte("xxyy")) {
+		t.Error("unexpected value:", c.Buffer)
+	}
 }
 
 func TestDestroyAll(t *testing.T) {
@@ -147,13 +163,13 @@ func TestDestroyedFlag(t *testing.T) {
 		t.Error("expected ErrDestroyed")
 	}
 
-	if _, err := b.EqualTo([]byte("test")); err != ErrDestroyed {
+	/*if _, err := b.EqualTo([]byte("test")); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed")
 	}
 
-	if err := b.Trim(10); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
+	//if err := b.Trim(10); err != ErrDestroyed {
+	//	t.Error("expected ErrDestroyed")
+	//}
 
 	if _, err := Duplicate(b); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed")
@@ -165,7 +181,7 @@ func TestDestroyedFlag(t *testing.T) {
 
 	if _, _, err := Split(b, 10); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed")
-	}
+	}*/
 }
 
 func TestCatchInterrupt(t *testing.T) {
