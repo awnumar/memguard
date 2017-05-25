@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"os"
 	"os/signal"
 	"sync"
@@ -12,21 +13,8 @@ import (
 )
 
 var (
-	// Are we listening for interrupts?
-	monInterrupt bool
-
-	// Store pointers to all of the LockedBuffers.
-	allLockedBuffers      []*LockedBuffer
-	allLockedBuffersMutex = &sync.Mutex{}
-
-	// Mutex for the DestroyAll function.
-	destroyAllMutex = &sync.Mutex{}
-
 	// A slice that holds the canary we set.
-	canary = csprng(32)
-
-	// Grab the system page size.
-	pageSize = os.Getpagesize()
+	canary = getRandBytes(32)
 )
 
 // LockedBuffer implements a structure that holds protected values.
@@ -38,11 +26,11 @@ type LockedBuffer struct {
 	// Buffer holds the secure values themselves.
 	Buffer []byte
 
-	// Holds the current permissions of Buffer.
-	// Possible values are `ReadWrite` and `ReadOnly`.
-	Permissions string
+	// A boolean flag indicating if this
+	// memory has been marked as read-only.
+	ReadOnly bool
 
-	// A boolean option indicating whether this
+	// A boolean flag indicating whether this
 	// LockedBuffer has been destroyed. No API
 	// calls succeed on a destroyed buffer.
 	Destroyed bool
@@ -61,7 +49,7 @@ type ExitFunc func()
 func New(length int) (*LockedBuffer, error) {
 	// Panic if length < one.
 	if length < 1 {
-		return nil, ErrZeroLength
+		return nil, ErrInvalidLength
 	}
 
 	// Allocate a new LockedBuffer.
@@ -89,9 +77,6 @@ func New(length int) (*LockedBuffer, error) {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
-	// Set the correct protection value to exported State field.
-	b.Permissions = "ReadWrite"
-
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffersMutex.Lock()
 	allLockedBuffers = append(allLockedBuffers, b)
@@ -118,59 +103,144 @@ func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	return b, nil
 }
 
-// ReadWrite makes the buffer readable and writable.
-// This is the default state of new LockedBuffers.
-func (b *LockedBuffer) ReadWrite() error {
-	b.Lock()
-	defer b.Unlock()
-
-	if !b.Destroyed {
-		memory := getAllMemory(b)
-		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, true)
-		b.Permissions = "ReadWrite"
-		return nil
+// GenKey creates a LockedBuffer that is
+// filled with cryptographically-secure
+// pseudo-random bytes instead of zeroes.
+func GenKey(length int) (*LockedBuffer, error) {
+	// Create a new LockedBuffer for the key.
+	key, err := New(length)
+	if err != nil {
+		return nil, err
 	}
 
-	return ErrDestroyed
+	// Fill it with random data.
+	fillRandBytes(key.Buffer)
+
+	// Return the LockedBuffer.
+	return key, nil
 }
 
-// ReadOnly makes the buffer read-only. After setting
-// this, any other action will trigger a SIGSEGV violation.
-func (b *LockedBuffer) ReadOnly() error {
+// EqualTo compares a LockedBuffer to a byte slice in constant time.
+func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		memory := getAllMemory(b)
-		memcall.Protect(memory[pageSize:pageSize+roundToPageSize(len(b.Buffer)+32)], true, false)
-		b.Permissions = "ReadOnly"
-		return nil
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return false, ErrDestroyed
 	}
 
-	return ErrDestroyed
+	// Do a time-constant comparison.
+	if equal := subtle.ConstantTimeCompare(b.Buffer, buf); equal == 1 {
+		// They're equal.
+		return true, nil
+	}
+
+	// They're not equal.
+	return false, nil
+}
+
+// MarkAsReadWrite makes the buffer readable and writable.
+// This is the default state of new LockedBuffers.
+func (b *LockedBuffer) MarkAsReadWrite() error {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return ErrDestroyed
+	}
+
+	// Mark the memory as readable and writable.
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memcall.Protect(memoryToMark, true, true)
+
+	// Tell everyone about the change we made.
+	b.ReadOnly = false
+
+	// Everything went well.
+	return nil
+}
+
+// MarkAsReadOnly makes the buffer read-only. After setting
+// this, any other action will trigger a SIGSEGV violation.
+func (b *LockedBuffer) MarkAsReadOnly() error {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return ErrDestroyed
+	}
+
+	// Mark the memory as read-only.
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memcall.Protect(memoryToMark, true, false)
+
+	// Tell everyone about the change we made.
+	b.ReadOnly = true
+
+	// Everything went well.
+	return nil
 }
 
 // Copy copies bytes from a byte slice into a LockedBuffer,
 // preserving the original slice. This is insecure, and so
 // Move() should be favoured unless you have a specific need.
+// You should aim to call WipeBytes(buf) as soon as possible.
 func (b *LockedBuffer) Copy(buf []byte) error {
+	// Just call CopyAt with a zero offset.
+	return b.CopyAt(buf, 0)
+}
+
+// CopyAt copies bytes from a byte slice into a LockedBuffer,
+// preserving the original slice. This is insecure, and so
+// Move() should be favoured unless you have a specific need.
+// It also takes an offset, and starts copying at that index.
+// You should aim to call WipeBytes(buf) as soon as possible.
+func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
-	if !b.Destroyed {
-		copy(b.Buffer, buf)
-		return nil
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return ErrDestroyed
 	}
 
-	return ErrDestroyed
+	// Check if it's marked as ReadOnly.
+	if b.ReadOnly {
+		return ErrReadOnly
+	}
+
+	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
+	if len(b.Buffer[offset:]) > len(buf) {
+		subtle.ConstantTimeCopy(1, b.Buffer[offset:len(buf)], buf)
+	} else if len(b.Buffer[offset:]) < len(buf) {
+		subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf[:len(b.Buffer[offset:])])
+	} else {
+		subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf)
+	}
+
+	return nil
 }
 
 // Move copies bytes from a byte slice into a LockedBuffer,
 // wiping the original slice afterwards.
 func (b *LockedBuffer) Move(buf []byte) error {
+	// Just call MoveAt with a zero offset.
+	return b.MoveAt(buf, 0)
+}
+
+// MoveAt copies bytes from a byte slice into a LockedBuffer,
+// wiping the original slice afterwards. It also takes an
+// offset, and starts copying at that index.
+func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 	// Copy buf into the LockedBuffer.
-	err := b.Copy(buf)
-	if err != nil {
+	if err := b.CopyAt(buf, offset); err != nil {
 		return err
 	}
 
@@ -212,13 +282,13 @@ func (b *LockedBuffer) Destroy() {
 		// Get the total size of all the pages between the guards.
 		roundedLength := len(memory) - (pageSize * 2)
 
-		// Make all of the memory readable and writable.
-		memcall.Protect(memory, true, true)
-
 		// Verify the canary.
 		if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
-			panic("memguard.Destroy(): buffer underflow detected; canary has changed")
+			panic("memguard.Destroy(): buffer underflow detected")
 		}
+
+		// Make all of the memory readable and writable.
+		memcall.Protect(memory, true, true)
 
 		// Wipe the pages that hold our data.
 		WipeBytes(memory[pageSize : pageSize+roundedLength])
@@ -230,7 +300,7 @@ func (b *LockedBuffer) Destroy() {
 		memcall.Free(memory)
 
 		// Set the metadata appropriately.
-		b.Permissions = ""
+		b.ReadOnly = false
 		b.Destroyed = true
 
 		// Set the buffer to nil.
@@ -257,6 +327,136 @@ func DestroyAll() {
 	}
 }
 
+// Duplicate takes a LockedBuffer as an argument and creates
+// a new one with the same contents and permissions. The
+// original LockedBuffer is preserved.
+func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return nil, ErrDestroyed
+	}
+
+	// Create new LockedBuffer.
+	newBuf, _ := New(len(b.Buffer))
+
+	// Copy bytes into it.
+	newBuf.Copy(b.Buffer)
+
+	// Set permissions accordingly.
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		newBuf.ReadOnly = true
+	}
+
+	// Return duplicated.
+	return newBuf, nil
+}
+
+// Equal compares the contents of two LockedBuffers in constant time.
+// The LockedBuffers' respective permissions are ignored.
+func Equal(a, b *LockedBuffer) (bool, error) {
+	// Get a mutex lock on the LockedBuffers.
+	a.Lock()
+	b.Lock()
+	defer a.Unlock()
+	defer b.Unlock()
+
+	// Check if either are destroyed.
+	if a.Destroyed || b.Destroyed {
+		return false, ErrDestroyed
+	}
+
+	// Do a time-constant comparison on the two buffers.
+	if equal := subtle.ConstantTimeCompare(a.Buffer, b.Buffer); equal == 1 {
+		// They're equal.
+		return true, nil
+	}
+
+	// They're not equal.
+	return false, nil
+}
+
+// Split takes a LockedBuffer and splits it at a specified offset,
+// then returning the two created LockedBuffers. The permissions
+// of the original are copied over, and the original is preserved.
+// This can be called with a LockedBuffer that is marked ReadOnly.
+func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return nil, nil, ErrDestroyed
+	}
+
+	// Create two new LockedBuffers.
+	firstBuf, err := New(len(b.Buffer[:offset]))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secondBuf, err := New(len(b.Buffer[offset:]))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Copy the values into them.
+	firstBuf.Copy(b.Buffer[:offset])
+	secondBuf.Copy(b.Buffer[offset:])
+
+	// Copy over permissions.
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(firstBuf)[pageSize : pageSize+roundToPageSize(len(firstBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		firstBuf.ReadOnly = true
+
+		memoryToMark = getAllMemory(secondBuf)[pageSize : pageSize+roundToPageSize(len(secondBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		secondBuf.ReadOnly = true
+	}
+
+	// Return the new LockedBuffers.
+	return firstBuf, secondBuf, nil
+}
+
+// Trim shortens a LockedBuffer to a specified size. The returned
+// `LockedBuffer.Buffer` is equal to `b.Buffer[offset:offset+size]`.
+// This can be called with a LockedBuffer that is marked ReadOnly.
+// The permissions of the original LockedBuffer are also copied over.
+func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return nil, ErrDestroyed
+	}
+
+	// Create new LockedBuffer and copy over the old.
+	newBuf, err := New(size)
+	if err != nil {
+		return nil, err
+	}
+	newBuf.Copy(b.Buffer[offset : offset+size])
+
+	// Copy over permissions.
+	if b.ReadOnly {
+		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
+		memcall.Protect(memoryToMark, true, false)
+		newBuf.ReadOnly = true
+	}
+
+	// Return the new LockedBuffer.
+	return newBuf, nil
+}
+
 /*
 CatchInterrupt starts a goroutine that monitors for
 interrupt signals. It accepts a function of type ExitFunc
@@ -270,10 +470,18 @@ If CatchInterrupt is called multiple times, only the first
 call is executed and all subsequent calls are ignored.
 */
 func CatchInterrupt(f ExitFunc) {
+	// Only do this if it hasn't been done before.
 	if !monInterrupt {
+		// We've now done this. Don't do it again.
 		monInterrupt = true
+
+		// Create a channel to listen on.
 		c := make(chan os.Signal, 2)
+
+		// Notify the channel if we receive a signal.
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+		// Start a goroutine to listen on the channel.
 		go func() {
 			<-c         // Wait for signal.
 			f()         // Execute user function.
@@ -292,9 +500,11 @@ func SafeExit(c int) {
 	os.Exit(c)
 }
 
-// WipeBytes zeroes out a byte slice.
+// WipeBytes zeroes out a byte slice..
 func WipeBytes(buf []byte) {
+	// Iterate over the slice...
 	for i := 0; i < len(buf); i++ {
+		// ... setting each element to zero.
 		buf[i] = byte(0)
 	}
 }
