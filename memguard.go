@@ -85,7 +85,7 @@ func New(length int) (*LockedBuffer, error) {
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
 
 	// Generate and set the canary.
-	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
+	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
@@ -197,7 +197,7 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 		return ErrReadOnly
 	}
 
-	copy(b.Buffer[offset:], buf)
+	subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf[:len(b.Buffer[offset:])])
 
 	return nil
 }

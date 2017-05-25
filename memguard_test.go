@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 	"testing"
 	"unsafe"
@@ -103,11 +102,10 @@ func TestReadOnlyFlag(t *testing.T) {
 
 func TestMove(t *testing.T) {
 	b, _ := New(16)
-	buf := []byte("yellow submarine")
+	buf := []byte("yellow submarine TEST")
 
 	b.Move(buf)
-	if !bytes.Equal(buf, make([]byte, 16)) {
-		fmt.Println(buf)
+	if !bytes.Equal(buf, make([]byte, 21)) {
 		t.Error("expected buf to be nil")
 	}
 	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
