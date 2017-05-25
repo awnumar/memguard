@@ -72,7 +72,7 @@ func New(length int) (*LockedBuffer, error) {
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
 
 	// Generate and set the canary.
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
+	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
@@ -483,18 +483,9 @@ func SafeExit(c int) {
 	os.Exit(c)
 }
 
-// WipeBytes performs two passes over a buffer. The
-// first pass overwrites each element with random data,
-// and the second pass then sets each element to zero.
-// The result is effectively a zeroed out buffer.
+// WipeBytes zeroes out a byte slice..
 func WipeBytes(buf []byte) {
 	// Iterate over the slice...
-	for i := 0; i < len(buf); i++ {
-		// ... setting each element to a random value.
-		buf[i] = csprng(1)[0]
-	}
-
-	// Iterate over it again...
 	for i := 0; i < len(buf); i++ {
 		// ... setting each element to zero.
 		buf[i] = byte(0)
