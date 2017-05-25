@@ -280,13 +280,13 @@ func (b *LockedBuffer) Destroy() {
 		// Get the total size of all the pages between the guards.
 		roundedLength := len(memory) - (pageSize * 2)
 
-		// Make all of the memory readable and writable.
-		memcall.Protect(memory, true, true)
-
 		// Verify the canary.
 		if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
 			panic("memguard.Destroy(): buffer underflow detected")
 		}
+
+		// Make all of the memory readable and writable.
+		memcall.Protect(memory, true, true)
 
 		// Wipe the pages that hold our data.
 		WipeBytes(memory[pageSize : pageSize+roundedLength])

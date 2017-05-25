@@ -21,7 +21,7 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 * The secure buffer is prepended with a random canary. If this value changes, the process will panic. This is designed to prevent buffer underflows.
 * All pages between the two guards are locked to stop them from being swapped to disk.
 * The secure buffer can be made read-only so that any other action triggers a SIGSEGV violation.
-* When freeing, secure memory is wiped.
+* When freeing, secure memory is overwritten with random values and then zeroed out.
 * The API also includes functions for time-constant copying and comparison, disabling system core dumps, and catching signals.
 
 Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
