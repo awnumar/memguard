@@ -86,18 +86,14 @@ func TestReadOnly(t *testing.T) {
 	}
 
 	b.Destroy()
-}
 
-func TestReadOnlyFlag(t *testing.T) {
-	b, _ := New(8)
-	b.MarkAsReadOnly()
-
-	err := b.Move([]byte("test"))
-	if err != ErrReadOnly {
-		t.Error("expected ErrReadOnly")
+	if err := b.MarkAsReadOnly(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 
-	b.Destroy()
+	if err := b.MarkAsReadWrite(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
 }
 
 func TestMove(t *testing.T) {
@@ -111,7 +107,19 @@ func TestMove(t *testing.T) {
 	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
 		t.Error("bytes were't copied properly")
 	}
+
+	b.MarkAsReadOnly()
+
+	err := b.Move([]byte("test"))
+	if err != ErrReadOnly {
+		t.Error("expected ErrReadOnly")
+	}
+
 	b.Destroy()
+
+	if err := b.Move([]byte("test")); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
 }
 
 func TestTrim(t *testing.T) {
@@ -159,47 +167,6 @@ func TestDestroyAll(t *testing.T) {
 	if !b.Destroyed || !c.Destroyed {
 		t.Error("expected destroy flag to be set")
 	}
-}
-
-func TestDestroyedFlag(t *testing.T) {
-	b, _ := New(4)
-	b.Destroy()
-
-	if err := b.Copy([]byte("test")); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	if err := b.Move([]byte("test")); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	if err := b.MarkAsReadOnly(); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	if err := b.MarkAsReadWrite(); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	/*if _, err := b.EqualTo([]byte("test")); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	//if err := b.Trim(10); err != ErrDestroyed {
-	//	t.Error("expected ErrDestroyed")
-	//}
-
-	if _, err := Duplicate(b); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	if _, err := Equal(b, new(LockedBuffer)); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-
-	if _, _, err := Split(b, 10); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}*/
 }
 
 func TestCatchInterrupt(t *testing.T) {
