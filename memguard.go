@@ -118,26 +118,33 @@ func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 
 // EqualTo compares a LockedBuffer to a byte slice in constant time.
 func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return false, ErrDestroyed
 	}
 
+	// Do a time-constant comparison.
 	if equal := subtle.ConstantTimeCompare(b.Buffer, buf); equal == 1 {
+		// They're equal.
 		return true, nil
 	}
 
+	// They're not equal.
 	return false, nil
 }
 
 // MarkAsReadWrite makes the buffer readable and writable.
 // This is the default state of new LockedBuffers.
 func (b *LockedBuffer) MarkAsReadWrite() error {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return ErrDestroyed
 	}
@@ -149,15 +156,18 @@ func (b *LockedBuffer) MarkAsReadWrite() error {
 	// Tell everyone about the change we made.
 	b.ReadOnly = false
 
+	// Everything went well.
 	return nil
 }
 
 // MarkAsReadOnly makes the buffer read-only. After setting
 // this, any other action will trigger a SIGSEGV violation.
 func (b *LockedBuffer) MarkAsReadOnly() error {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return ErrDestroyed
 	}
@@ -169,6 +179,7 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 	// Tell everyone about the change we made.
 	b.ReadOnly = true
 
+	// Everything went well.
 	return nil
 }
 
@@ -177,6 +188,7 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 // Move() should be favoured unless you have a specific need.
 // You should aim to call WipeBytes(buf) as soon as possible.
 func (b *LockedBuffer) Copy(buf []byte) error {
+	// Just call CopyAt with a zero offset.
 	return b.CopyAt(buf, 0)
 }
 
@@ -186,15 +198,27 @@ func (b *LockedBuffer) Copy(buf []byte) error {
 // It also takes an offset, and starts copying at that index.
 // You should aim to call WipeBytes(buf) as soon as possible.
 func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return ErrDestroyed
 	}
 
+	// Check if it's marked as ReadOnly.
 	if b.ReadOnly {
 		return ErrReadOnly
+	}
+
+	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
+	if len(b.Buffer[offset:]) > len(buf) {
+
+	} else if len(b.Buffer[offset:]) < len(buf) {
+
+	} else {
+
 	}
 
 	subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf[:len(b.Buffer[offset:])])
@@ -205,6 +229,7 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 // Move copies bytes from a byte slice into a LockedBuffer,
 // wiping the original slice afterwards.
 func (b *LockedBuffer) Move(buf []byte) error {
+	// Just call MoveAt with a zero offset.
 	return b.MoveAt(buf, 0)
 }
 
@@ -303,9 +328,11 @@ func DestroyAll() {
 // Duplicate takes a LockedBuffer as an argument and creates
 // a new one with the same contents and permissions.
 func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return nil, ErrDestroyed
 	}
@@ -330,19 +357,24 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 // Equal compares the contents of two LockedBuffers in constant time.
 // The LockedBuffers' respective permissions are ignored.
 func Equal(a, b *LockedBuffer) (bool, error) {
+	// Get a mutex lock on the LockedBuffers.
 	a.Lock()
-	defer a.Unlock()
 	b.Lock()
+	defer a.Unlock()
 	defer b.Unlock()
 
+	// Check if either are destroyed.
 	if a.Destroyed || b.Destroyed {
 		return false, ErrDestroyed
 	}
 
+	// Do a time-constant comparison on the two buffers.
 	if equal := subtle.ConstantTimeCompare(a.Buffer, b.Buffer); equal == 1 {
+		// They're equal.
 		return true, nil
 	}
 
+	// They're not equal.
 	return false, nil
 }
 
@@ -351,16 +383,31 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 // of the original are copied over, and the original is preserved.
 // This can be called with a LockedBuffer that is marked ReadOnly.
 func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return nil, nil, ErrDestroyed
 	}
 
-	firstBuf, _ := NewFromBytes(b.Buffer[:offset])
-	secondBuf, _ := NewFromBytes(b.Buffer[offset:])
+	// Create two new LockedBuffers.
+	firstBuf, err := New(len(b.Buffer[:offset]))
+	if err != nil {
+		return nil, nil, err
+	}
 
+	secondBuf, err := New(len(b.Buffer[offset:]))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Copy the values into them.
+	firstBuf.Copy(b.Buffer[:offset])
+	secondBuf.Copy(b.Buffer[offset:])
+
+	// Copy over permissions.
 	if b.ReadOnly {
 		memoryToMark := getAllMemory(firstBuf)[pageSize : pageSize+roundToPageSize(len(firstBuf.Buffer)+32)]
 		memcall.Protect(memoryToMark, true, false)
@@ -371,6 +418,7 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 		secondBuf.ReadOnly = true
 	}
 
+	// Return the new LockedBuffers.
 	return firstBuf, secondBuf, nil
 }
 
@@ -379,9 +427,11 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 // This can be called with a LockedBuffer that is marked ReadOnly.
 // The permissions of the original LockedBuffer are also copied over.
 func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
+	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
+	// Check if it's destroyed.
 	if b.Destroyed {
 		return nil, ErrDestroyed
 	}
@@ -414,10 +464,18 @@ If CatchInterrupt is called multiple times, only the first
 call is executed and all subsequent calls are ignored.
 */
 func CatchInterrupt(f ExitFunc) {
+	// Only do this if it hasn't been done before.
 	if !monInterrupt {
+		// We've now done this. Don't do it again.
 		monInterrupt = true
+
+		// Create a channel to listen on.
 		c := make(chan os.Signal, 2)
+
+		// Notify the channel if we receive a signal.
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+		// Start a goroutine to listen on the channel.
 		go func() {
 			<-c         // Wait for signal.
 			f()         // Execute user function.
@@ -438,7 +496,15 @@ func SafeExit(c int) {
 
 // WipeBytes zeroes out a byte slice.
 func WipeBytes(buf []byte) {
+	// Iterate over the slice...
 	for i := 0; i < len(buf); i++ {
+		// ... setting each element to a random value.
+		buf[i] = csprng(1)[0]
+	}
+
+	// Iterate over it again...
+	for i := 0; i < len(buf); i++ {
+		// ... setting each element to zero.
 		buf[i] = byte(0)
 	}
 }
