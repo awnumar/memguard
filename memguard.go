@@ -26,8 +26,8 @@ type LockedBuffer struct {
 	// Buffer holds the secure values themselves.
 	Buffer []byte
 
-	// A boolean flag indicating if this memory has
-	// been marked as ReadOnly by a call to b.ReadOnly()
+	// A boolean flag indicating if this
+	// memory has been marked as read-only.
 	ReadOnly bool
 
 	// A boolean flag indicating whether this
