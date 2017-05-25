@@ -55,7 +55,7 @@ func getBytes(ptr uintptr, len int) []byte {
 	return *(*[]byte)(unsafe.Pointer(&sl))
 }
 
-// Takes a slice as an argument and fills it with random data.
+// Takes a byte slice and fills it with random data.
 func fillRandBytes(b []byte) {
 	// Get a mutex lock on the csprng.
 	csprngMutex.Lock()

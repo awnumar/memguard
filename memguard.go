@@ -103,12 +103,12 @@ func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	return b, nil
 }
 
-// GenKey creates a LockedBuffer that is filled with
-// cryptographically-secure pseudo-random bytes, to
-// be used as an encryption key.
-func GenKey(size int) (*LockedBuffer, error) {
+// GenKey creates a LockedBuffer that is
+// filled with cryptographically-secure
+// pseudo-random bytes instead of zeroes.
+func GenKey(length int) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
-	key, err := New(size)
+	key, err := New(length)
 	if err != nil {
 		return nil, err
 	}
