@@ -214,14 +214,12 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 
 	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
 	if len(b.Buffer[offset:]) > len(buf) {
-
+		subtle.ConstantTimeCopy(1, b.Buffer[offset:len(buf)], buf)
 	} else if len(b.Buffer[offset:]) < len(buf) {
-
+		subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf[:len(b.Buffer[offset:])])
 	} else {
-
+		subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf)
 	}
-
-	subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf[:len(b.Buffer[offset:])])
 
 	return nil
 }
