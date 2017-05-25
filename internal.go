@@ -32,7 +32,7 @@ func getBytes(ptr uintptr, len int) []byte {
 func csprng(n int) []byte {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
-		panic("memguard._csprng(): could not get random bytes")
+		panic("memguard.csprng(): could not get random bytes")
 	}
 	return b
 }
