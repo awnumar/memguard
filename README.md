@@ -22,7 +22,7 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 * All pages between the two guards are locked to stop them from being swapped to disk.
 * The secure buffer can be made read-only so that any other action triggers a SIGSEGV violation.
 * When freeing, secure memory is wiped.
-* The API includes functions to disable system core dumps and catch signals.
+* The API also includes functions for time-constant copying and comparison, disabling system core dumps, and catching signals.
 
 Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
