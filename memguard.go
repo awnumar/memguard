@@ -324,7 +324,8 @@ func DestroyAll() {
 }
 
 // Duplicate takes a LockedBuffer as an argument and creates
-// a new one with the same contents and permissions.
+// a new one with the same contents and permissions. The
+// original LockedBuffer is preserved.
 func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()

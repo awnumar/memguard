@@ -149,6 +149,118 @@ func TestMove(t *testing.T) {
 	}
 }
 
+func TestDestroyAll(t *testing.T) {
+	b, _ := New(16)
+	c, _ := New(16)
+
+	b.Copy([]byte("yellow submarine"))
+	c.Copy([]byte("yellow submarine"))
+
+	DestroyAll()
+
+	if b.Buffer != nil || c.Buffer != nil {
+		t.Error("expected buffers to be nil")
+	}
+
+	if b.ReadOnly || c.ReadOnly {
+		t.Error("expected permissions to be empty")
+	}
+
+	if !b.Destroyed || !c.Destroyed {
+		t.Error("expected destroy flag to be set")
+	}
+}
+
+func TestDuplicate(t *testing.T) {
+	b, _ := NewFromBytes([]byte("test"))
+	b.MarkAsReadOnly()
+
+	c, err := Duplicate(b)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !bytes.Equal(b.Buffer, c.Buffer) {
+		t.Error("duplicated buffer has different contents")
+	}
+	if !c.ReadOnly {
+		t.Error("permissions not copied")
+	}
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := Duplicate(b); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestEqual(t *testing.T) {
+	b, _ := New(16)
+	c, _ := New(16)
+
+	equal, err := Equal(b, c)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !equal {
+		t.Error("should be equal")
+	}
+
+	a, _ := New(8)
+	equal, err = Equal(a, b)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if equal {
+		t.Error("should not be equal")
+	}
+
+	a.Destroy()
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := Equal(a, b); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestSplit(t *testing.T) {
+	a, _ := NewFromBytes([]byte("xxxxyyyy"))
+	a.MarkAsReadOnly()
+
+	b, c, err := Split(a, 4)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !bytes.Equal(b.Buffer, []byte("xxxx")) {
+		t.Error("first buffer has unexpected value")
+	}
+	if !bytes.Equal(c.Buffer, []byte("yyyy")) {
+		t.Error("second buffer has unexpected value")
+	}
+	if !b.ReadOnly || !c.ReadOnly {
+		t.Error("permissions not preserved")
+	}
+	if !bytes.Equal(a.Buffer, []byte("xxxxyyyy")) {
+		t.Error("original is not preserved")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, _, err := Split(a, 0); err != ErrInvalidLength {
+		t.Error("expected ErrInvalidLength")
+	}
+	if _, _, err := Split(a, 8); err != ErrInvalidLength {
+		t.Error("expected ErrInvalidLength")
+	}
+
+	a.Destroy()
+
+	if _, _, err := Split(a, 4); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
 func TestTrim(t *testing.T) {
 	b, _ := NewFromBytes([]byte("xxxxyyyy"))
 	b.MarkAsReadOnly()
@@ -171,28 +283,6 @@ func TestTrim(t *testing.T) {
 
 	if _, err := Trim(b, 2, 4); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed")
-	}
-}
-
-func TestDestroyAll(t *testing.T) {
-	b, _ := New(16)
-	c, _ := New(16)
-
-	b.Copy([]byte("yellow submarine"))
-	c.Copy([]byte("yellow submarine"))
-
-	DestroyAll()
-
-	if b.Buffer != nil || c.Buffer != nil {
-		t.Error("expected buffers to be nil")
-	}
-
-	if b.ReadOnly || c.ReadOnly {
-		t.Error("expected permissions to be empty")
-	}
-
-	if !b.Destroyed || !c.Destroyed {
-		t.Error("expected destroy flag to be set")
 	}
 }
 
