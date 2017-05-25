@@ -492,7 +492,10 @@ func SafeExit(c int) {
 	os.Exit(c)
 }
 
-// WipeBytes zeroes out a byte slice.
+// WipeBytes performs two passes over a buffer. The
+// first pass overwrites each element with random data,
+// and the second pass then sets each element to zero.
+// The result is effectively a zeroed out buffer.
 func WipeBytes(buf []byte) {
 	// Iterate over the slice...
 	for i := 0; i < len(buf); i++ {

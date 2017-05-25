@@ -97,11 +97,38 @@ func TestReadOnly(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
+	// When buf is larger than LockedBuffer.
 	b, _ := New(16)
-	buf := []byte("yellow submarine TEST")
-
+	buf := []byte("this is a very large buffer")
 	b.Move(buf)
-	if !bytes.Equal(buf, make([]byte, 21)) {
+	if !bytes.Equal(buf, make([]byte, len(buf))) {
+		t.Error("expected buf to be nil")
+	}
+	if !bytes.Equal(b.Buffer, []byte("this is a very l")) {
+		t.Error("bytes were't copied properly")
+	}
+	b.Destroy()
+
+	// When buf is smaller than LockedBuffer.
+	b, _ = New(16)
+	buf = []byte("diz small buf")
+	b.Move(buf)
+	if !bytes.Equal(buf, make([]byte, len(buf))) {
+		t.Error("expected buf to be nil")
+	}
+	if !bytes.Equal(b.Buffer[:len(buf)], []byte("diz small buf")) {
+		t.Error("bytes weren't copied properly")
+	}
+	if !bytes.Equal(b.Buffer[len(buf):], make([]byte, 16-len(buf))) {
+		t.Error("bytes were't copied properly;", b.Buffer[len(buf):])
+	}
+	b.Destroy()
+
+	// When buf is equal in size to LockedBuffer.
+	b, _ = New(16)
+	buf = []byte("yellow submarine")
+	b.Move(buf)
+	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
 	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
