@@ -317,8 +317,6 @@ func TestConcurrent(t *testing.T) {
 			b.Move([]byte("Test"))
 			b.Copy([]byte("test"))
 
-			WipeBytes(b.Buffer)
-
 			wg.Done()
 		}()
 	}
