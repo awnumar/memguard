@@ -277,8 +277,12 @@ func TestTrim(t *testing.T) {
 	if !c.ReadOnly {
 		t.Error("unexpected state")
 	}
-
 	c.Destroy()
+
+	if _, err := Trim(b, 4, 0); err != ErrInvalidLength {
+		t.Error("expected ErrInvalidLength")
+	}
+
 	b.Destroy()
 
 	if _, err := Trim(b, 2, 4); err != ErrDestroyed {

@@ -423,7 +423,10 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	}
 
 	// Create new LockedBuffer and copy over the old.
-	newBuf, _ := New(size)
+	newBuf, err := New(size)
+	if err != nil {
+		return nil, err
+	}
 	newBuf.Copy(b.Buffer[offset : offset+size])
 
 	// Copy over permissions.
