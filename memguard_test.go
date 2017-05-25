@@ -41,6 +41,20 @@ func TestNewFromBytes(t *testing.T) {
 	c.Destroy()
 }
 
+func TestGenKey(t *testing.T) {
+	b, _ := GenKey(32)
+
+	if bytes.Equal(b.Buffer, make([]byte, 32)) {
+		t.Error("was not filled with random data")
+	}
+
+	b.Destroy()
+
+	if _, err := GenKey(0); err != ErrInvalidLength {
+		t.Error("expected ErrInvalidLength")
+	}
+}
+
 func TestEqualTo(t *testing.T) {
 	a, _ := NewFromBytes([]byte("test"))
 

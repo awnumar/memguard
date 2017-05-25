@@ -14,7 +14,7 @@ import (
 
 var (
 	// A slice that holds the canary we set.
-	canary = csprng(32)
+	canary = getRandBytes(32)
 )
 
 // LockedBuffer implements a structure that holds protected values.
@@ -101,6 +101,23 @@ func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 
 	// Return a pointer to the LockedBuffer.
 	return b, nil
+}
+
+// GenKey creates a LockedBuffer that is filled with
+// cryptographically-secure pseudo-random bytes, to
+// be used as an encryption key.
+func GenKey(size int) (*LockedBuffer, error) {
+	// Create a new LockedBuffer for the key.
+	key, err := New(size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fill it with random data.
+	fillRandBytes(key.Buffer)
+
+	// Return the LockedBuffer.
+	return key, nil
 }
 
 // EqualTo compares a LockedBuffer to a byte slice in constant time.

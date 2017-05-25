@@ -55,19 +55,25 @@ func getBytes(ptr uintptr, len int) []byte {
 	return *(*[]byte)(unsafe.Pointer(&sl))
 }
 
-// Cryptographically Secure Pseudo-Random Number Generator.
-func csprng(n int) []byte {
+// Takes a slice as an argument and fills it with random data.
+func fillRandBytes(b []byte) {
 	// Get a mutex lock on the csprng.
 	csprngMutex.Lock()
 	defer csprngMutex.Unlock()
 
+	// Read len(b) bytes into the buffer.
+	if _, err := rand.Read(b); err != nil {
+		panic("memguard.csprng(): could not get random bytes")
+	}
+}
+
+// Create and return a slice of length n, filled with random data.
+func getRandBytes(n int) []byte {
 	// Create a buffer to hold this data.
 	b := make([]byte, n)
 
 	// Read len(b) bytes into the created buffer.
-	if _, err := rand.Read(b); err != nil {
-		panic("memguard.csprng(): could not get random bytes")
-	}
+	fillRandBytes(b)
 
 	// Return the buffer.
 	return b
