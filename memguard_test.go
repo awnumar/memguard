@@ -302,10 +302,10 @@ func TestWipeBytes(t *testing.T) {
 
 func TestConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
-	wg.Add(4)
+	wg.Add(16)
 
 	b, _ := New(4)
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 16; i++ {
 		go func() {
 			CatchInterrupt(func() {
 				return
