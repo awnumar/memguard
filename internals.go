@@ -2,7 +2,27 @@ package memguard
 
 import (
 	"crypto/rand"
+	"os"
+	"sync"
 	"unsafe"
+)
+
+var (
+	// Are we listening for interrupts?
+	monInterrupt bool
+
+	// Store pointers to all of the LockedBuffers.
+	allLockedBuffers      []*LockedBuffer
+	allLockedBuffersMutex = &sync.Mutex{}
+
+	// Mutex for getting random data from the csprng.
+	csprngMutex = &sync.Mutex{}
+
+	// Mutex for the DestroyAll function.
+	destroyAllMutex = &sync.Mutex{}
+
+	// Grab the system page size.
+	pageSize = os.Getpagesize()
 )
 
 // Round a length to a multiple of the system page size.
@@ -12,9 +32,16 @@ func roundToPageSize(length int) int {
 
 // Get a slice that describes all memory related to a LockedBuffer.
 func getAllMemory(b *LockedBuffer) []byte {
+	// Calculate the length of the buffer and the associated rounded value.
 	bufLen, roundedBufLen := len(b.Buffer), roundToPageSize(len(b.Buffer)+32)
+
+	// Calculate the address of the start of the memory.
 	memAddr := uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
+
+	// Calculate the size of the entire memory.
 	memLen := (pageSize * 2) + roundedBufLen
+
+	// Use this information to generate a slice and return it.
 	return getBytes(memAddr, memLen)
 }
 
@@ -30,9 +57,18 @@ func getBytes(ptr uintptr, len int) []byte {
 
 // Cryptographically Secure Pseudo-Random Number Generator.
 func csprng(n int) []byte {
+	// Get a mutex lock on the csprng.
+	csprngMutex.Lock()
+	defer csprngMutex.Unlock()
+
+	// Create a buffer to hold this data.
 	b := make([]byte, n)
+
+	// Read len(b) bytes into the created buffer.
 	if _, err := rand.Read(b); err != nil {
 		panic("memguard.csprng(): could not get random bytes")
 	}
+
+	// Return the buffer.
 	return b
 }

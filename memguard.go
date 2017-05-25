@@ -13,21 +13,8 @@ import (
 )
 
 var (
-	// Are we listening for interrupts?
-	monInterrupt bool
-
-	// Store pointers to all of the LockedBuffers.
-	allLockedBuffers      []*LockedBuffer
-	allLockedBuffersMutex = &sync.Mutex{}
-
-	// Mutex for the DestroyAll function.
-	destroyAllMutex = &sync.Mutex{}
-
 	// A slice that holds the canary we set.
 	canary = csprng(32)
-
-	// Grab the system page size.
-	pageSize = os.Getpagesize()
 )
 
 // LockedBuffer implements a structure that holds protected values.
