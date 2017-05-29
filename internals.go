@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	// Are we listening for interrupts?
-	monInterrupt bool
+	// Once object to ensure CatchInterrupt is only executed once.
+	catchInterruptOnce sync.Once
 
 	// Store pointers to all of the LockedBuffers.
 	allLockedBuffers      []*LockedBuffer
