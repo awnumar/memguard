@@ -36,13 +36,6 @@ type LockedBuffer struct {
 	Destroyed bool
 }
 
-/*
-ExitFunc is a function type that takes no arguments and returns
-no values. It is passed to CatchInterrupt which executes it before
-terminating the application securely.
-*/
-type ExitFunc func()
-
 // New creates a new *LockedBuffer and returns it. The
 // LockedBuffer's state is `ReadWrite`. Length
 // must be greater than zero.
@@ -459,7 +452,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 
 /*
 CatchInterrupt starts a goroutine that monitors for
-interrupt signals. It accepts a function of type ExitFunc
+interrupt signals. It accepts a function of type func()
 and executes that before calling SafeExit(0).
 
 	memguard.CatchInterrupt(func() {
@@ -469,7 +462,7 @@ and executes that before calling SafeExit(0).
 If CatchInterrupt is called multiple times, only the first
 call is executed and all subsequent calls are ignored.
 */
-func CatchInterrupt(f ExitFunc) {
+func CatchInterrupt(f func()) {
 	// Only do this if it hasn't been done before.
 	if !monInterrupt {
 		// We've now done this. Don't do it again.
