@@ -464,10 +464,7 @@ call is executed and all subsequent calls are ignored.
 */
 func CatchInterrupt(f func()) {
 	// Only do this if it hasn't been done before.
-	if !monInterrupt {
-		// We've now done this. Don't do it again.
-		monInterrupt = true
-
+	catchInterruptOnce.Do(func() {
 		// Create a channel to listen on.
 		c := make(chan os.Signal, 2)
 
@@ -480,7 +477,7 @@ func CatchInterrupt(f func()) {
 			f()         // Execute user function.
 			SafeExit(0) // Exit securely.
 		}()
-	}
+	})
 }
 
 // SafeExit exits the program with the specified return code,
