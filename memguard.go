@@ -252,7 +252,7 @@ func (b *LockedBuffer) MarkAsReadWrite() error {
 
 /*
 Copy copies bytes from a byte slice into a LockedBuffer in
-constant-time. Just like Golang's builtin copy function,
+constant-time. Just like Golang's built-in copy function,
 Copy only copies up to the smallest of the two buffers.
 
 It does not wipe the original slice so using Copy is less
@@ -271,7 +271,7 @@ func (b *LockedBuffer) Copy(buf []byte) error {
 }
 
 /*
-CopyAt is identicle to Copy but it copies into the LockedBuffer
+CopyAt is identical to Copy but it copies into the LockedBuffer
 at a specified offset.
 */
 func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
@@ -303,7 +303,7 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 
 /*
 Move moves bytes from a byte slice into a LockedBuffer in
-constant-time. Just like Golang's builtin copy function,
+constant-time. Just like Golang's built-in copy function,
 Move only moves up to the smallest of the two buffers.
 
 Unlike Copy, Move wipes the entire original slice after
@@ -319,7 +319,7 @@ func (b *LockedBuffer) Move(buf []byte) error {
 }
 
 /*
-MoveAt is identicle to Move but it copies into the LockedBuffer
+MoveAt is identical to Move but it copies into the LockedBuffer
 at a specified offset.
 */
 func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
@@ -336,7 +336,7 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 }
 
 /*
-Destroy verifies that no buffer underflows occured and then wipes,
+Destroy verifies that no buffer underflows occurred and then wipes,
 unlocks, and frees all related memory. If a buffer underflow is
 detected, the process panics.
 
@@ -625,7 +625,7 @@ func WipeBytes(buf []byte) {
 
 /*
 DisableUnixCoreDumps disables core-dumps on Unix systems. Since core-dumps
-are only relavant on Unix systems, if DisableUnixCoreDumps is called on any
+are only relevant on Unix systems, if DisableUnixCoreDumps is called on any
 other system it will do nothing and return immediately.
 */
 func DisableUnixCoreDumps() {
