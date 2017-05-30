@@ -41,8 +41,8 @@ func TestNewFromBytes(t *testing.T) {
 	c.Destroy()
 }
 
-func TestGenKey(t *testing.T) {
-	b, _ := GenKey(32)
+func TestNewRandom(t *testing.T) {
+	b, _ := NewRandom(32)
 
 	if bytes.Equal(b.Buffer, make([]byte, 32)) {
 		t.Error("was not filled with random data")
@@ -50,7 +50,7 @@ func TestGenKey(t *testing.T) {
 
 	b.Destroy()
 
-	if _, err := GenKey(0); err != ErrInvalidLength {
+	if _, err := NewRandom(0); err != ErrInvalidLength {
 		t.Error("expected ErrInvalidLength")
 	}
 }
@@ -89,12 +89,16 @@ func TestReadOnly(t *testing.T) {
 		t.Error("Unexpected State")
 	}
 
-	b.MarkAsReadOnly()
+	if err := b.MarkAsReadOnly(); err != nil {
+		t.Error("unexpected error")
+	}
 	if !b.ReadOnly {
 		t.Error("Unexpected State")
 	}
 
-	b.MarkAsReadWrite()
+	if err := b.MarkAsReadWrite(); err != nil {
+		t.Error("unexpected error")
+	}
 	if b.ReadOnly {
 		t.Error("Unexpected State")
 	}
@@ -308,6 +312,14 @@ func TestCatchInterrupt(t *testing.T) {
 	CatchInterrupt(func() {
 		return
 	})
+
+	var i int
+	catchInterruptOnce.Do(func() {
+		i++
+	})
+	if i != 0 {
+		t.Error("sync.Once failed")
+	}
 }
 
 func TestWipeBytes(t *testing.T) {
@@ -343,8 +355,8 @@ func TestConcurrent(t *testing.T) {
 	b.Destroy()
 }
 
-func TestDisableCoreDumps(t *testing.T) {
-	DisableCoreDumps()
+func TestDisableUnixCoreDumps(t *testing.T) {
+	DisableUnixCoreDumps()
 }
 
 func TestRoundPage(t *testing.T) {

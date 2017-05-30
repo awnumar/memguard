@@ -17,28 +17,40 @@ var (
 	canary = getRandBytes(32)
 )
 
-// LockedBuffer implements a structure that holds protected values.
+/*
+LockedBuffer is a structure that holds secure values. It
+exposes a Mutex, various metadata flags, and a slice that
+maps to the protected memory.
+
+	if LockedBuffer.ReadOnly == true {
+		// Editing this buffer will crash the process.
+	}
+
+	if LockedBuffer.Destroyed == true {
+		// This buffer has been cleaned up and destroyed.
+	}
+
+If an API function that needs to edit a LockedBuffer is given
+one marked as read-only, the call will return an ErrReadOnly.
+Similarly, if a function is given a LockedBuffer that has been
+destroyed, the call will return an ErrDestroyed.
+
+For obvious reasons, you should never edit these metadata values
+yourself. Doing so will result in undefined behaviour.
+*/
 type LockedBuffer struct {
-	// Exposed mutex for implementing thread-safety
-	// both within and outside of the API.
 	sync.Mutex
-
-	// Buffer holds the secure values themselves.
-	Buffer []byte
-
-	// A boolean flag indicating if this
-	// memory has been marked as read-only.
-	ReadOnly bool
-
-	// A boolean flag indicating whether this
-	// LockedBuffer has been destroyed. No API
-	// calls succeed on a destroyed buffer.
+	Buffer    []byte
+	ReadOnly  bool
 	Destroyed bool
 }
 
-// New creates a new *LockedBuffer and returns it. The
-// LockedBuffer's state is `ReadWrite`. Length
-// must be greater than zero.
+/*
+New creates a new LockedBuffer of a specified length.
+
+If the given length is less than one, the call will return
+an ErrInvalidLength.
+*/
 func New(length int) (*LockedBuffer, error) {
 	// Panic if length < one.
 	if length < 1 {
@@ -79,9 +91,13 @@ func New(length int) (*LockedBuffer, error) {
 	return b, nil
 }
 
-// NewFromBytes creates a new *LockedBuffer from a byte slice,
-// attempting to destroy the old value before returning. It is
-// identicle to calling New() followed by Move().
+/*
+NewFromBytes creates a new LockedBuffer containing the contents
+of a given slice. The slice is wiped after the values have been
+copied over.
+
+If the size of the slice is zero, the call will return an ErrInvalidLength.
+*/
 func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	// Use New to create a Secured LockedBuffer.
 	b, err := New(len(buf))
@@ -96,10 +112,16 @@ func NewFromBytes(buf []byte) (*LockedBuffer, error) {
 	return b, nil
 }
 
-// GenKey creates a LockedBuffer that is
-// filled with cryptographically-secure
-// pseudo-random bytes instead of zeroes.
-func GenKey(length int) (*LockedBuffer, error) {
+/*
+NewRandom creates a new LockedBuffer of a given length.
+
+The distinction is that while a LockedBuffer created with New
+would be filled with zeroes, NewRandom creates LockedBuffers
+full of cryptographically-secure pseudo-random bytes instead.
+Therefore, a LockedBuffer attained by a call to NewRandom can
+be safely used as an encryption key.
+*/
+func NewRandom(length int) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
 	key, err := New(length)
 	if err != nil {
@@ -113,7 +135,9 @@ func GenKey(length int) (*LockedBuffer, error) {
 	return key, nil
 }
 
-// EqualTo compares a LockedBuffer to a byte slice in constant time.
+/*
+EqualTo compares a LockedBuffer to a byte slice in constant time.
+*/
 func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
@@ -134,9 +158,18 @@ func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
 	return false, nil
 }
 
-// MarkAsReadWrite makes the buffer readable and writable.
-// This is the default state of new LockedBuffers.
-func (b *LockedBuffer) MarkAsReadWrite() error {
+/*
+MarkAsReadOnly asks the kernel to mark the LockedBuffer's
+memory as read-only. Any subsequent attempts to write to
+this memory will result in the process crashing with a
+SIGSEGV memory violation.
+
+Calling MarkAsReadOnly on a LockedBuffer that is already
+read-only will result in no changes being made.
+
+To make the memory writable again, MarkAsReadWrite is called.
+*/
+func (b *LockedBuffer) MarkAsReadOnly() error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -146,27 +179,9 @@ func (b *LockedBuffer) MarkAsReadWrite() error {
 		return ErrDestroyed
 	}
 
-	// Mark the memory as readable and writable.
-	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
-	memcall.Protect(memoryToMark, true, true)
-
-	// Tell everyone about the change we made.
-	b.ReadOnly = false
-
-	// Everything went well.
-	return nil
-}
-
-// MarkAsReadOnly makes the buffer read-only. After setting
-// this, any other action will trigger a SIGSEGV violation.
-func (b *LockedBuffer) MarkAsReadOnly() error {
-	// Get a mutex lock on this LockedBuffer.
-	b.Lock()
-	defer b.Unlock()
-
-	// Check if it's destroyed.
-	if b.Destroyed {
-		return ErrDestroyed
+	// Check if it's already read-only.
+	if b.ReadOnly {
+		return nil
 	}
 
 	// Mark the memory as read-only.
@@ -180,20 +195,65 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 	return nil
 }
 
-// Copy copies bytes from a byte slice into a LockedBuffer,
-// preserving the original slice. This is insecure, and so
-// Move() should be favoured unless you have a specific need.
-// You should aim to call WipeBytes(buf) as soon as possible.
+/*
+MarkAsReadWrite asks the kernel to mark the LockedBuffer's
+memory as readable and writable.
+
+Calling MarkAsReadWrite on a LockedBuffer that is already
+readable and writable will result in no changes being made.
+
+This method is the counterpart of MarkAsReadOnly.
+*/
+func (b *LockedBuffer) MarkAsReadWrite() error {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return ErrDestroyed
+	}
+
+	// Check if it's already readable and writable.
+	if !b.ReadOnly {
+		return nil
+	}
+
+	// Mark the memory as readable and writable.
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memcall.Protect(memoryToMark, true, true)
+
+	// Tell everyone about the change we made.
+	b.ReadOnly = false
+
+	// Everything went well.
+	return nil
+}
+
+/*
+Copy copies bytes from a byte slice into a LockedBuffer in
+constant-time. Just like Golang's builtin copy function,
+Copy only copies up to the smallest of the two buffers.
+
+It does not wipe the original slice so using Copy is less
+secure than using Move. Therefore Move should be favoured
+unless you have a good reason.
+
+You should aim to call WipeBytes on the original slice as
+soon as possible.
+
+If the LockedBuffer is marked as read-only, the call will
+fail and return an ErrReadOnly.
+*/
 func (b *LockedBuffer) Copy(buf []byte) error {
 	// Just call CopyAt with a zero offset.
 	return b.CopyAt(buf, 0)
 }
 
-// CopyAt copies bytes from a byte slice into a LockedBuffer,
-// preserving the original slice. This is insecure, and so
-// Move() should be favoured unless you have a specific need.
-// It also takes an offset, and starts copying at that index.
-// You should aim to call WipeBytes(buf) as soon as possible.
+/*
+CopyAt is identicle to Copy but it copies into the LockedBuffer
+at a specified offset.
+*/
 func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
@@ -221,16 +281,27 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 	return nil
 }
 
-// Move copies bytes from a byte slice into a LockedBuffer,
-// wiping the original slice afterwards.
+/*
+Move moves bytes from a byte slice into a LockedBuffer in
+constant-time. Just like Golang's builtin copy function,
+Move only moves up to the smallest of the two buffers.
+
+Unlike Copy, Move wipes the entire original slice after
+copying the appropriate number of bytes over, and so it
+should be favoured unless you have a good reason.
+
+If the LockedBuffer is marked as read-only, the call will
+fail and return an ErrReadOnly.
+*/
 func (b *LockedBuffer) Move(buf []byte) error {
 	// Just call MoveAt with a zero offset.
 	return b.MoveAt(buf, 0)
 }
 
-// MoveAt copies bytes from a byte slice into a LockedBuffer,
-// wiping the original slice afterwards. It also takes an
-// offset, and starts copying at that index.
+/*
+MoveAt is identicle to Move but it copies into the LockedBuffer
+at a specified offset.
+*/
 func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 	// Copy buf into the LockedBuffer.
 	if err := b.CopyAt(buf, offset); err != nil {
@@ -245,11 +316,16 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 }
 
 /*
-Destroy verifies that everything went well, wipes the Buffer,
-and then unlocks and frees all related memory. This function
-should be called on all LockedBuffers before exiting. If the
-LockedBuffer has already been destroyed, then nothing happens
-and the function returns.
+Destroy verifies that no buffer underflows occured and then wipes,
+unlocks, and frees all related memory. If a buffer underflow is
+detected, the process panics.
+
+This function must be called on all LockedBuffers before exiting.
+DestroyAll is designed for this purpose, as is CatchInterrupt and
+SafeExit. We recommend using all of them together.
+
+If the LockedBuffer has already been destroyed then the call
+makes no changes.
 */
 func (b *LockedBuffer) Destroy() {
 	// Remove this one from global slice.
@@ -301,8 +377,12 @@ func (b *LockedBuffer) Destroy() {
 	}
 }
 
-// DestroyAll calls Destroy on all LockedBuffers. This
-// function can be called even if no LockedBuffers exist.
+/*
+DestroyAll calls Destroy on all LockedBuffers that have not already
+been destroyed.
+
+CatchInterrupt and SafeExit both call DestroyAll before exiting.
+*/
 func DestroyAll() {
 	// Only allow one routine to DestroyAll at a time.
 	destroyAllMutex.Lock()
@@ -320,9 +400,10 @@ func DestroyAll() {
 	}
 }
 
-// Duplicate takes a LockedBuffer as an argument and creates
-// a new one with the same contents and permissions. The
-// original LockedBuffer is preserved.
+/*
+Duplicate takes a LockedBuffer and creates a new one with
+the same contents and permissions as the original.
+*/
 func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
@@ -350,8 +431,9 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	return newBuf, nil
 }
 
-// Equal compares the contents of two LockedBuffers in constant time.
-// The LockedBuffers' respective permissions are ignored.
+/*
+Equal compares the contents of two LockedBuffers in constant time.
+*/
 func Equal(a, b *LockedBuffer) (bool, error) {
 	// Get a mutex lock on the LockedBuffers.
 	a.Lock()
@@ -374,10 +456,12 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	return false, nil
 }
 
-// Split takes a LockedBuffer and splits it at a specified offset,
-// then returning the two created LockedBuffers. The permissions
-// of the original are copied over, and the original is preserved.
-// This can be called with a LockedBuffer that is marked ReadOnly.
+/*
+Split takes a LockedBuffer, splits it at a specified offset, and
+then returns the two newly created LockedBuffers. The permissions
+of the original are preserved and the original LockedBuffer is not
+destroyed.
+*/
 func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
@@ -418,10 +502,14 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	return firstBuf, secondBuf, nil
 }
 
-// Trim shortens a LockedBuffer to a specified size. The returned
-// `LockedBuffer.Buffer` is equal to `b.Buffer[offset:offset+size]`.
-// This can be called with a LockedBuffer that is marked ReadOnly.
-// The permissions of the original LockedBuffer are also copied over.
+/*
+Trim shortens a LockedBuffer according to the given specifications.
+The permissions of the original are preserved and the original
+LockedBuffer is not destroyed.
+
+Trim takes an offset and a size as arguments. The resulting LockedBuffer
+starts at index [offset] and ends at index [offset+size].
+*/
 func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
@@ -480,8 +568,9 @@ func CatchInterrupt(f func()) {
 	})
 }
 
-// SafeExit exits the program with the specified return code,
-// but calls DestroyAll before doing so.
+/*
+SafeExit exits the program with a specified exit-code, but calls DestroyAll first.
+*/
 func SafeExit(c int) {
 	// Cleanup protected memory.
 	DestroyAll()
@@ -490,7 +579,9 @@ func SafeExit(c int) {
 	os.Exit(c)
 }
 
-// WipeBytes zeroes out a byte slice..
+/*
+WipeBytes wipes a byte slice with zeroes.
+*/
 func WipeBytes(buf []byte) {
 	// Iterate over the slice...
 	for i := 0; i < len(buf); i++ {
@@ -499,7 +590,11 @@ func WipeBytes(buf []byte) {
 	}
 }
 
-// DisableCoreDumps disables core dumps on Unix systems. On windows it is a no-op.
-func DisableCoreDumps() {
+/*
+DisableUnixCoreDumps disables core-dumps on Unix systems. Since core-dumps
+are only relavant on Unix systems, if DisableUnixCoreDumps is called on any
+other system it will do nothing and return immediately.
+*/
+func DisableUnixCoreDumps() {
 	memcall.DisableCoreDumps()
 }
