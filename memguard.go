@@ -22,6 +22,10 @@ LockedBuffer is a structure that holds secure values. It
 exposes a Mutex, various metadata flags, and a slice that
 maps to the protected memory.
 
+The entire memguard API handles and passes around pointers
+to LockedBuffers, and so, for both security and convenience,
+you should refrain from dereferencing a LockedBuffer.
+
 	if LockedBuffer.ReadOnly == true {
 		// Editing this buffer will crash the process.
 	}
@@ -496,6 +500,7 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 
 	secondBuf, err := New(len(b.Buffer[offset:]), false)
 	if err != nil {
+		firstBuf.Destroy()
 		return nil, nil, err
 	}
 
@@ -552,6 +557,21 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 
 	// Return the new LockedBuffer.
 	return newBuf, nil
+}
+
+/*
+LockedBuffers returns a slice containing a pointer to
+each LockedBuffer that has not been destroyed.
+*/
+func LockedBuffers() []*LockedBuffer {
+	// Get a Mutex lock on allLockedBuffers, and get a copy.
+	allLockedBuffersMutex.Lock()
+	LockedBuffers := make([]*LockedBuffer, len(allLockedBuffers))
+	copy(LockedBuffers, allLockedBuffers)
+	allLockedBuffersMutex.Unlock()
+
+	// Return this copy.
+	return LockedBuffers
 }
 
 /*

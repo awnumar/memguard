@@ -350,6 +350,29 @@ func TestTrim(t *testing.T) {
 	}
 }
 
+func TestLockedBuffers(t *testing.T) {
+	a, _ := New(4, false)
+	b, _ := New(4, false)
+	c, _ := New(4, false)
+
+	actualList := []*LockedBuffer{a, b, c}
+	givenList := LockedBuffers()
+
+	if len(actualList) != len(givenList) {
+		t.Error("actual != given")
+	}
+
+	for i := 0; i < len(actualList); i++ {
+		if actualList[i] != givenList[0] && actualList[i] != givenList[1] && actualList[i] != givenList[2] {
+			t.Error("actual != given")
+		}
+	}
+
+	a.Destroy()
+	b.Destroy()
+	c.Destroy()
+}
+
 func TestCatchInterrupt(t *testing.T) {
 	CatchInterrupt(func() {
 		return
