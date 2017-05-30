@@ -46,12 +46,13 @@ type LockedBuffer struct {
 }
 
 /*
-New creates a new LockedBuffer of a specified length.
+New creates a new LockedBuffer of a specified length and
+permissions.
 
 If the given length is less than one, the call will return
 an ErrInvalidLength.
 */
-func New(length int) (*LockedBuffer, error) {
+func New(length int, readOnly bool) (*LockedBuffer, error) {
 	// Panic if length < one.
 	if length < 1 {
 		return nil, ErrInvalidLength
@@ -82,6 +83,11 @@ func New(length int) (*LockedBuffer, error) {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
+	// Mark as read-only if requested.
+	if readOnly {
+		b.MarkAsReadOnly()
+	}
+
 	// Append this LockedBuffer to allLockedBuffers.
 	allLockedBuffersMutex.Lock()
 	allLockedBuffers = append(allLockedBuffers, b)
@@ -98,15 +104,20 @@ copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
-func NewFromBytes(buf []byte) (*LockedBuffer, error) {
-	// Use New to create a Secured LockedBuffer.
-	b, err := New(len(buf))
+func NewFromBytes(buf []byte, readOnly bool) (*LockedBuffer, error) {
+	// Create a new LockedBuffer.
+	b, err := New(len(buf), false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
+
+	// Make it read-only if requested.
+	if readOnly {
+		b.MarkAsReadOnly()
+	}
 
 	// Return a pointer to the LockedBuffer.
 	return b, nil
@@ -121,18 +132,23 @@ full of cryptographically-secure pseudo-random bytes instead.
 Therefore, a LockedBuffer attained by a call to NewRandom can
 be safely used as an encryption key.
 */
-func NewRandom(length int) (*LockedBuffer, error) {
+func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
-	key, err := New(length)
+	b, err := New(length, false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Fill it with random data.
-	fillRandBytes(key.Buffer)
+	fillRandBytes(b.Buffer)
+
+	// Mark as read-only if requested.
+	if readOnly {
+		b.MarkAsReadOnly()
+	}
 
 	// Return the LockedBuffer.
-	return key, nil
+	return b, nil
 }
 
 /*
@@ -415,7 +431,7 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	}
 
 	// Create new LockedBuffer.
-	newBuf, _ := New(len(b.Buffer))
+	newBuf, _ := New(len(b.Buffer), false)
 
 	// Copy bytes into it.
 	newBuf.Copy(b.Buffer)
@@ -473,12 +489,12 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	}
 
 	// Create two new LockedBuffers.
-	firstBuf, err := New(len(b.Buffer[:offset]))
+	firstBuf, err := New(len(b.Buffer[:offset]), false)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	secondBuf, err := New(len(b.Buffer[offset:]))
+	secondBuf, err := New(len(b.Buffer[offset:]), false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -521,7 +537,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	}
 
 	// Create new LockedBuffer and copy over the old.
-	newBuf, err := New(size)
+	newBuf, err := New(size, false)
 	if err != nil {
 		return nil, err
 	}
