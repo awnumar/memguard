@@ -8,7 +8,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	b, err := New(8)
+	b, err := New(8, false)
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -17,15 +17,24 @@ func TestNew(t *testing.T) {
 	}
 	b.Destroy()
 
-	c, err := New(0)
+	c, err := New(0, false)
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	c.Destroy()
+
+	a, err := New(8, true)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !a.ReadOnly {
+		t.Error("unexpected state")
+	}
+	a.Destroy()
 }
 
 func TestNewFromBytes(t *testing.T) {
-	b, err := NewFromBytes([]byte("test"))
+	b, err := NewFromBytes([]byte("test"), false)
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -34,15 +43,24 @@ func TestNewFromBytes(t *testing.T) {
 	}
 	b.Destroy()
 
-	c, err := NewFromBytes([]byte(""))
+	c, err := NewFromBytes([]byte(""), false)
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	c.Destroy()
+
+	a, err := NewFromBytes([]byte("test"), true)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !a.ReadOnly {
+		t.Error("unexpected state")
+	}
+	a.Destroy()
 }
 
-func TestGenKey(t *testing.T) {
-	b, _ := GenKey(32)
+func TestNewRandom(t *testing.T) {
+	b, _ := NewRandom(32, false)
 
 	if bytes.Equal(b.Buffer, make([]byte, 32)) {
 		t.Error("was not filled with random data")
@@ -50,13 +68,24 @@ func TestGenKey(t *testing.T) {
 
 	b.Destroy()
 
-	if _, err := GenKey(0); err != ErrInvalidLength {
+	c, err := NewRandom(0, false)
+	if err != ErrInvalidLength {
 		t.Error("expected ErrInvalidLength")
 	}
+	c.Destroy()
+
+	a, err := NewRandom(8, true)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !a.ReadOnly {
+		t.Error("unexpected state")
+	}
+	a.Destroy()
 }
 
 func TestEqualTo(t *testing.T) {
-	a, _ := NewFromBytes([]byte("test"))
+	a, _ := NewFromBytes([]byte("test"), false)
 
 	equal, err := a.EqualTo([]byte("test"))
 	if err != nil {
@@ -84,17 +113,34 @@ func TestEqualTo(t *testing.T) {
 }
 
 func TestReadOnly(t *testing.T) {
-	b, _ := New(8)
+	b, _ := New(8, false)
 	if b.ReadOnly {
 		t.Error("Unexpected State")
 	}
 
-	b.MarkAsReadOnly()
+	// Test each twice for completeness.
+	if err := b.MarkAsReadOnly(); err != nil {
+		t.Error("unexpected error")
+	}
+	if !b.ReadOnly {
+		t.Error("Unexpected State")
+	}
+	if err := b.MarkAsReadOnly(); err != nil {
+		t.Error("unexpected error")
+	}
 	if !b.ReadOnly {
 		t.Error("Unexpected State")
 	}
 
-	b.MarkAsReadWrite()
+	if err := b.MarkAsReadWrite(); err != nil {
+		t.Error("unexpected error")
+	}
+	if b.ReadOnly {
+		t.Error("Unexpected State")
+	}
+	if err := b.MarkAsReadWrite(); err != nil {
+		t.Error("unexpected error")
+	}
 	if b.ReadOnly {
 		t.Error("Unexpected State")
 	}
@@ -112,7 +158,7 @@ func TestReadOnly(t *testing.T) {
 
 func TestMove(t *testing.T) {
 	// When buf is larger than LockedBuffer.
-	b, _ := New(16)
+	b, _ := New(16, false)
 	buf := []byte("this is a very large buffer")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
@@ -124,7 +170,7 @@ func TestMove(t *testing.T) {
 	b.Destroy()
 
 	// When buf is smaller than LockedBuffer.
-	b, _ = New(16)
+	b, _ = New(16, false)
 	buf = []byte("diz small buf")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
@@ -139,7 +185,7 @@ func TestMove(t *testing.T) {
 	b.Destroy()
 
 	// When buf is equal in size to LockedBuffer.
-	b, _ = New(16)
+	b, _ = New(16, false)
 	buf = []byte("yellow submarine")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
@@ -164,8 +210,8 @@ func TestMove(t *testing.T) {
 }
 
 func TestDestroyAll(t *testing.T) {
-	b, _ := New(16)
-	c, _ := New(16)
+	b, _ := New(16, false)
+	c, _ := New(16, false)
 
 	b.Copy([]byte("yellow submarine"))
 	c.Copy([]byte("yellow submarine"))
@@ -186,7 +232,7 @@ func TestDestroyAll(t *testing.T) {
 }
 
 func TestDuplicate(t *testing.T) {
-	b, _ := NewFromBytes([]byte("test"))
+	b, _ := NewFromBytes([]byte("test"), false)
 	b.MarkAsReadOnly()
 
 	c, err := Duplicate(b)
@@ -208,8 +254,8 @@ func TestDuplicate(t *testing.T) {
 }
 
 func TestEqual(t *testing.T) {
-	b, _ := New(16)
-	c, _ := New(16)
+	b, _ := New(16, false)
+	c, _ := New(16, false)
 
 	equal, err := Equal(b, c)
 	if err != nil {
@@ -219,7 +265,7 @@ func TestEqual(t *testing.T) {
 		t.Error("should be equal")
 	}
 
-	a, _ := New(8)
+	a, _ := New(8, false)
 	equal, err = Equal(a, b)
 	if err != nil {
 		t.Error("unexpected error")
@@ -238,7 +284,7 @@ func TestEqual(t *testing.T) {
 }
 
 func TestSplit(t *testing.T) {
-	a, _ := NewFromBytes([]byte("xxxxyyyy"))
+	a, _ := NewFromBytes([]byte("xxxxyyyy"), false)
 	a.MarkAsReadOnly()
 
 	b, c, err := Split(a, 4)
@@ -276,7 +322,7 @@ func TestSplit(t *testing.T) {
 }
 
 func TestTrim(t *testing.T) {
-	b, _ := NewFromBytes([]byte("xxxxyyyy"))
+	b, _ := NewFromBytes([]byte("xxxxyyyy"), false)
 	b.MarkAsReadOnly()
 
 	c, err := Trim(b, 2, 4)
@@ -304,10 +350,41 @@ func TestTrim(t *testing.T) {
 	}
 }
 
+func TestLockedBuffers(t *testing.T) {
+	a, _ := New(4, false)
+	b, _ := New(4, false)
+	c, _ := New(4, false)
+
+	actualList := []*LockedBuffer{a, b, c}
+	givenList := LockedBuffers()
+
+	if len(actualList) != len(givenList) {
+		t.Error("actual != given")
+	}
+
+	for i := 0; i < len(actualList); i++ {
+		if actualList[i] != givenList[0] && actualList[i] != givenList[1] && actualList[i] != givenList[2] {
+			t.Error("actual != given")
+		}
+	}
+
+	a.Destroy()
+	b.Destroy()
+	c.Destroy()
+}
+
 func TestCatchInterrupt(t *testing.T) {
 	CatchInterrupt(func() {
 		return
 	})
+
+	var i int
+	catchInterruptOnce.Do(func() {
+		i++
+	})
+	if i != 0 {
+		t.Error("sync.Once failed")
+	}
 }
 
 func TestWipeBytes(t *testing.T) {
@@ -322,7 +399,7 @@ func TestConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(16)
 
-	b, _ := New(4)
+	b, _ := New(4, false)
 	for i := 0; i < 16; i++ {
 		go func() {
 			CatchInterrupt(func() {
@@ -343,8 +420,8 @@ func TestConcurrent(t *testing.T) {
 	b.Destroy()
 }
 
-func TestDisableCoreDumps(t *testing.T) {
-	DisableCoreDumps()
+func TestDisableUnixCoreDumps(t *testing.T) {
+	DisableUnixCoreDumps()
 }
 
 func TestRoundPage(t *testing.T) {
