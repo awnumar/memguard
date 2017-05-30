@@ -408,11 +408,8 @@ func DestroyAll() {
 	destroyAllMutex.Lock()
 	defer destroyAllMutex.Unlock()
 
-	// Get a Mutex lock on allLockedBuffers, and get a copy.
-	allLockedBuffersMutex.Lock()
-	toDestroy := make([]*LockedBuffer, len(allLockedBuffers))
-	copy(toDestroy, allLockedBuffers)
-	allLockedBuffersMutex.Unlock()
+	// Get a copy of allLockedBuffers.
+	toDestroy := LockedBuffers()
 
 	// Call destroy on each LockedBuffer.
 	for _, v := range toDestroy {
