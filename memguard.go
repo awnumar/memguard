@@ -624,9 +624,14 @@ func WipeBytes(buf []byte) {
 }
 
 /*
-DisableUnixCoreDumps disables core-dumps on Unix systems. Since core-dumps
-are only relevant on Unix systems, if DisableUnixCoreDumps is called on any
-other system it will do nothing and return immediately.
+DisableUnixCoreDumps disables core-dumps.
+
+Since core-dumps are only relevant on Unix systems,
+if DisableUnixCoreDumps is called on any other system it
+will do nothing and return immediately.
+
+This function is precautonary as core-dumps are usually
+disabled by default on most systems.
 */
 func DisableUnixCoreDumps() {
 	memcall.DisableCoreDumps()
