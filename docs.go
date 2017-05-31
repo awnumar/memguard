@@ -4,8 +4,8 @@ Package memguard is designed to allow you to easily handle sensitive values in m
 The general working cycle is easy to follow:
 
     // Declare a protected slice and move bytes into it.
-    encryptionKey := memguard.New(32)
-    encryptionKey.Move(generateRandomBytes(32))
+    encryptionKey, _ := memguard.New(16, false) // Size 16; Not read-only.
+    encryptionKey.Move([]byte("yellow submarine"))
 
     // Use the buffer wherever you need it.
     Encrypt(encryptionKey.Buffer, plaintext)
@@ -13,7 +13,7 @@ The general working cycle is easy to follow:
     // Destroy it after you're done.
     encryptionKey.Destroy()
 
-As you'll have noted, the example above does not append or assign the key to the buffer, but rather it uses the built-in API function `Move()`.
+As you'll have noted, the example above does not append or assign the key to the buffer, but rather it uses the built-in API function Move.
 
     b := memguard.New(32)
 
@@ -25,19 +25,20 @@ As you'll have noted, the example above does not append or assign the key to the
 
 If a function that you're using requires an array, you can cast the Buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
-    key := memguard.NewFromBytes([]byte("yellow submarine"))
+    key, _ := memguard.NewFromBytes([]byte("yellow submarine"), false)
 
-    // Make sure that the size of the array matches the size of the Buffer.
+    // Make sure the size of the array matches the size of the Buffer.
+    // In this case that size is 16. This is very important.
     keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer[0]))
 
 The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer exposes. Do not use the mutex when calling a function that is part of the MemGuard API. For example:
 
-    b := New(4)
+    b := memguard.New(4, false)
     b.Lock()
     copy(b.Buffer, []byte("test"))
     b.Unlock()
 
-    c := New(4)
+    c := memguard.New(4, false)
     c.Lock()
     c.Copy([]byte("test")) // This will deadlock.
     c.Unlock()
