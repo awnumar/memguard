@@ -15,9 +15,6 @@ func Lock(b []byte) {
 
 	// Call mlock.
 	if err := unix.Mlock(b); err != nil {
-		if err.Error() == "cannot allocate memory" {
-			panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err))
-		}
 		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p [Err: %s]", &b[0], err))
 	}
 }
