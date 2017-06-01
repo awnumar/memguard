@@ -7,6 +7,13 @@ import (
 	"unsafe"
 )
 
+// TEMPORARY
+func TestTest(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		New(32, false)
+	}
+}
+
 func TestNew(t *testing.T) {
 	b, err := New(8, false)
 	if err != nil {
