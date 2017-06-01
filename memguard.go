@@ -53,6 +53,18 @@ type LockedBuffer struct {
 New creates a new LockedBuffer of a specified length and
 permissions.
 
+The number of LockedBuffers that you are able to create is
+limited by how much memory your system kernel allows each
+process to mlock/VirtualLock. Therefore we recommend calling
+Destroy on LockedBuffers that you no longer need, or simply
+deferring a Destroy call after creating a new LockedBuffer.
+
+	lBuf, err := New(32, false)
+	if err != nil {
+		panic(err)
+	}
+	defer lBuf.Destroy()
+
 If the given length is less than one, the call will return
 an ErrInvalidLength.
 */
