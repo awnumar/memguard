@@ -17,7 +17,7 @@ var _zero uintptr
 // Lock is a wrapper for windows.VirtualLock()
 func Lock(b []byte) {
 	if err := windows.VirtualLock(_getPtr(b), uintptr(len(b))); err != nil {
-		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p [Err: %s]", &b[0], err))
+		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err))
 	}
 }
 

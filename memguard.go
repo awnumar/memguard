@@ -53,6 +53,18 @@ type LockedBuffer struct {
 New creates a new LockedBuffer of a specified length and
 permissions.
 
+The number of LockedBuffers that you are able to create is
+limited by how much memory your system kernel allows each
+process to mlock/VirtualLock. Therefore we recommend calling
+Destroy on LockedBuffers that you no longer need, or simply
+deferring a Destroy call after creating a new LockedBuffer.
+
+	lBuf, err := New(32, false)
+	if err != nil {
+		panic(err)
+	}
+	defer lBuf.Destroy()
+
 If the given length is less than one, the call will return
 an ErrInvalidLength.
 */
@@ -102,9 +114,9 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 }
 
 /*
-NewFromBytes creates a new LockedBuffer containing the contents
-of a given slice. The slice is wiped after the values have been
-copied over.
+NewFromBytes is identicle to New but for the fact that the created
+LockedBuffer is of the same length and has the same contents as a
+given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
@@ -128,13 +140,10 @@ func NewFromBytes(buf []byte, readOnly bool) (*LockedBuffer, error) {
 }
 
 /*
-NewRandom creates a new LockedBuffer of a given length.
-
-The distinction is that while a LockedBuffer created with New
-would be filled with zeroes, NewRandom creates LockedBuffers
-full of cryptographically-secure pseudo-random bytes instead.
-Therefore, a LockedBuffer attained by a call to NewRandom can
-be safely used as an encryption key.
+NewRandom is identicle to New but for the fact that the created
+LockedBuffer is filled with cryptographically-secure pseudo-random
+bytes instead of zeroes. Therefore a LockedBuffer created with
+NewRandom can safely be used as an encryption key.
 */
 func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
