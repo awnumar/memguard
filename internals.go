@@ -18,9 +18,6 @@ var (
 	// Mutex for getting random data from the csprng.
 	csprngMutex = &sync.Mutex{}
 
-	// Mutex for the DestroyAll function.
-	destroyAllMutex = &sync.Mutex{}
-
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
 )
