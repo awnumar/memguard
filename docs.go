@@ -11,30 +11,21 @@ The general working cycle is as follows:
     defer encryptionKey.Destroy()
 
     // Move bytes into the buffer.
+    // Do not append or assign, use API call.
     encryptionKey.Move([]byte("yellow submarine"))
 
     // Use the buffer wherever you need it.
     Encrypt(encryptionKey.Buffer, plaintext)
 
-As you'll have noted, the example above does not append or assign the key to the buffer, but rather it uses the built-in API function Move.
-
-    b, err := memguard.New(32, false)
-    if err != nil {
-        panic(err)
-    }
-    defer b.Destroy()
-
-    b.Move([]byte("...")) // Correct.
-    b.Copy([]byte("...")) // Less correct; original buffer isn't wiped.
-
-    b.Buffer = []byte("...")                   // WRONG
-    b.Buffer = append(b.Buffer, []byte("...")) // WRONG
-
 The number of LockedBuffers that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore we recommend calling Destroy on LockedBuffers that you no longer need, or simply deferring a Destroy call after creating a new LockedBuffer.
 
 If a function that you're using requires an array, you can cast the Buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
-    key, _ := memguard.NewFromBytes([]byte("yellow submarine"), false)
+    key, err := memguard.NewRandom(32, false)
+    if err != nil {
+        panic(err)
+    }
+    defer key.Destroy()
 
     // Make sure the size of the array matches the size of the Buffer.
     // In this case that size is 16. This is very important.
