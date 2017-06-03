@@ -413,10 +413,6 @@ been destroyed.
 CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
 func DestroyAll() {
-	// Only allow one routine to DestroyAll at a time.
-	destroyAllMutex.Lock()
-	defer destroyAllMutex.Unlock()
-
 	// Get a copy of allLockedBuffers.
 	toDestroy := LockedBuffers()
 
