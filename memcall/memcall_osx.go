@@ -11,7 +11,7 @@ import (
 // Lock is a wrapper for unix.Mlock(), with extra precautions.
 func Lock(b []byte) {
 	if err := unix.Mlock(b); err != nil {
-		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p [Err: %s]", &b[0], err))
+		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err))
 	}
 }
 

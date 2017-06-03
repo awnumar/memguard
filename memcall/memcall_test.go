@@ -3,6 +3,7 @@ package memcall
 import "testing"
 
 func TestCycle(t *testing.T) {
+	DisableCoreDumps()
 	buffer := Alloc(32)
 	Protect(buffer, true, true)
 	Lock(buffer)
@@ -16,4 +17,5 @@ func TestProtect(t *testing.T) {
 	Protect(buffer, true, false)
 	Protect(buffer, false, true)
 	Protect(buffer, false, false)
+	Free(buffer)
 }
