@@ -114,7 +114,7 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 }
 
 /*
-NewFromBytes is identicle to New but for the fact that the created
+NewFromBytes is identical to New but for the fact that the created
 LockedBuffer is of the same length and has the same contents as a
 given slice. The slice is wiped after the bytes have been copied over.
 
@@ -140,7 +140,7 @@ func NewFromBytes(buf []byte, readOnly bool) (*LockedBuffer, error) {
 }
 
 /*
-NewRandom is identicle to New but for the fact that the created
+NewRandom is identical to New but for the fact that the created
 LockedBuffer is filled with cryptographically-secure pseudo-random
 bytes instead of zeroes. Therefore a LockedBuffer created with
 NewRandom can safely be used as an encryption key.
