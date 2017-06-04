@@ -572,10 +572,6 @@ CatchInterrupt starts a goroutine that monitors for
 interrupt signals. It accepts a function of type func()
 and executes that before calling SafeExit(0).
 
-	memguard.CatchInterrupt(func() {
-		fmt.Println("Interrupt signal received. Exiting...")
-	})
-
 If CatchInterrupt is called multiple times, only the first
 call is executed and all subsequent calls are ignored.
 */
