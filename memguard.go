@@ -193,9 +193,6 @@ memory as read-only. Any subsequent attempts to write to
 this memory will result in the process crashing with a
 SIGSEGV memory violation.
 
-Calling MarkAsReadOnly on a LockedBuffer that is already
-read-only will result in no changes being made.
-
 To make the memory writable again, MarkAsReadWrite is called.
 */
 func (b *LockedBuffer) MarkAsReadOnly() error {
@@ -227,9 +224,6 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 /*
 MarkAsReadWrite asks the kernel to mark the LockedBuffer's
 memory as readable and writable.
-
-Calling MarkAsReadWrite on a LockedBuffer that is already
-readable and writable will result in no changes being made.
 
 This method is the counterpart of MarkAsReadOnly.
 */
