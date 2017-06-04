@@ -325,6 +325,42 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 }
 
 /*
+FillRandomBytes fills a LockedBuffer with cryptographically-secure
+pseudo-random bytes.
+*/
+func (b *LockedBuffer) FillRandomBytes() error {
+	// Just call FillRandomBytesAt.
+	return b.FillRandomBytesAt(0, len(b.Buffer))
+}
+
+/*
+FillRandomBytesAt fills a LockedBuffer with cryptographically-secure
+pseudo-random bytes, starting at an offset and ending after a given
+number of bytes.
+*/
+func (b *LockedBuffer) FillRandomBytesAt(offset, length int) error {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.Destroyed {
+		return ErrDestroyed
+	}
+
+	// Check if it's marked as ReadOnly.
+	if b.ReadOnly {
+		return ErrReadOnly
+	}
+
+	// Fill with random bytes.
+	fillRandBytes(b.Buffer[offset : offset+length])
+
+	// Everything went well.
+	return nil
+}
+
+/*
 Destroy verifies that no buffer underflows occurred and then wipes,
 unlocks, and frees all related memory. If a buffer underflow is
 detected, the process panics.
