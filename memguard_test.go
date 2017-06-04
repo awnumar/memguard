@@ -209,6 +209,32 @@ func TestMove(t *testing.T) {
 	}
 }
 
+func TestFillRandomBytes(t *testing.T) {
+	a, _ := New(32, false)
+	a.FillRandomBytes()
+
+	if a.Buffer == nil {
+		t.Error("not random")
+	}
+
+	WipeBytes(a.Buffer)
+	a.FillRandomBytesAt(16, 16)
+
+	if !bytes.Equal(a.Buffer[:16], make([]byte, 16)) || bytes.Equal(a.Buffer[16:], make([]byte, 16)) {
+		t.Error("incorrect offset/size;", a.Buffer[:16], a.Buffer[16:])
+	}
+
+	a.MarkAsReadOnly()
+	if err := a.FillRandomBytes(); err != ErrReadOnly {
+		t.Error("expected ErrReadOnly")
+	}
+
+	a.Destroy()
+	if err := a.FillRandomBytes(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
 func TestDestroyAll(t *testing.T) {
 	b, _ := New(16, false)
 	c, _ := New(16, false)
