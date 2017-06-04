@@ -439,6 +439,41 @@ func DestroyAll() {
 }
 
 /*
+Concatenate takes two LockedBuffers and concatenates them.
+
+If one of the given LockedBuffers is read-only, the resulting
+LockedBuffer will also be read-only. The original LockedBuffers
+are not destroyed.
+*/
+func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
+	// Get a mutex lock on the LockedBuffers.
+	a.Lock()
+	b.Lock()
+	defer a.Unlock()
+	defer b.Unlock()
+
+	// Check if either are destroyed.
+	if a.Destroyed || b.Destroyed {
+		return nil, ErrDestroyed
+	}
+
+	// Create a new LockedBuffer to hold the concatenated value.
+	c, _ := New(len(a.Buffer)+len(b.Buffer), false)
+
+	// Copy the values across.
+	c.Copy(a.Buffer)
+	c.CopyAt(b.Buffer, len(a.Buffer))
+
+	// Set permissions accordingly.
+	if a.ReadOnly || b.ReadOnly {
+		c.MarkAsReadOnly()
+	}
+
+	// Return the resulting LockedBuffer.
+	return c, nil
+}
+
+/*
 Duplicate takes a LockedBuffer and creates a new one with
 the same contents and permissions as the original.
 */
