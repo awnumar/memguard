@@ -444,9 +444,7 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 
 	// Set permissions accordingly.
 	if b.ReadOnly {
-		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
-		memcall.Protect(memoryToMark, true, false)
-		newBuf.ReadOnly = true
+		newBuf.MarkAsReadOnly()
 	}
 
 	// Return duplicated.
@@ -512,13 +510,8 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 
 	// Copy over permissions.
 	if b.ReadOnly {
-		memoryToMark := getAllMemory(firstBuf)[pageSize : pageSize+roundToPageSize(len(firstBuf.Buffer)+32)]
-		memcall.Protect(memoryToMark, true, false)
-		firstBuf.ReadOnly = true
-
-		memoryToMark = getAllMemory(secondBuf)[pageSize : pageSize+roundToPageSize(len(secondBuf.Buffer)+32)]
-		memcall.Protect(memoryToMark, true, false)
-		secondBuf.ReadOnly = true
+		firstBuf.MarkAsReadOnly()
+		secondBuf.MarkAsReadOnly()
 	}
 
 	// Return the new LockedBuffers.
@@ -552,9 +545,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 
 	// Copy over permissions.
 	if b.ReadOnly {
-		memoryToMark := getAllMemory(newBuf)[pageSize : pageSize+roundToPageSize(len(newBuf.Buffer)+32)]
-		memcall.Protect(memoryToMark, true, false)
-		newBuf.ReadOnly = true
+		newBuf.MarkAsReadOnly()
 	}
 
 	// Return the new LockedBuffer.

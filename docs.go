@@ -21,7 +21,7 @@ The number of LockedBuffers that you are able to create is limited by how much m
 
 If a function that you're using requires an array, you can cast the Buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
-    key, err := memguard.NewRandom(32, false)
+    key, err := memguard.NewRandom(16, false)
     if err != nil {
         panic(err)
     }
