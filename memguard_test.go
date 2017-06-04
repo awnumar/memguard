@@ -257,6 +257,31 @@ func TestDestroyAll(t *testing.T) {
 	}
 }
 
+func TestConcatenate(t *testing.T) {
+	a, _ := NewFromBytes([]byte("xxxx"), true)
+	b, _ := NewFromBytes([]byte("yyyy"), false)
+
+	c, err := Concatenate(a, b)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	if !bytes.Equal(c.Buffer, []byte("xxxxyyyy")) {
+		t.Error("unexpected output;", c.Buffer)
+	}
+	if !c.ReadOnly {
+		t.Error("expected ReadOnly")
+	}
+
+	a.Destroy()
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := Concatenate(a, b); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
 func TestDuplicate(t *testing.T) {
 	b, _ := NewFromBytes([]byte("test"), false)
 	b.MarkAsReadOnly()
