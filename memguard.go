@@ -22,17 +22,15 @@ LockedBuffer is a structure that holds secure values. It
 exposes a Mutex, various metadata flags, and a slice that
 maps to the protected memory.
 
+The number of LockedBuffers that you are able to create is
+limited by how much memory your system kernel allows each
+process to mlock/VirtualLock. Therefore you should call
+Destroy on LockedBuffers that you no longer need, or simply
+defer a Destroy call after creating a new LockedBuffer.
+
 The entire memguard API handles and passes around pointers
 to LockedBuffers, and so, for both security and convenience,
 you should refrain from dereferencing a LockedBuffer.
-
-	if LockedBuffer.ReadOnly == true {
-		// Editing this buffer will crash the process.
-	}
-
-	if LockedBuffer.Destroyed == true {
-		// This buffer has been cleaned up and destroyed.
-	}
 
 If an API function that needs to edit a LockedBuffer is given
 one marked as read-only, the call will return an ErrReadOnly.
@@ -52,18 +50,6 @@ type LockedBuffer struct {
 /*
 New creates a new LockedBuffer of a specified length and
 permissions.
-
-The number of LockedBuffers that you are able to create is
-limited by how much memory your system kernel allows each
-process to mlock/VirtualLock. Therefore we recommend calling
-Destroy on LockedBuffers that you no longer need, or simply
-deferring a Destroy call after creating a new LockedBuffer.
-
-	lBuf, err := New(32, false)
-	if err != nil {
-		panic(err)
-	}
-	defer lBuf.Destroy()
 
 If the given length is less than one, the call will return
 an ErrInvalidLength.
