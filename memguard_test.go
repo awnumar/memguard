@@ -463,6 +463,8 @@ func TestConcurrent(t *testing.T) {
 			b.Move([]byte("Test"))
 			b.Copy([]byte("test"))
 
+			b.FillRandomBytes()
+
 			wg.Done()
 		}()
 	}
