@@ -4,7 +4,7 @@
   <p align="center">A pure Go library that handles sensitive values in memory.</p>
   <p align="center">
     <a href="https://travis-ci.org/0xAwn/memguard"><img src="https://travis-ci.org/0xAwn/memguard.svg?branch=master"></a>
-    <a href="https://ci.appveyor.com/project/0xAwn/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/g6cg347cam7lli5m/branch/master?svg=true"></a>
+    <a href="https://ci.appveyor.com/project/0xAwn/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/v00m88muvtr7k9p5/branch/master?svg=true"></a>
     <a href="https://godoc.org/github.com/0xAwn/memguard"><img src="https://godoc.org/github.com/0xAwn/memguard?status.svg"></a>
     <a href="https://goreportcard.com/report/github.com/0xAwn/memguard"><img src="https://goreportcard.com/badge/github.com/0xAwn/memguard"></a>
   </p>
