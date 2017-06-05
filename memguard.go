@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/libeclipse/memguard/memcall"
+	"github.com/0xAwn/memguard/memcall"
 )
 
 var (

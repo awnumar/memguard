@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/libeclipse/memguard/master/logo.svg" height="140" />
+  <img src="https://cdn.rawgit.com/0xAwn/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
   <p align="center">A pure Go library that handles sensitive values in memory.</p>
   <p align="center">
-    <a href="https://travis-ci.org/libeclipse/memguard"><img src="https://travis-ci.org/libeclipse/memguard.svg?branch=master"></a>
-    <a href="https://ci.appveyor.com/project/libeclipse/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/g6cg347cam7lli5m/branch/master?svg=true"></a>
-    <a href="https://godoc.org/github.com/libeclipse/memguard"><img src="https://godoc.org/github.com/libeclipse/memguard?status.svg"></a>
-    <a href="https://goreportcard.com/report/github.com/libeclipse/memguard"><img src="https://goreportcard.com/badge/github.com/libeclipse/memguard"></a>
+    <a href="https://travis-ci.org/0xAwn/memguard"><img src="https://travis-ci.org/0xAwn/memguard.svg?branch=master"></a>
+    <a href="https://ci.appveyor.com/project/0xAwn/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/g6cg347cam7lli5m/branch/master?svg=true"></a>
+    <a href="https://godoc.org/github.com/0xAwn/memguard"><img src="https://godoc.org/github.com/0xAwn/memguard?status.svg"></a>
+    <a href="https://goreportcard.com/report/github.com/0xAwn/memguard"><img src="https://goreportcard.com/badge/github.com/0xAwn/memguard"></a>
   </p>
 </p>
 
@@ -26,17 +26,17 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
-Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/libeclipse/memguard).
+Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/0xAwn/memguard).
 
 ## Installation
 
 Although we do recommend using a release, the simplest way to install the library is to `go get` it:
 
 ```
-$ go get github.com/libeclipse/memguard
+$ go get github.com/0xAwn/memguard
 ```
 
-If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/libeclipse/memguard/releases/latest). Then go ahead and run:
+If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/0xAwn/memguard/releases/latest). Then go ahead and run:
 
 ```
 $ go install -v ./

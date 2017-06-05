@@ -1,10 +1,10 @@
-hash: d84eadc8ea2cc567ba3642fe99a78443403074e601fb42d51f6ee5864e11d3d9
-updated: 2017-06-03T14:34:03.536128893+01:00
+hash: ba55bbd2fd97e9d9e4bb0b8b1d14fafa95833ff6baf1c48f0e560e6d601a4b69
+updated: 2017-06-05T18:43:30.595463291+01:00
 imports:
 - name: github.com/alexbrainman/winapi
   version: c959b37223f62e4581a4a58da7816cf962aeb906
 - name: golang.org/x/sys
-  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
+  version: e24f485414aeafb646f6fca458b0bf869c0880a1
   subpackages:
   - unix
   - windows

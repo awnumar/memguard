@@ -2,7 +2,7 @@ version: '{build}'
 
 platform: Any CPU
 
-clone_folder: c:\go\src\github.com\libeclipse\memguard
+clone_folder: c:\go\src\github.com\0xAwn\memguard
 
 environment:
   GOPATH: c:\go
