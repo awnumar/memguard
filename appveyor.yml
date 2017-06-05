@@ -2,7 +2,7 @@ version: '{build}'
 
 platform: Any CPU
 
-clone_folder: c:\go\src\github.com\libeclipse\memguard
+clone_folder: c:\go\src\github.com\0xAwn\memguard
 
 environment:
   GOPATH: c:\go
@@ -21,7 +21,7 @@ test_script:
 notifications:
 - provider: Slack
   incoming_webhook:
-    secure: 9hDxjNAP1MM9K5R70lukmCLr3IZfRWawlHWyGTNEvE9K8hKsmvtPl2uxBeq7FT6mo+tFNqTHgJyNZDSjBVOHlt4oUs7qrWxH7jqJKTX+HoQ=
+    secure: WjopZ/uuTGqqu1XhbjE05ZHSGcoVa7M07WwKQuGLqkO4AD1xGj+G817tMC1Ke0XxB3dBNQ++Ryr/SlzrjUVSHetvUgEpjE380XaCzXIdXP8=
   on_build_success: true
   on_build_failure: true
   on_build_status_changed: true

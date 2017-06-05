@@ -1,5 +1,5 @@
-package: github.com/libeclipse/memguard
-homepage: https://github.com/libeclipse/memguard
+package: github.com/0xAwn/memguard
+homepage: https://github.com/0xAwn/memguard
 license: Apache-2.0
 owners:
 - name: Awn
