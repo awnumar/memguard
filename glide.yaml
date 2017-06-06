@@ -1,8 +1,8 @@
-package: github.com/0xAwn/memguard
-homepage: https://github.com/0xAwn/memguard
+package: github.com/awnumar/memguard
+homepage: https://github.com/awnumar/memguard
 license: Apache-2.0
 owners:
-- name: Awn
+- name: Awn Umar
   email: awn@cryptolosophy.io
   homepage: https://cryptolosophy.io
 import:

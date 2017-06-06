@@ -1,5 +1,5 @@
-hash: ba55bbd2fd97e9d9e4bb0b8b1d14fafa95833ff6baf1c48f0e560e6d601a4b69
-updated: 2017-06-05T18:43:30.595463291+01:00
+hash: f978c194505b88476a4691af2e2b5d8e8f0afdf96fa8e31cb3fe4d237a0994b0
+updated: 2017-06-06T19:43:40.993110593+01:00
 imports:
 - name: github.com/alexbrainman/winapi
   version: c959b37223f62e4581a4a58da7816cf962aeb906

@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/0xAwn/memguard/memcall"
+	"github.com/awnumar/memguard/memcall"
 )
 
 var (

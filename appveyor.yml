@@ -2,7 +2,7 @@ version: '{build}'
 
 platform: Any CPU
 
-clone_folder: c:\go\src\github.com\0xAwn\memguard
+clone_folder: c:\go\src\github.com\awnumar\memguard
 
 environment:
   GOPATH: c:\go

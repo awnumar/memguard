@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/0xAwn/memguard/master/logo.svg" height="140" />
+  <img src="https://cdn.rawgit.com/awnumar/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
   <p align="center">A pure Go library that handles sensitive values in memory.</p>
   <p align="center">
-    <a href="https://travis-ci.org/0xAwn/memguard"><img src="https://travis-ci.org/0xAwn/memguard.svg?branch=master"></a>
-    <a href="https://ci.appveyor.com/project/0xAwn/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/v00m88muvtr7k9p5/branch/master?svg=true"></a>
-    <a href="https://godoc.org/github.com/0xAwn/memguard"><img src="https://godoc.org/github.com/0xAwn/memguard?status.svg"></a>
-    <a href="https://goreportcard.com/report/github.com/0xAwn/memguard"><img src="https://goreportcard.com/badge/github.com/0xAwn/memguard"></a>
+    <a href="https://travis-ci.org/awnumar/memguard"><img src="https://travis-ci.org/awnumar/memguard.svg?branch=master"></a>
+    <a href="https://ci.appveyor.com/project/awnumar/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/0f8g87xsahx2t7lg/branch/master?svg=true"></a>
+    <a href="https://godoc.org/github.com/awnumar/memguard"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
+    <a href="https://goreportcard.com/report/github.com/awnumar/memguard"><img src="https://goreportcard.com/badge/github.com/awnumar/memguard"></a>
   </p>
 </p>
 
@@ -26,17 +26,17 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
-Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/0xAwn/memguard).
+Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard).
 
 ## Installation
 
 Although we do recommend using a release, the simplest way to install the library is to `go get` it:
 
 ```
-$ go get github.com/0xAwn/memguard
+$ go get github.com/awnumar/memguard
 ```
 
-If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/0xAwn/memguard/releases/latest). Then go ahead and run:
+If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/awnumar/memguard/releases/latest). Then go ahead and run:
 
 ```
 $ go install -v ./
