@@ -84,6 +84,27 @@ func TestNewRandom(t *testing.T) {
 	a.Destroy()
 }
 
+func TestGetMetadata(t *testing.T) {
+	b, _ := New(8, false)
+
+	if val := b.IsReadOnly(); val != false {
+		t.Error("incorrect value")
+	}
+	if val := b.IsDestroyed(); val != false {
+		t.Error("incorrect value")
+	}
+
+	b.MarkAsReadOnly()
+	if val := b.IsReadOnly(); val != true {
+		t.Error("incorrect value")
+	}
+
+	b.Destroy()
+	if val := b.IsDestroyed(); val != true {
+		t.Error("incorrect value")
+	}
+}
+
 func TestEqualTo(t *testing.T) {
 	a, _ := NewFromBytes([]byte("test"), false)
 
