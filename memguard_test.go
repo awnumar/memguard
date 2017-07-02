@@ -27,7 +27,7 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !a.ReadOnly {
+	if !a.IsReadOnly() {
 		t.Error("unexpected state")
 	}
 	a.Destroy()
@@ -53,7 +53,7 @@ func TestNewFromBytes(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !a.ReadOnly {
+	if !a.IsReadOnly() {
 		t.Error("unexpected state")
 	}
 	a.Destroy()
@@ -78,7 +78,7 @@ func TestNewRandom(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !a.ReadOnly {
+	if !a.IsReadOnly() {
 		t.Error("unexpected state")
 	}
 	a.Destroy()
@@ -114,7 +114,7 @@ func TestEqualTo(t *testing.T) {
 
 func TestReadOnly(t *testing.T) {
 	b, _ := New(8, false)
-	if b.ReadOnly {
+	if b.IsReadOnly() {
 		t.Error("Unexpected State")
 	}
 
@@ -122,26 +122,26 @@ func TestReadOnly(t *testing.T) {
 	if err := b.MarkAsReadOnly(); err != nil {
 		t.Error("unexpected error")
 	}
-	if !b.ReadOnly {
+	if !b.IsReadOnly() {
 		t.Error("Unexpected State")
 	}
 	if err := b.MarkAsReadOnly(); err != nil {
 		t.Error("unexpected error")
 	}
-	if !b.ReadOnly {
+	if !b.IsReadOnly() {
 		t.Error("Unexpected State")
 	}
 
 	if err := b.MarkAsReadWrite(); err != nil {
 		t.Error("unexpected error")
 	}
-	if b.ReadOnly {
+	if b.IsReadOnly() {
 		t.Error("Unexpected State")
 	}
 	if err := b.MarkAsReadWrite(); err != nil {
 		t.Error("unexpected error")
 	}
-	if b.ReadOnly {
+	if b.IsReadOnly() {
 		t.Error("Unexpected State")
 	}
 
@@ -248,11 +248,11 @@ func TestDestroyAll(t *testing.T) {
 		t.Error("expected buffers to be nil")
 	}
 
-	if b.ReadOnly || c.ReadOnly {
+	if b.IsReadOnly() || c.IsReadOnly() {
 		t.Error("expected permissions to be empty")
 	}
 
-	if !b.Destroyed || !c.Destroyed {
+	if !b.IsDestroyed() || !c.IsDestroyed() {
 		t.Error("expected destroy flag to be set")
 	}
 }
@@ -269,7 +269,7 @@ func TestConcatenate(t *testing.T) {
 	if !bytes.Equal(c.Buffer, []byte("xxxxyyyy")) {
 		t.Error("unexpected output;", c.Buffer)
 	}
-	if !c.ReadOnly {
+	if !c.IsReadOnly() {
 		t.Error("expected ReadOnly")
 	}
 
@@ -293,7 +293,7 @@ func TestDuplicate(t *testing.T) {
 	if !bytes.Equal(b.Buffer, c.Buffer) {
 		t.Error("duplicated buffer has different contents")
 	}
-	if !c.ReadOnly {
+	if !c.IsReadOnly() {
 		t.Error("permissions not copied")
 	}
 	b.Destroy()
@@ -348,7 +348,7 @@ func TestSplit(t *testing.T) {
 	if !bytes.Equal(c.Buffer, []byte("yyyy")) {
 		t.Error("second buffer has unexpected value")
 	}
-	if !b.ReadOnly || !c.ReadOnly {
+	if !b.IsReadOnly() || !c.IsReadOnly() {
 		t.Error("permissions not preserved")
 	}
 	if !bytes.Equal(a.Buffer, []byte("xxxxyyyy")) {
@@ -385,7 +385,7 @@ func TestTrim(t *testing.T) {
 		t.Error("unexpected value:", c.Buffer)
 	}
 
-	if !c.ReadOnly {
+	if !c.IsReadOnly() {
 		t.Error("unexpected state")
 	}
 	c.Destroy()
