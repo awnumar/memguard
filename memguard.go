@@ -36,15 +36,13 @@ If an API function that needs to edit a LockedBuffer is given
 one marked as read-only, the call will return an ErrReadOnly.
 Similarly, if a function is given a LockedBuffer that has been
 destroyed, the call will return an ErrDestroyed.
-
-For obvious reasons, you should never edit these metadata values
-yourself. Doing so will result in undefined behaviour.
 */
 type LockedBuffer struct {
 	sync.Mutex
-	Buffer    []byte
-	ReadOnly  bool
-	Destroyed bool
+	Buffer []byte
+
+	readOnly  bool
+	destroyed bool
 }
 
 /*
@@ -151,6 +149,32 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 }
 
 /*
+IsReadOnly returns a boolean value indicating if a LockedBuffer is
+marked read-only.
+*/
+func (b *LockedBuffer) IsReadOnly() bool {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Return the appropriate value.
+	return b.readOnly
+}
+
+/*
+IsDestroyed returns a boolean value indicating if a LockedBuffer
+has been destroyed.
+*/
+func (b *LockedBuffer) IsDestroyed() bool {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Return the appropriate value.
+	return b.destroyed
+}
+
+/*
 EqualTo compares a LockedBuffer to a byte slice in constant time.
 */
 func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
@@ -159,7 +183,7 @@ func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return false, ErrDestroyed
 	}
 
@@ -187,12 +211,12 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return ErrDestroyed
 	}
 
 	// Check if it's already read-only.
-	if b.ReadOnly {
+	if b.readOnly {
 		return nil
 	}
 
@@ -201,7 +225,7 @@ func (b *LockedBuffer) MarkAsReadOnly() error {
 	memcall.Protect(memoryToMark, true, false)
 
 	// Tell everyone about the change we made.
-	b.ReadOnly = true
+	b.readOnly = true
 
 	// Everything went well.
 	return nil
@@ -219,12 +243,12 @@ func (b *LockedBuffer) MarkAsReadWrite() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return ErrDestroyed
 	}
 
 	// Check if it's already readable and writable.
-	if !b.ReadOnly {
+	if !b.readOnly {
 		return nil
 	}
 
@@ -233,7 +257,7 @@ func (b *LockedBuffer) MarkAsReadWrite() error {
 	memcall.Protect(memoryToMark, true, true)
 
 	// Tell everyone about the change we made.
-	b.ReadOnly = false
+	b.readOnly = false
 
 	// Everything went well.
 	return nil
@@ -269,12 +293,12 @@ func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return ErrDestroyed
 	}
 
 	// Check if it's marked as ReadOnly.
-	if b.ReadOnly {
+	if b.readOnly {
 		return ErrReadOnly
 	}
 
@@ -344,12 +368,12 @@ func (b *LockedBuffer) FillRandomBytesAt(offset, length int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return ErrDestroyed
 	}
 
 	// Check if it's marked as ReadOnly.
-	if b.ReadOnly {
+	if b.readOnly {
 		return ErrReadOnly
 	}
 
@@ -414,8 +438,8 @@ func (b *LockedBuffer) Destroy() {
 		memcall.Free(memory)
 
 		// Set the metadata appropriately.
-		b.ReadOnly = false
-		b.Destroyed = true
+		b.readOnly = false
+		b.destroyed = true
 
 		// Set the buffer to nil.
 		b.Buffer = nil
@@ -453,7 +477,7 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if a.Destroyed || b.Destroyed {
+	if a.destroyed || b.destroyed {
 		return nil, ErrDestroyed
 	}
 
@@ -465,7 +489,7 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	c.CopyAt(b.Buffer, len(a.Buffer))
 
 	// Set permissions accordingly.
-	if a.ReadOnly || b.ReadOnly {
+	if a.readOnly || b.readOnly {
 		c.MarkAsReadOnly()
 	}
 
@@ -483,7 +507,7 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return nil, ErrDestroyed
 	}
 
@@ -494,7 +518,7 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	newBuf.Copy(b.Buffer)
 
 	// Set permissions accordingly.
-	if b.ReadOnly {
+	if b.readOnly {
 		newBuf.MarkAsReadOnly()
 	}
 
@@ -513,7 +537,7 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if a.Destroyed || b.Destroyed {
+	if a.destroyed || b.destroyed {
 		return false, ErrDestroyed
 	}
 
@@ -539,7 +563,7 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return nil, nil, ErrDestroyed
 	}
 
@@ -560,7 +584,7 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	secondBuf.Copy(b.Buffer[offset:])
 
 	// Copy over permissions.
-	if b.ReadOnly {
+	if b.readOnly {
 		firstBuf.MarkAsReadOnly()
 		secondBuf.MarkAsReadOnly()
 	}
@@ -583,7 +607,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.Destroyed {
+	if b.destroyed {
 		return nil, ErrDestroyed
 	}
 
@@ -595,7 +619,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	newBuf.Copy(b.Buffer[offset : offset+size])
 
 	// Copy over permissions.
-	if b.ReadOnly {
+	if b.readOnly {
 		newBuf.MarkAsReadOnly()
 	}
 
