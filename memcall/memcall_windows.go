@@ -7,8 +7,6 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-
-	"github.com/alexbrainman/winapi"
 )
 
 // Placeholder variable for when we need a valid pointer to zero bytes.
@@ -31,7 +29,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	ptr, err := winapi.VirtualAlloc(_zero, uintptr(n), 0x00001000|0x00002000, 0x40)
+	ptr, err := windows.VirtualAlloc(_zero, uintptr(n), 0x00001000|0x00002000, 0x40)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
@@ -42,7 +40,7 @@ func Alloc(n int) []byte {
 
 // Free unallocates the byte slice specified.
 func Free(b []byte) {
-	if err := winapi.VirtualFree(_getPtr(b), uintptr(0), 0x8000); err != nil {
+	if err := windows.VirtualFree(_getPtr(b), uintptr(0), 0x8000); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err))
 	}
 }
@@ -60,7 +58,7 @@ func Protect(b []byte, read, write bool) {
 	}
 
 	var oldProtect uint32
-	if err := winapi.VirtualProtect(_getPtr(b), uintptr(len(b)), uint32(prot), &oldProtect); err != nil {
+	if err := windows.VirtualProtect(_getPtr(b), uintptr(len(b)), uint32(prot), &oldProtect); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err))
 	}
 }
