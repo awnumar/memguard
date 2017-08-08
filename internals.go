@@ -44,6 +44,9 @@ func createCanary() []byte {
 	c := getRandBytes(32)
 	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLen-32:pageSize+roundedLen], c)
 
+	// Mark the middle page as read-only.
+	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
+
 	// Return a slice that describes the correct portion of memory.
 	return getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
 }
