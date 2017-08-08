@@ -15,9 +15,6 @@ var (
 	allLockedBuffers      []*LockedBuffer
 	allLockedBuffersMutex = &sync.Mutex{}
 
-	// Mutex for getting random data from the csprng.
-	csprngMutex = &sync.Mutex{}
-
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
 )
@@ -54,10 +51,6 @@ func getBytes(ptr uintptr, len int) []byte {
 
 // Takes a byte slice and fills it with random data.
 func fillRandBytes(b []byte) {
-	// Get a mutex lock on the csprng.
-	csprngMutex.Lock()
-	defer csprngMutex.Unlock()
-
 	// Read len(b) bytes into the buffer.
 	if _, err := rand.Read(b); err != nil {
 		panic("memguard.csprng(): could not get random bytes")
