@@ -2,9 +2,12 @@ package memguard
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"os"
 	"sync"
 	"unsafe"
+
+	"github.com/awnumar/memguard/memcall"
 )
 
 var (
@@ -15,12 +18,38 @@ var (
 	allLockedBuffers      []*LockedBuffer
 	allLockedBuffersMutex = &sync.Mutex{}
 
-	// Mutex for getting random data from the csprng.
-	csprngMutex = &sync.Mutex{}
-
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
 )
+
+// Create and allocate a canary value. Return to caller.
+func createCanary() []byte {
+	// Canary length rounded to page size.
+	roundedLen := roundToPageSize(32)
+
+	// Therefore the total length is...
+	totalLen := (2 * pageSize) + roundedLen
+
+	// Allocate it.
+	memory := memcall.Alloc(totalLen)
+
+	// Lock the pages that will hold the canary.
+	memcall.Lock(memory[pageSize : pageSize+roundedLen])
+
+	// Make the guard pages inaccessible.
+	memcall.Protect(memory[:pageSize], false, false)
+	memcall.Protect(memory[pageSize+roundedLen:], false, false)
+
+	// Generate and copy the canary to the correct location.
+	c := getRandBytes(32)
+	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLen-32:pageSize+roundedLen], c)
+
+	// Mark the middle page as read-only.
+	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
+
+	// Return a slice that describes the correct portion of memory.
+	return getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
+}
 
 // Round a length to a multiple of the system page size.
 func roundToPageSize(length int) int {
@@ -54,10 +83,6 @@ func getBytes(ptr uintptr, len int) []byte {
 
 // Takes a byte slice and fills it with random data.
 func fillRandBytes(b []byte) {
-	// Get a mutex lock on the csprng.
-	csprngMutex.Lock()
-	defer csprngMutex.Unlock()
-
 	// Read len(b) bytes into the buffer.
 	if _, err := rand.Read(b); err != nil {
 		panic("memguard.csprng(): could not get random bytes")
