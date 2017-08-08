@@ -14,7 +14,7 @@ import (
 
 var (
 	// A slice that holds the canary we set.
-	canary = getRandBytes(32)
+	canary = createCanary()
 )
 
 /*
@@ -77,8 +77,8 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
 
-	// Generate and set the canary.
-	copy(memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
+	// Set the canary.
+	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
