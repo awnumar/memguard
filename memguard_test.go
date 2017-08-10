@@ -519,29 +519,30 @@ func TestFinalizer(t *testing.T) {
 	}
 	ic := c.lockedBuffer
 
-	runtime.GC()
-	for ib.IsDestroyed() != true {
-		runtime.Gosched()
-	}
-
-	if ib.IsDestroyed() != true {
-		t.Error("expected b to be destroyed")
+	if ib.IsDestroyed() != false {
+		t.Error("expected b to not be destroyed")
 	}
 	if ic.IsDestroyed() != false {
 		t.Error("expected c to not be destroyed")
 	}
 
-	runtime.KeepAlive(c)
+	runtime.KeepAlive(b)
+	// b is now unreachable
 
-	runtime.GC()
-	for ic.IsDestroyed() != true {
+	runtime.GC() // should collect b
+	for ib.IsDestroyed() != true {
 		runtime.Gosched()
 	}
 
-	if ib.IsDestroyed() != true {
-		t.Error("expected b to be destroyed")
+	if ic.IsDestroyed() != false {
+		t.Error("expected c to not be destroyed")
 	}
-	if ic.IsDestroyed() != true {
-		t.Error("expected c to be destroyed")
+
+	runtime.KeepAlive(c)
+	// c is now unreachable
+
+	runtime.GC() // should collect c
+	for ic.IsDestroyed() != true {
+		runtime.Gosched()
 	}
 }
