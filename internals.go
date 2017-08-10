@@ -15,7 +15,7 @@ var (
 	catchInterruptOnce sync.Once
 
 	// Store pointers to all of the LockedBuffers.
-	allLockedBuffers      []*LockedBuffer
+	allLockedBuffers      []*lockedBuffer
 	allLockedBuffersMutex = &sync.Mutex{}
 
 	// Grab the system page size.
@@ -57,7 +57,7 @@ func roundToPageSize(length int) int {
 }
 
 // Get a slice that describes all memory related to a LockedBuffer.
-func getAllMemory(b *LockedBuffer) []byte {
+func getAllMemory(b *lockedBuffer) []byte {
 	// Calculate the length of the buffer and the associated rounded value.
 	bufLen, roundedBufLen := len(b.Buffer), roundToPageSize(len(b.Buffer)+32)
 
