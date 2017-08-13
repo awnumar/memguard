@@ -20,9 +20,9 @@ var (
 /*
 LockedBuffer is a structure that holds secure values.
 
-The protected memory itself can be accessed with the `Buffer()`
+The protected memory itself can be accessed with the Buffer()
 method. The varous status flags can be accessed with the
-`IsDestroyed()` and `IsReadOnly()` methods, both of which
+IsDestroyed() and IsReadOnly() methods, both of which
 are pretty self-explanatory.
 
 The number of LockedBuffers that you are able to create is
