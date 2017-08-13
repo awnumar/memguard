@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"bytes"
+	"runtime"
 	"sync"
 	"testing"
 	"unsafe"
@@ -21,7 +22,9 @@ func TestNew(t *testing.T) {
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
-	c.Destroy()
+	if c != nil {
+		t.Error("expected nil, got *LockedBuffer")
+	}
 
 	a, err := New(8, true)
 	if err != nil {
@@ -47,7 +50,9 @@ func TestNewFromBytes(t *testing.T) {
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
-	c.Destroy()
+	if c != nil {
+		t.Error("expected nil, got *LockedBuffer")
+	}
 
 	a, err := NewFromBytes([]byte("test"), true)
 	if err != nil {
@@ -72,7 +77,9 @@ func TestNewRandom(t *testing.T) {
 	if err != ErrInvalidLength {
 		t.Error("expected ErrInvalidLength")
 	}
-	c.Destroy()
+	if c != nil {
+		t.Error("expected nil, got *LockedBuffer")
+	}
 
 	a, err := NewRandom(8, true)
 	if err != nil {
@@ -422,29 +429,6 @@ func TestTrim(t *testing.T) {
 	}
 }
 
-func TestLockedBuffers(t *testing.T) {
-	a, _ := New(4, false)
-	b, _ := New(4, false)
-	c, _ := New(4, false)
-
-	actualList := []*LockedBuffer{a, b, c}
-	givenList := LockedBuffers()
-
-	if len(actualList) != len(givenList) {
-		t.Error("actual != given")
-	}
-
-	for i := 0; i < len(actualList); i++ {
-		if actualList[i] != givenList[0] && actualList[i] != givenList[1] && actualList[i] != givenList[2] {
-			t.Error("actual != given")
-		}
-	}
-
-	a.Destroy()
-	b.Destroy()
-	c.Destroy()
-}
-
 func TestCatchInterrupt(t *testing.T) {
 	CatchInterrupt(func() {
 		return
@@ -519,5 +503,46 @@ func TestGetBytes(t *testing.T) {
 
 	if !bytes.Equal(b, bBytes) {
 		t.Error("pointer does not describe actual memory")
+	}
+}
+
+func TestFinalizer(t *testing.T) {
+	b, err := New(8, false)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	ib := b.container
+
+	c, err := New(8, false)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	ic := c.container
+
+	if ib.IsDestroyed() != false {
+		t.Error("expected b to not be destroyed")
+	}
+	if ic.IsDestroyed() != false {
+		t.Error("expected c to not be destroyed")
+	}
+
+	runtime.KeepAlive(b)
+	// b is now unreachable
+
+	runtime.GC() // should collect b
+	for ib.IsDestroyed() != true {
+		runtime.Gosched()
+	}
+
+	if ic.IsDestroyed() != false {
+		t.Error("expected c to not be destroyed")
+	}
+
+	runtime.KeepAlive(c)
+	// c is now unreachable
+
+	runtime.GC() // should collect c
+	for ic.IsDestroyed() != true {
+		runtime.Gosched()
 	}
 }
