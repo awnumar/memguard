@@ -13,8 +13,8 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if len(b.Buffer) != 8 || cap(b.Buffer) != 8 {
-		t.Error("length or capacity != required; len, cap =", len(b.Buffer), cap(b.Buffer))
+	if len(b.Buffer()) != 8 || cap(b.Buffer()) != 8 {
+		t.Error("length or capacity != required; len, cap =", len(b.Buffer()), cap(b.Buffer()))
 	}
 	b.Destroy()
 
@@ -41,8 +41,8 @@ func TestNewFromBytes(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer, []byte("test")) {
-		t.Error("b.Buffer != required")
+	if !bytes.Equal(b.Buffer(), []byte("test")) {
+		t.Error("b.Buffer() != required")
 	}
 	b.Destroy()
 
@@ -67,7 +67,7 @@ func TestNewFromBytes(t *testing.T) {
 func TestNewRandom(t *testing.T) {
 	b, _ := NewRandom(32, false)
 
-	if bytes.Equal(b.Buffer, make([]byte, 32)) {
+	if bytes.Equal(b.Buffer(), make([]byte, 32)) {
 		t.Error("was not filled with random data")
 	}
 
@@ -89,6 +89,15 @@ func TestNewRandom(t *testing.T) {
 		t.Error("unexpected state")
 	}
 	a.Destroy()
+}
+
+func TestBuffer(t *testing.T) {
+	b, _ := New(8, false)
+	defer b.Destroy()
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
 }
 
 func TestGetMetadata(t *testing.T) {
@@ -192,7 +201,7 @@ func TestMove(t *testing.T) {
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer, []byte("this is a very l")) {
+	if !bytes.Equal(b.Buffer(), []byte("this is a very l")) {
 		t.Error("bytes were't copied properly")
 	}
 	b.Destroy()
@@ -204,11 +213,11 @@ func TestMove(t *testing.T) {
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer[:len(buf)], []byte("diz small buf")) {
+	if !bytes.Equal(b.Buffer()[:len(buf)], []byte("diz small buf")) {
 		t.Error("bytes weren't copied properly")
 	}
-	if !bytes.Equal(b.Buffer[len(buf):], make([]byte, 16-len(buf))) {
-		t.Error("bytes were't copied properly;", b.Buffer[len(buf):])
+	if !bytes.Equal(b.Buffer()[len(buf):], make([]byte, 16-len(buf))) {
+		t.Error("bytes were't copied properly;", b.Buffer()[len(buf):])
 	}
 	b.Destroy()
 
@@ -219,7 +228,7 @@ func TestMove(t *testing.T) {
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer, []byte("yellow submarine")) {
+	if !bytes.Equal(b.Buffer(), []byte("yellow submarine")) {
 		t.Error("bytes were't copied properly")
 	}
 
@@ -241,15 +250,15 @@ func TestFillRandomBytes(t *testing.T) {
 	a, _ := New(32, false)
 	a.FillRandomBytes()
 
-	if a.Buffer == nil {
+	if a.Buffer() == nil {
 		t.Error("not random")
 	}
 
-	WipeBytes(a.Buffer)
+	WipeBytes(a.Buffer())
 	a.FillRandomBytesAt(16, 16)
 
-	if !bytes.Equal(a.Buffer[:16], make([]byte, 16)) || bytes.Equal(a.Buffer[16:], make([]byte, 16)) {
-		t.Error("incorrect offset/size;", a.Buffer[:16], a.Buffer[16:])
+	if !bytes.Equal(a.Buffer()[:16], make([]byte, 16)) || bytes.Equal(a.Buffer()[16:], make([]byte, 16)) {
+		t.Error("incorrect offset/size;", a.Buffer()[:16], a.Buffer()[16:])
 	}
 
 	a.MarkAsReadOnly()
@@ -272,7 +281,7 @@ func TestDestroyAll(t *testing.T) {
 
 	DestroyAll()
 
-	if b.Buffer != nil || c.Buffer != nil {
+	if b.Buffer() != nil || c.Buffer() != nil {
 		t.Error("expected buffers to be nil")
 	}
 
@@ -294,8 +303,8 @@ func TestConcatenate(t *testing.T) {
 		t.Error("unexpected error")
 	}
 
-	if !bytes.Equal(c.Buffer, []byte("xxxxyyyy")) {
-		t.Error("unexpected output;", c.Buffer)
+	if !bytes.Equal(c.Buffer(), []byte("xxxxyyyy")) {
+		t.Error("unexpected output;", c.Buffer())
 	}
 	if !c.IsReadOnly() {
 		t.Error("expected ReadOnly")
@@ -318,7 +327,7 @@ func TestDuplicate(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer, c.Buffer) {
+	if !bytes.Equal(b.Buffer(), c.Buffer()) {
 		t.Error("duplicated buffer has different contents")
 	}
 	if !c.IsReadOnly() {
@@ -370,16 +379,16 @@ func TestSplit(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer, []byte("xxxx")) {
+	if !bytes.Equal(b.Buffer(), []byte("xxxx")) {
 		t.Error("first buffer has unexpected value")
 	}
-	if !bytes.Equal(c.Buffer, []byte("yyyy")) {
+	if !bytes.Equal(c.Buffer(), []byte("yyyy")) {
 		t.Error("second buffer has unexpected value")
 	}
 	if !b.IsReadOnly() || !c.IsReadOnly() {
 		t.Error("permissions not preserved")
 	}
-	if !bytes.Equal(a.Buffer, []byte("xxxxyyyy")) {
+	if !bytes.Equal(a.Buffer(), []byte("xxxxyyyy")) {
 		t.Error("original is not preserved")
 	}
 
@@ -409,8 +418,8 @@ func TestTrim(t *testing.T) {
 		t.Error("unexpected error")
 	}
 
-	if !bytes.Equal(c.Buffer, []byte("xxyy")) {
-		t.Error("unexpected value:", c.Buffer)
+	if !bytes.Equal(c.Buffer(), []byte("xxyy")) {
+		t.Error("unexpected value:", c.Buffer())
 	}
 
 	if !c.IsReadOnly() {
