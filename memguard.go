@@ -648,15 +648,15 @@ func CatchInterrupt(f func()) {
 		// Create a channel to listen on.
 		c := make(chan os.Signal, 2)
 
+		// Notify the channel if we receive a signal.
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 		// Start a goroutine to listen on the channel.
 		go func() {
 			<-c         // Wait for signal.
 			f()         // Execute user function.
 			SafeExit(0) // Exit securely.
 		}()
-
-		// Notify the channel if we receive a signal.
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	})
 }
 

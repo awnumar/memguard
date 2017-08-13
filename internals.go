@@ -11,15 +11,15 @@ import (
 )
 
 var (
+	// Grab the system page size.
+	pageSize = os.Getpagesize()
+
 	// Once object to ensure CatchInterrupt is only executed once.
 	catchInterruptOnce sync.Once
 
 	// Store pointers to all of the LockedBuffers.
 	allLockedBuffers      []*container
 	allLockedBuffersMutex = &sync.Mutex{}
-
-	// Grab the system page size.
-	pageSize = os.Getpagesize()
 )
 
 // container implements the actual data container.
