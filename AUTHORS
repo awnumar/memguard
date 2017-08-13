@@ -8,6 +8,9 @@
 Awn Umar <awn@cryptolosophy.io>
     - Main developer.
 
+Carlo Alberto Ferraris <cafxx@strayorange.com>
+    - Implemented buffer leaking protection via finalizers.
+
 dotcppfile <dotcppfile@gmail.com>
     - Implemented guard pages.
     - Various bug fixes and optimisations.

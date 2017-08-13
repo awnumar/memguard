@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -38,12 +39,20 @@ Similarly, if a function is given a LockedBuffer that has been
 destroyed, the call will return an ErrDestroyed.
 */
 type LockedBuffer struct {
+	*lockedBuffer
+	*finalizerGuard
+}
+
+// LockedBuffer is actually just a handle to lockedBuffer
+type lockedBuffer struct {
 	sync.Mutex
 	Buffer []byte
 
 	readOnly  bool
 	destroyed bool
 }
+
+type finalizerGuard [16]byte
 
 /*
 New creates a new LockedBuffer of a specified length and
@@ -59,7 +68,8 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 	}
 
 	// Allocate a new LockedBuffer.
-	b := new(LockedBuffer)
+	ib := new(lockedBuffer)
+	b := &LockedBuffer{ib, new(finalizerGuard)}
 
 	// Round length + 32 bytes for the canary to a multiple of the page size..
 	roundedLength := roundToPageSize(length + 32)
@@ -88,10 +98,17 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 		b.MarkAsReadOnly()
 	}
 
-	// Append this LockedBuffer to allLockedBuffers.
+	// Append the lockedBuffer to allLockedBuffers. We have to add lockedBuffer
+	// instead of LockedBuffer so that the finalizerGuard can become unreachable
 	allLockedBuffersMutex.Lock()
-	allLockedBuffers = append(allLockedBuffers, b)
+	allLockedBuffers = append(allLockedBuffers, ib)
 	allLockedBuffersMutex.Unlock()
+
+	// Use a finalizer to make sure the buffer gets destroyed even if the user
+	// forgets to do it
+	runtime.SetFinalizer(b.finalizerGuard, func(_ *finalizerGuard) {
+		go ib.Destroy()
+	})
 
 	// Return a pointer to the LockedBuffer.
 	return b, nil
@@ -152,7 +169,7 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 IsReadOnly returns a boolean value indicating if a LockedBuffer is
 marked read-only.
 */
-func (b *LockedBuffer) IsReadOnly() bool {
+func (b *lockedBuffer) IsReadOnly() bool {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -165,7 +182,7 @@ func (b *LockedBuffer) IsReadOnly() bool {
 IsDestroyed returns a boolean value indicating if a LockedBuffer
 has been destroyed.
 */
-func (b *LockedBuffer) IsDestroyed() bool {
+func (b *lockedBuffer) IsDestroyed() bool {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -177,7 +194,7 @@ func (b *LockedBuffer) IsDestroyed() bool {
 /*
 EqualTo compares a LockedBuffer to a byte slice in constant time.
 */
-func (b *LockedBuffer) EqualTo(buf []byte) (bool, error) {
+func (b *lockedBuffer) EqualTo(buf []byte) (bool, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -205,7 +222,7 @@ SIGSEGV memory violation.
 
 To make the memory writable again, MarkAsReadWrite is called.
 */
-func (b *LockedBuffer) MarkAsReadOnly() error {
+func (b *lockedBuffer) MarkAsReadOnly() error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -237,7 +254,7 @@ memory as readable and writable.
 
 This method is the counterpart of MarkAsReadOnly.
 */
-func (b *LockedBuffer) MarkAsReadWrite() error {
+func (b *lockedBuffer) MarkAsReadWrite() error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -278,7 +295,7 @@ soon as possible.
 If the LockedBuffer is marked as read-only, the call will
 fail and return an ErrReadOnly.
 */
-func (b *LockedBuffer) Copy(buf []byte) error {
+func (b *lockedBuffer) Copy(buf []byte) error {
 	// Just call CopyAt with a zero offset.
 	return b.CopyAt(buf, 0)
 }
@@ -287,7 +304,7 @@ func (b *LockedBuffer) Copy(buf []byte) error {
 CopyAt is identical to Copy but it copies into the LockedBuffer
 at a specified offset.
 */
-func (b *LockedBuffer) CopyAt(buf []byte, offset int) error {
+func (b *lockedBuffer) CopyAt(buf []byte, offset int) error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -326,7 +343,7 @@ should be favoured unless you have a good reason.
 If the LockedBuffer is marked as read-only, the call will
 fail and return an ErrReadOnly.
 */
-func (b *LockedBuffer) Move(buf []byte) error {
+func (b *lockedBuffer) Move(buf []byte) error {
 	// Just call MoveAt with a zero offset.
 	return b.MoveAt(buf, 0)
 }
@@ -335,7 +352,7 @@ func (b *LockedBuffer) Move(buf []byte) error {
 MoveAt is identical to Move but it copies into the LockedBuffer
 at a specified offset.
 */
-func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
+func (b *lockedBuffer) MoveAt(buf []byte, offset int) error {
 	// Copy buf into the LockedBuffer.
 	if err := b.CopyAt(buf, offset); err != nil {
 		return err
@@ -352,7 +369,7 @@ func (b *LockedBuffer) MoveAt(buf []byte, offset int) error {
 FillRandomBytes fills a LockedBuffer with cryptographically-secure
 pseudo-random bytes.
 */
-func (b *LockedBuffer) FillRandomBytes() error {
+func (b *lockedBuffer) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
 	return b.FillRandomBytesAt(0, len(b.Buffer))
 }
@@ -362,7 +379,7 @@ FillRandomBytesAt fills a LockedBuffer with cryptographically-secure
 pseudo-random bytes, starting at an offset and ending after a given
 number of bytes.
 */
-func (b *LockedBuffer) FillRandomBytesAt(offset, length int) error {
+func (b *lockedBuffer) FillRandomBytesAt(offset, length int) error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -396,7 +413,7 @@ SafeExit. We recommend using all of them together.
 If the LockedBuffer has already been destroyed then the call
 makes no changes.
 */
-func (b *LockedBuffer) Destroy() {
+func (b *lockedBuffer) Destroy() {
 	// Remove this one from global slice.
 	var exists bool
 	allLockedBuffersMutex.Lock()
@@ -443,22 +460,6 @@ func (b *LockedBuffer) Destroy() {
 
 		// Set the buffer to nil.
 		b.Buffer = nil
-	}
-}
-
-/*
-DestroyAll calls Destroy on all LockedBuffers that have not already
-been destroyed.
-
-CatchInterrupt and SafeExit both call DestroyAll before exiting.
-*/
-func DestroyAll() {
-	// Get a copy of allLockedBuffers.
-	toDestroy := LockedBuffers()
-
-	// Call destroy on each LockedBuffer.
-	for _, v := range toDestroy {
-		v.Destroy()
 	}
 }
 
@@ -628,18 +629,21 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 }
 
 /*
-LockedBuffers returns a slice containing a pointer to
-each LockedBuffer that has not been destroyed.
+DestroyAll calls Destroy on all LockedBuffers that have not already
+been destroyed.
+
+CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
-func LockedBuffers() []*LockedBuffer {
+func DestroyAll() {
 	// Get a Mutex lock on allLockedBuffers, and get a copy.
 	allLockedBuffersMutex.Lock()
-	lockedBuffers := make([]*LockedBuffer, len(allLockedBuffers))
+	lockedBuffers := make([]*lockedBuffer, len(allLockedBuffers))
 	copy(lockedBuffers, allLockedBuffers)
 	allLockedBuffersMutex.Unlock()
 
-	// Return this copy.
-	return lockedBuffers
+	for _, b := range lockedBuffers {
+		b.Destroy()
+	}
 }
 
 /*
