@@ -156,6 +156,24 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 	return b, nil
 }
 
+/*
+Buffer returns a slice that references the secure, protected portion of memory.
+
+For the sake of good coding practice, we recommmend that you do not allocate the
+return value, and instead simply call Buffer each time that you need to access
+the memory that it references. There is no security issue with doing so, but it
+just makes it easier to quickly see where you're handling protected memory.
+
+If a function that you're using requires an array, you can cast the buffer to
+an array and then pass around a pointer:
+
+    // Make sure the size of the array matches the size of the buffer.
+    // In this case that size is 16. This is very important.
+    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Buffer()[0]))
+
+Make sure that you do not dereference the pointer and pass around the resulting
+value, as this will leave copies all over the place.
+*/
 func (b *container) Buffer() []byte {
 	return b.buffer
 }
