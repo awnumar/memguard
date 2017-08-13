@@ -15,7 +15,7 @@ The general working cycle is as follows:
     encryptionKey.Move([]byte("yellow submarine"))
 
     // Use the buffer wherever you need it.
-    Encrypt(encryptionKey.Buffer, plaintext)
+    Encrypt(encryptionKey.Buffer(), plaintext)
 
 The number of LockedBuffers that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on LockedBuffers that you no longer need, or simply defer a Destroy call after creating a new LockedBuffer.
 
@@ -29,7 +29,7 @@ If a function that you're using requires an array, you can cast the Buffer to an
 
     // Make sure the size of the array matches the size of the Buffer.
     // In this case that size is 16. This is very important.
-    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer[0]))
+    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer()[0]))
 
 The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer exposes. Don't use the mutex when calling a function that is part of the MemGuard API though, or the process will deadlock.
 

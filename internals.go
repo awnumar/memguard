@@ -24,11 +24,12 @@ var (
 
 // container implements the actual data container.
 type container struct {
-	sync.Mutex
-	Buffer []byte
+	sync.Mutex // Local mutex lock.
 
-	readOnly  bool
-	destroyed bool
+	buffer []byte // Slice that references protected memory.
+
+	readOnly  bool // Is this memory read-only?
+	destroyed bool // Is this LockedBuffer destroyed?
 }
 
 // finaliserHint is a value that we monitor instead of the LockedBuffer
@@ -72,10 +73,10 @@ func roundToPageSize(length int) int {
 // Get a slice that describes all memory related to a LockedBuffer.
 func getAllMemory(b *container) []byte {
 	// Calculate the length of the buffer and the associated rounded value.
-	bufLen, roundedBufLen := len(b.Buffer), roundToPageSize(len(b.Buffer)+32)
+	bufLen, roundedBufLen := len(b.buffer), roundToPageSize(len(b.buffer)+32)
 
 	// Calculate the address of the start of the memory.
-	memAddr := uintptr(unsafe.Pointer(&b.Buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
 
 	// Calculate the size of the entire memory.
 	memLen := (pageSize * 2) + roundedBufLen

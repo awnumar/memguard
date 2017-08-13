@@ -79,7 +79,7 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
 
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.Buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
+	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
 
 	// Mark as read-only if requested.
 	if readOnly {
@@ -142,7 +142,7 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 	}
 
 	// Fill it with random data.
-	fillRandBytes(b.Buffer)
+	fillRandBytes(b.buffer)
 
 	// Mark as read-only if requested.
 	if readOnly {
@@ -151,6 +151,10 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 
 	// Return the LockedBuffer.
 	return b, nil
+}
+
+func (b *container) Buffer() []byte {
+	return b.buffer
 }
 
 /*
@@ -193,7 +197,7 @@ func (b *container) EqualTo(buf []byte) (bool, error) {
 	}
 
 	// Do a time-constant comparison.
-	if equal := subtle.ConstantTimeCompare(b.Buffer, buf); equal == 1 {
+	if equal := subtle.ConstantTimeCompare(b.buffer, buf); equal == 1 {
 		// They're equal.
 		return true, nil
 	}
@@ -226,7 +230,7 @@ func (b *container) MarkAsReadOnly() error {
 	}
 
 	// Mark the memory as read-only.
-	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.buffer)+32)]
 	memcall.Protect(memoryToMark, true, false)
 
 	// Tell everyone about the change we made.
@@ -258,7 +262,7 @@ func (b *container) MarkAsReadWrite() error {
 	}
 
 	// Mark the memory as readable and writable.
-	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.Buffer)+32)]
+	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.buffer)+32)]
 	memcall.Protect(memoryToMark, true, true)
 
 	// Tell everyone about the change we made.
@@ -308,12 +312,12 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 	}
 
 	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
-	if len(b.Buffer[offset:]) > len(buf) {
-		subtle.ConstantTimeCopy(1, b.Buffer[offset:offset+len(buf)], buf)
-	} else if len(b.Buffer[offset:]) < len(buf) {
-		subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf[:len(b.Buffer[offset:])])
+	if len(b.buffer[offset:]) > len(buf) {
+		subtle.ConstantTimeCopy(1, b.buffer[offset:offset+len(buf)], buf)
+	} else if len(b.buffer[offset:]) < len(buf) {
+		subtle.ConstantTimeCopy(1, b.buffer[offset:], buf[:len(b.buffer[offset:])])
 	} else {
-		subtle.ConstantTimeCopy(1, b.Buffer[offset:], buf)
+		subtle.ConstantTimeCopy(1, b.buffer[offset:], buf)
 	}
 
 	return nil
@@ -359,7 +363,7 @@ pseudo-random bytes.
 */
 func (b *container) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
-	return b.FillRandomBytesAt(0, len(b.Buffer))
+	return b.FillRandomBytesAt(0, len(b.buffer))
 }
 
 /*
@@ -383,7 +387,7 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 	}
 
 	// Fill with random bytes.
-	fillRandBytes(b.Buffer[offset : offset+length])
+	fillRandBytes(b.buffer[offset : offset+length])
 
 	// Everything went well.
 	return nil
@@ -426,7 +430,7 @@ func (b *container) Destroy() {
 		roundedLength := len(memory) - (pageSize * 2)
 
 		// Verify the canary.
-		if !bytes.Equal(memory[pageSize+roundedLength-len(b.Buffer)-32:pageSize+roundedLength-len(b.Buffer)], canary) {
+		if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], canary) {
 			panic("memguard.Destroy(): buffer underflow detected")
 		}
 
@@ -447,7 +451,7 @@ func (b *container) Destroy() {
 		b.destroyed = true
 
 		// Set the buffer to nil.
-		b.Buffer = nil
+		b.buffer = nil
 	}
 }
 
@@ -471,11 +475,11 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	}
 
 	// Create a new LockedBuffer to hold the concatenated value.
-	c, _ := New(len(a.Buffer)+len(b.Buffer), false)
+	c, _ := New(len(a.buffer)+len(b.buffer), false)
 
 	// Copy the values across.
-	c.Copy(a.Buffer)
-	c.CopyAt(b.Buffer, len(a.Buffer))
+	c.Copy(a.buffer)
+	c.CopyAt(b.buffer, len(a.buffer))
 
 	// Set permissions accordingly.
 	if a.readOnly || b.readOnly {
@@ -501,10 +505,10 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	}
 
 	// Create new LockedBuffer.
-	newBuf, _ := New(len(b.Buffer), false)
+	newBuf, _ := New(len(b.buffer), false)
 
 	// Copy bytes into it.
-	newBuf.Copy(b.Buffer)
+	newBuf.Copy(b.buffer)
 
 	// Set permissions accordingly.
 	if b.readOnly {
@@ -531,7 +535,7 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	}
 
 	// Do a time-constant comparison on the two buffers.
-	if equal := subtle.ConstantTimeCompare(a.Buffer, b.Buffer); equal == 1 {
+	if equal := subtle.ConstantTimeCompare(a.buffer, b.buffer); equal == 1 {
 		// They're equal.
 		return true, nil
 	}
@@ -557,20 +561,20 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	}
 
 	// Create two new LockedBuffers.
-	firstBuf, err := New(len(b.Buffer[:offset]), false)
+	firstBuf, err := New(len(b.buffer[:offset]), false)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	secondBuf, err := New(len(b.Buffer[offset:]), false)
+	secondBuf, err := New(len(b.buffer[offset:]), false)
 	if err != nil {
 		firstBuf.Destroy()
 		return nil, nil, err
 	}
 
 	// Copy the values into them.
-	firstBuf.Copy(b.Buffer[:offset])
-	secondBuf.Copy(b.Buffer[offset:])
+	firstBuf.Copy(b.buffer[:offset])
+	secondBuf.Copy(b.buffer[offset:])
 
 	// Copy over permissions.
 	if b.readOnly {
@@ -605,7 +609,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	newBuf.Copy(b.Buffer[offset : offset+size])
+	newBuf.Copy(b.buffer[offset : offset+size])
 
 	// Copy over permissions.
 	if b.readOnly {
