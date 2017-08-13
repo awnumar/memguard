@@ -15,8 +15,7 @@ build_script:
 - go build -race -v .
 
 test_script:
-    - go test -race -v ./memcall/...
-    - go test -race -v ./
+    - go test -race -v ./...
 
 notifications:
 - provider: Slack

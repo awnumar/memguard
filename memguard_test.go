@@ -511,13 +511,13 @@ func TestFinalizer(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	ib := b.lockedBuffer
+	ib := b.container
 
 	c, err := New(8, false)
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	ic := c.lockedBuffer
+	ic := c.container
 
 	if ib.IsDestroyed() != false {
 		t.Error("expected b to not be destroyed")

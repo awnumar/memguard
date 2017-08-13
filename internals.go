@@ -15,12 +15,25 @@ var (
 	catchInterruptOnce sync.Once
 
 	// Store pointers to all of the LockedBuffers.
-	allLockedBuffers      []*lockedBuffer
+	allLockedBuffers      []*container
 	allLockedBuffersMutex = &sync.Mutex{}
 
 	// Grab the system page size.
 	pageSize = os.Getpagesize()
 )
+
+// container implements the actual data container.
+type container struct {
+	sync.Mutex
+	Buffer []byte
+
+	readOnly  bool
+	destroyed bool
+}
+
+// finaliserHint is a value that we monitor instead of the LockedBuffer
+// itself. It allows us to tell the GC to auto-destroy LockedBuffers.
+type finaliserHint [16]byte
 
 // Create and allocate a canary value. Return to caller.
 func createCanary() []byte {
@@ -57,7 +70,7 @@ func roundToPageSize(length int) int {
 }
 
 // Get a slice that describes all memory related to a LockedBuffer.
-func getAllMemory(b *lockedBuffer) []byte {
+func getAllMemory(b *container) []byte {
 	// Calculate the length of the buffer and the associated rounded value.
 	bufLen, roundedBufLen := len(b.Buffer), roundToPageSize(len(b.Buffer)+32)
 
