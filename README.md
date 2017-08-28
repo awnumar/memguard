@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://cdn.rawgit.com/awnumar/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
-  <p align="center">A pure Go library that handles sensitive values in memory.</p>
+  <p align="center">Pure go library for secure handling of sensitive memory.</p>
   <p align="center">
     <a href="https://travis-ci.org/awnumar/memguard"><img src="https://travis-ci.org/awnumar/memguard.svg?branch=master"></a>
     <a href="https://ci.appveyor.com/project/awnumar/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/nrtqmdolndm0pcac/branch/master?svg=true"></a>
