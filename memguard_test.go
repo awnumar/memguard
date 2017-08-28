@@ -299,6 +299,32 @@ func TestDestroyAll(t *testing.T) {
 	}
 }
 
+func TestSize(t *testing.T) {
+	b, _ := New(16, false)
+
+	if b.Size() != 16 {
+		t.Error("unexpected size")
+	}
+
+	b.Destroy()
+
+	if b.Size() != 0 {
+		t.Error("unexpected size")
+	}
+}
+
+func TestWipe(t *testing.T) {
+	b, _ := NewFromBytes([]byte("yellow submarine"), false)
+
+	if err := b.Wipe(); err != nil {
+		t.Error("failed to wipe:", err)
+	}
+
+	if !bytes.Equal(b.Buffer(), make([]byte, 16)) {
+		t.Error("bytes not wiped; b =", b.Buffer())
+	}
+}
+
 func TestConcatenate(t *testing.T) {
 	a, _ := NewFromBytes([]byte("xxxx"), true)
 	b, _ := NewFromBytes([]byte("yyyy"), false)
@@ -454,18 +480,6 @@ func TestCatchInterrupt(t *testing.T) {
 	})
 	if i != 0 {
 		t.Error("sync.Once failed")
-	}
-}
-
-func TestWipe(t *testing.T) {
-	b, _ := NewFromBytes([]byte("yellow submarine"), false)
-
-	if err := b.Wipe(); err != nil {
-		t.Error("failed to wipe:", err)
-	}
-
-	if !bytes.Equal(b.Buffer(), make([]byte, 16)) {
-		t.Error("bytes not wiped; b =", b.Buffer())
 	}
 }
 

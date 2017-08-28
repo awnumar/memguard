@@ -477,6 +477,14 @@ func (b *container) Destroy() {
 }
 
 /*
+Size returns an integer representing the total length, in bytes, of a LockedBuffer.
+If this size is zero, it is safe to assume that the LockedBuffer has been destroyed.
+*/
+func (b *container) Size() int {
+	return len(b.buffer)
+}
+
+/*
 Wipe wipes a LockedBuffer's contents by overwriting the buffer with zeroes.
 */
 func (b *container) Wipe() error {
