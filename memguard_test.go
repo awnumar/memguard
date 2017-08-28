@@ -338,7 +338,7 @@ func TestWipe(t *testing.T) {
 	b.Destroy()
 
 	if err := b.Wipe(); err != ErrDestroyed {
-		t.Error("expected ErrReadOnly")
+		t.Error("expected ErrDestroyed")
 	}
 }
 
