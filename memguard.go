@@ -372,7 +372,7 @@ func (b *container) MoveAt(buf []byte, offset int) error {
 	}
 
 	// Wipe the old bytes.
-	WipeBytes(buf)
+	wipeBytes(buf)
 
 	// Everything went well.
 	return nil
@@ -459,7 +459,7 @@ func (b *container) Destroy() {
 		memcall.Protect(memory, true, true)
 
 		// Wipe the pages that hold our data.
-		WipeBytes(memory[pageSize : pageSize+roundedLength])
+		wipeBytes(memory[pageSize : pageSize+roundedLength])
 
 		// Unlock the pages that hold our data.
 		memcall.Unlock(memory[pageSize : pageSize+roundedLength])
@@ -474,6 +474,31 @@ func (b *container) Destroy() {
 		// Set the buffer to nil.
 		b.buffer = nil
 	}
+}
+
+/*
+Wipe wipes a LockedBuffer's contents by overwriting the buffer with zeroes.
+*/
+func (b *container) Wipe() error {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if b.destroyed {
+		return ErrDestroyed
+	}
+
+	// Check if it's marked as ReadOnly.
+	if b.readOnly {
+		return ErrReadOnly
+	}
+
+	// Wipe the buffer.
+	wipeBytes(b.buffer)
+
+	// Everything went well.
+	return nil
 }
 
 /*
@@ -694,17 +719,6 @@ func SafeExit(c int) {
 
 	// Exit with a specified exit-code.
 	os.Exit(c)
-}
-
-/*
-WipeBytes wipes a byte slice with zeroes.
-*/
-func WipeBytes(buf []byte) {
-	// Iterate over the slice...
-	for i := 0; i < len(buf); i++ {
-		// ... setting each element to zero.
-		buf[i] = byte(0)
-	}
 }
 
 /*

@@ -101,3 +101,12 @@ func fillRandBytes(b []byte) {
 		panic("memguard.csprng(): could not get random bytes")
 	}
 }
+
+// Wipes a byte slice with zeroes.
+func wipeBytes(buf []byte) {
+	// Iterate over the slice...
+	for i := 0; i < len(buf); i++ {
+		// ... setting each element to zero.
+		buf[i] = byte(0)
+	}
+}
