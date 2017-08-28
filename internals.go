@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"crypto/rand"
-	"crypto/subtle"
 	"os"
 	"sync"
 	"unsafe"
@@ -54,15 +53,15 @@ func createCanary() []byte {
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLen:], false, false)
 
-	// Generate and copy the canary to the correct location.
-	c := getRandBytes(32)
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLen-32:pageSize+roundedLen], c)
+	// Fill the memory with cryptographically-secure random bytes (the canary value).
+	c := getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
+	fillRandBytes(c)
 
 	// Mark the middle page as read-only.
 	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
 
 	// Return a slice that describes the correct portion of memory.
-	return getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
+	return c
 }
 
 // Round a length to a multiple of the system page size.
@@ -101,16 +100,4 @@ func fillRandBytes(b []byte) {
 	if _, err := rand.Read(b); err != nil {
 		panic("memguard.csprng(): could not get random bytes")
 	}
-}
-
-// Create and return a slice of length n, filled with random data.
-func getRandBytes(n int) []byte {
-	// Create a buffer to hold this data.
-	b := make([]byte, n)
-
-	// Read len(b) bytes into the created buffer.
-	fillRandBytes(b)
-
-	// Return the buffer.
-	return b
 }

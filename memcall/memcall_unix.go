@@ -69,6 +69,6 @@ func Protect(b []byte, read, write bool) {
 func DisableCoreDumps() {
 	// Disable core dumps.
 	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
-		panic(fmt.Sprintf("memguard.memprot._disableCoreDumps(): could not set rlimit [Err: %s]", err))
+		panic(fmt.Sprintf("memguard.memcall.DisableCoreDumps(): could not set rlimit [Err: %s]", err))
 	}
 }
