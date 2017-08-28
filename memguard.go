@@ -159,10 +159,10 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 /*
 Buffer returns a slice that references the secure, protected portion of memory.
 
-For the sake of good coding practice, we recommmend that you do not allocate the
-return value, and instead simply call Buffer each time that you need to access
-the memory that it references. There is no security issue with doing so, but it
-just makes it easier to quickly see where you're handling protected memory.
+If the LockedBuffer that you call Buffer on has been destroyed, the returned
+slice will be nil (it will have a length and capacity of zero). Thus, checking
+the size of the returned slice is a very good indication of whether it has been
+destroyed.
 
 If a function that you're using requires an array, you can cast the buffer to
 an array and then pass around a pointer:
