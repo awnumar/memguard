@@ -11,7 +11,7 @@ import (
 // Lock is a wrapper for unix.Mlock(), with extra precautions.
 func Lock(b []byte) {
 	// Advise the kernel not to dump. Ignore failure.
-	unix.Madvise(b, 0x10)
+	unix.Madvise(b, unix.MADV_DONTDUMP)
 
 	// Call mlock.
 	if err := unix.Mlock(b); err != nil {

@@ -41,8 +41,8 @@ Similarly, if a function is given a LockedBuffer that has been
 destroyed, the call will return an ErrDestroyed.
 */
 type LockedBuffer struct {
-	*container     // Import all the container fields.
-	*finaliserHint // Monitor this for auto-destruction.
+	*container  // Import all the container fields.
+	*littleBird // Monitor this for auto-destruction.
 }
 
 /*
@@ -60,7 +60,7 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 
 	// Allocate a new LockedBuffer.
 	ib := new(container)
-	b := &LockedBuffer{ib, new(finaliserHint)}
+	b := &LockedBuffer{ib, new(littleBird)}
 
 	// Round length + 32 bytes for the canary to a multiple of the page size..
 	roundedLength := roundToPageSize(length + 32)
@@ -90,14 +90,14 @@ func New(length int, readOnly bool) (*LockedBuffer, error) {
 	}
 
 	// Append the container to allLockedBuffers. We have to add container
-	// instead of LockedBuffer so that the finaliserHint can become unreachable
+	// instead of LockedBuffer so that the littleBird can become unreachable
 	allLockedBuffersMutex.Lock()
 	allLockedBuffers = append(allLockedBuffers, ib)
 	allLockedBuffersMutex.Unlock()
 
 	// Use a finalizer to make sure the buffer gets destroyed even if the user
 	// forgets to do it
-	runtime.SetFinalizer(b.finaliserHint, func(_ *finaliserHint) {
+	runtime.SetFinalizer(b.littleBird, func(_ *littleBird) {
 		go ib.Destroy()
 	})
 
@@ -159,10 +159,10 @@ func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
 /*
 Buffer returns a slice that references the secure, protected portion of memory.
 
-For the sake of good coding practice, we recommmend that you do not allocate the
-return value, and instead simply call Buffer each time that you need to access
-the memory that it references. There is no security issue with doing so, but it
-just makes it easier to quickly see where you're handling protected memory.
+If the LockedBuffer that you call Buffer on has been destroyed, the returned
+slice will be nil (it will have a length and capacity of zero). Thus, checking
+the size of the returned slice is a very good indication of whether it has been
+destroyed.
 
 If a function that you're using requires an array, you can cast the buffer to
 an array and then pass around a pointer:

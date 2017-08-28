@@ -31,9 +31,9 @@ type container struct {
 	destroyed bool // Is this LockedBuffer destroyed?
 }
 
-// finaliserHint is a value that we monitor instead of the LockedBuffer
+// littleBird is a value that we monitor instead of the LockedBuffer
 // itself. It allows us to tell the GC to auto-destroy LockedBuffers.
-type finaliserHint [16]byte
+type littleBird [16]byte
 
 // Create and allocate a canary value. Return to caller.
 func createCanary() []byte {

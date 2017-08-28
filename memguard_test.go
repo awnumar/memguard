@@ -93,10 +93,15 @@ func TestNewRandom(t *testing.T) {
 
 func TestBuffer(t *testing.T) {
 	b, _ := New(8, false)
-	defer b.Destroy()
 
 	if !bytes.Equal(b.buffer, b.Buffer()) {
 		t.Error("buffers inequal")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
 	}
 }
 
