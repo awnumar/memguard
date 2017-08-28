@@ -323,6 +323,23 @@ func TestWipe(t *testing.T) {
 	if !bytes.Equal(b.Buffer(), make([]byte, 16)) {
 		t.Error("bytes not wiped; b =", b.Buffer())
 	}
+
+	b.FillRandomBytes()
+	b.MarkAsReadOnly()
+
+	if err := b.Wipe(); err != ErrReadOnly {
+		t.Error("expected ErrReadOnly")
+	}
+
+	if bytes.Equal(b.Buffer(), make([]byte, 16)) {
+		t.Error("bytes wiped")
+	}
+
+	b.Destroy()
+
+	if err := b.Wipe(); err != ErrDestroyed {
+		t.Error("expected ErrReadOnly")
+	}
 }
 
 func TestConcatenate(t *testing.T) {
