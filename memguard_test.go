@@ -254,7 +254,7 @@ func TestFillRandomBytes(t *testing.T) {
 		t.Error("not random")
 	}
 
-	WipeBytes(a.Buffer())
+	a.Wipe()
 	a.FillRandomBytesAt(16, 16)
 
 	if !bytes.Equal(a.Buffer()[:16], make([]byte, 16)) || bytes.Equal(a.Buffer()[16:], make([]byte, 16)) {
@@ -452,11 +452,15 @@ func TestCatchInterrupt(t *testing.T) {
 	}
 }
 
-func TestWipeBytes(t *testing.T) {
-	b := []byte("yellow submarine")
-	WipeBytes(b)
-	if !bytes.Equal(b, make([]byte, 16)) {
-		t.Error("bytes not wiped; b =", b)
+func TestWipe(t *testing.T) {
+	b, _ := NewFromBytes([]byte("yellow submarine"), false)
+
+	if err := b.Wipe(); err != nil {
+		t.Error("failed to wipe:", err)
+	}
+
+	if !bytes.Equal(b.Buffer(), make([]byte, 16)) {
+		t.Error("bytes not wiped; b =", b.Buffer())
 	}
 }
 
