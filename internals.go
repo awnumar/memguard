@@ -10,30 +10,19 @@ import (
 )
 
 var (
-	// Grab the system page size.
+	// Ascertain and store the system memory page size.
 	pageSize = os.Getpagesize()
 
-	// Once object to ensure CatchInterrupt is only executed once.
+	// Canary value that acts as an alarm in case of disallowed memory access.
+	canary = createCanary()
+
+	// Create a dedicated sync object for the CatchInterrupt function.
 	catchInterruptOnce sync.Once
 
-	// Store pointers to all of the LockedBuffers.
+	// Array of all active containers, and associated mutex.
 	allLockedBuffers      []*container
 	allLockedBuffersMutex = &sync.Mutex{}
 )
-
-// container implements the actual data container.
-type container struct {
-	sync.Mutex // Local mutex lock.
-
-	buffer []byte // Slice that references protected memory.
-
-	readOnly  bool // Is this memory read-only?
-	destroyed bool // Is this LockedBuffer destroyed?
-}
-
-// littleBird is a value that we monitor instead of the LockedBuffer
-// itself. It allows us to tell the GC to auto-destroy LockedBuffers.
-type littleBird [16]byte
 
 // Create and allocate a canary value. Return to caller.
 func createCanary() []byte {

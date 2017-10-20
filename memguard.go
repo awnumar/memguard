@@ -5,116 +5,70 @@ import (
 	"crypto/subtle"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
-	"unsafe"
 
 	"github.com/awnumar/memguard/memcall"
 )
 
-var (
-	// A slice that holds the canary we set.
-	canary = createCanary()
-)
-
 /*
-LockedBuffer is a structure that holds secure values.
+NewImmutable creates a new, immutable LockedBuffer of a
+specified size.
 
-The protected memory itself can be accessed with the Buffer()
-method. The varous status flags can be accessed with the
-IsDestroyed() and IsReadOnly() methods, both of which
-are pretty self-explanatory.
-
-The number of LockedBuffers that you are able to create is
-limited by how much memory your system kernel allows each
-process to mlock/VirtualLock. Therefore you should call
-Destroy on LockedBuffers that you no longer need, or simply
-defer a Destroy call after creating a new LockedBuffer.
-
-The entire memguard API handles and passes around pointers
-to LockedBuffers, and so, for both security and convenience,
-you should refrain from dereferencing a LockedBuffer.
-
-If an API function that needs to edit a LockedBuffer is given
-one marked as read-only, the call will return an ErrReadOnly.
-Similarly, if a function is given a LockedBuffer that has been
-destroyed, the call will return an ErrDestroyed.
-*/
-type LockedBuffer struct {
-	*container  // Import all the container fields.
-	*littleBird // Monitor this for auto-destruction.
-}
-
-/*
-New creates a new LockedBuffer of a specified length and
-permissions.
+The mutability can later be toggled with the MakeImmutable and
+MakeMutable methods.
 
 If the given length is less than one, the call will return
 an ErrInvalidLength.
 */
-func New(length int, readOnly bool) (*LockedBuffer, error) {
-	// Panic if length < one.
-	if length < 1 {
-		return nil, ErrInvalidLength
+func NewImmutable(size int) (*LockedBuffer, error) {
+	return newContainer(size, false)
+}
+
+/*
+NewMutable creates a new, mutable LockedBuffer of a specified
+length.
+
+The mutability can later be toggled with the MakeImmutable and
+MakeMutable methods.
+
+If the given length is less than one, the call will return
+an ErrInvalidLength.
+*/
+func NewMutable(size int) (*LockedBuffer, error) {
+	return newContainer(size, true)
+}
+
+/*
+NewImmutableFromBytes is identical to NewImmutable but for the fact that
+the created LockedBuffer is of the same length and has the same contents
+as a given slice. The slice is wiped after the bytes have been copied over.
+
+If the size of the slice is zero, the call will return an ErrInvalidLength.
+*/
+func NewImmutableFromBytes(buf []byte) (*LockedBuffer, error) {
+	// Create a new LockedBuffer.
+	b, err := NewMutableFromBytes(buf)
+	if err != nil {
+		return nil, err
 	}
 
-	// Allocate a new LockedBuffer.
-	ib := new(container)
-	b := &LockedBuffer{ib, new(littleBird)}
-
-	// Round length + 32 bytes for the canary to a multiple of the page size..
-	roundedLength := roundToPageSize(length + 32)
-
-	// Calculate the total size of memory including the guard pages.
-	totalSize := (2 * pageSize) + roundedLength
-
-	// Allocate it all.
-	memory := memcall.Alloc(totalSize)
-
-	// Lock the pages that will hold the sensitive data.
-	memcall.Lock(memory[pageSize : pageSize+roundedLength])
-
-	// Make the guard pages inaccessible.
-	memcall.Protect(memory[:pageSize], false, false)
-	memcall.Protect(memory[pageSize+roundedLength:], false, false)
-
-	// Set the canary.
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-length-32:pageSize+roundedLength-length], canary)
-
-	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
-	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-length])), length)
-
-	// Mark as read-only if requested.
-	if readOnly {
-		b.MarkAsReadOnly()
-	}
-
-	// Append the container to allLockedBuffers. We have to add container
-	// instead of LockedBuffer so that the littleBird can become unreachable
-	allLockedBuffersMutex.Lock()
-	allLockedBuffers = append(allLockedBuffers, ib)
-	allLockedBuffersMutex.Unlock()
-
-	// Use a finalizer to make sure the buffer gets destroyed even if the user
-	// forgets to do it
-	runtime.SetFinalizer(b.littleBird, func(_ *littleBird) {
-		go ib.Destroy()
-	})
+	// Mark as immutable.
+	b.MakeImmutable()
 
 	// Return a pointer to the LockedBuffer.
 	return b, nil
 }
 
 /*
-NewFromBytes is identical to New but for the fact that the created
+NewMutableFromBytes is identical to New but for the fact that the created
 LockedBuffer is of the same length and has the same contents as a
 given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
-func NewFromBytes(buf []byte, readOnly bool) (*LockedBuffer, error) {
+func NewMutableFromBytes(buf []byte) (*LockedBuffer, error) {
 	// Create a new LockedBuffer.
-	b, err := New(len(buf), false)
+	b, err := newContainer(len(buf), true)
 	if err != nil {
 		return nil, err
 	}
@@ -122,35 +76,44 @@ func NewFromBytes(buf []byte, readOnly bool) (*LockedBuffer, error) {
 	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
 
-	// Make it read-only if requested.
-	if readOnly {
-		b.MarkAsReadOnly()
-	}
-
 	// Return a pointer to the LockedBuffer.
 	return b, nil
 }
 
 /*
-NewRandom is identical to New but for the fact that the created
-LockedBuffer is filled with cryptographically-secure pseudo-random
+NewImmutableRandom is identical to NewImmutable but for the fact that the created LockedBuffer is filled with cryptographically-secure pseudo-random
 bytes instead of zeroes. Therefore a LockedBuffer created with
-NewRandom can safely be used as an encryption key.
+NewImmutableRandom can safely be used as an encryption key.
 */
-func NewRandom(length int, readOnly bool) (*LockedBuffer, error) {
+func NewImmutableRandom(size int) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
-	b, err := New(length, false)
+	b, err := NewMutableRandom(size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark as immutable if specified.
+	b.MakeImmutable()
+
+	// Return the LockedBuffer.
+	return b, nil
+}
+
+/*
+NewMutableRandom is identical to NewImmutable but for the fact that
+the created LockedBuffer is filled with cryptographically-secure
+pseudo-random bytes instead of zeroes. Therefore a LockedBuffer
+created with NewMutableRandom can safely be used as an encryption key.
+*/
+func NewMutableRandom(size int) (*LockedBuffer, error) {
+	// Create a new LockedBuffer for the key.
+	b, err := newContainer(size, true)
 	if err != nil {
 		return nil, err
 	}
 
 	// Fill it with random data.
 	fillRandBytes(b.buffer)
-
-	// Mark as read-only if requested.
-	if readOnly {
-		b.MarkAsReadOnly()
-	}
 
 	// Return the LockedBuffer.
 	return b, nil
@@ -168,7 +131,7 @@ If a function that you're using requires an array, you can cast the buffer to
 an array and then pass around a pointer:
 
     // Make sure the size of the array matches the size of the buffer.
-    // In this case that size is 16. This is very important.
+    // In this case that size is 16. This is *very* important.
     keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Buffer()[0]))
 
 Make sure that you do not dereference the pointer and pass around the resulting
@@ -179,16 +142,11 @@ func (b *container) Buffer() []byte {
 }
 
 /*
-IsReadOnly returns a boolean value indicating if a LockedBuffer is
+IsMutable returns a boolean value indicating if a LockedBuffer is
 marked read-only.
 */
-func (b *container) IsReadOnly() bool {
-	// Get a mutex lock on this LockedBuffer.
-	b.Lock()
-	defer b.Unlock()
-
-	// Return the appropriate value.
-	return b.readOnly
+func (b *container) IsMutable() bool {
+	return b.mutable
 }
 
 /*
@@ -196,12 +154,8 @@ IsDestroyed returns a boolean value indicating if a LockedBuffer
 has been destroyed.
 */
 func (b *container) IsDestroyed() bool {
-	// Get a mutex lock on this LockedBuffer.
-	b.Lock()
-	defer b.Unlock()
-
 	// Return the appropriate value.
-	return b.destroyed
+	return len(b.buffer) == 0
 }
 
 /*
@@ -213,12 +167,12 @@ func (b *container) EqualTo(buf []byte) (bool, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return false, ErrDestroyed
 	}
 
 	// Do a time-constant comparison.
-	if equal := subtle.ConstantTimeCompare(b.buffer, buf); equal == 1 {
+	if subtle.ConstantTimeCompare(b.buffer, buf) == 1 {
 		// They're equal.
 		return true, nil
 	}
@@ -228,66 +182,57 @@ func (b *container) EqualTo(buf []byte) (bool, error) {
 }
 
 /*
-MarkAsReadOnly asks the kernel to mark the LockedBuffer's
-memory as read-only. Any subsequent attempts to write to
+MakeImmutable asks the kernel to mark the LockedBuffer's
+memory as immutable. Any subsequent attempts to modify
 this memory will result in the process crashing with a
 SIGSEGV memory violation.
 
-To make the memory writable again, MarkAsReadWrite is called.
+To make the memory mutable again, MakeMutable is called.
 */
-func (b *container) MarkAsReadOnly() error {
+func (b *container) MakeImmutable() error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return ErrDestroyed
 	}
 
-	// Check if it's already read-only.
-	if b.readOnly {
-		return nil
+	if b.mutable {
+		// Mark the memory as mutable.
+		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(b.Size()+32)], true, false)
+
+		// Tell everyone about the change we made.
+		b.mutable = false
 	}
-
-	// Mark the memory as read-only.
-	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.buffer)+32)]
-	memcall.Protect(memoryToMark, true, false)
-
-	// Tell everyone about the change we made.
-	b.readOnly = true
 
 	// Everything went well.
 	return nil
 }
 
 /*
-MarkAsReadWrite asks the kernel to mark the LockedBuffer's
-memory as readable and writable.
+MakeMutable asks the kernel to mark the LockedBuffer's memory as mutable.
 
-This method is the counterpart of MarkAsReadOnly.
+To make the memory immutable again, MakeImmutable is called.
 */
-func (b *container) MarkAsReadWrite() error {
+func (b *container) MakeMutable() error {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return ErrDestroyed
 	}
 
-	// Check if it's already readable and writable.
-	if !b.readOnly {
-		return nil
+	if !b.mutable {
+		// Mark the memory as mutable.
+		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(b.Size()+32)], true, true)
+
+		// Tell everyone about the change we made.
+		b.mutable = true
 	}
-
-	// Mark the memory as readable and writable.
-	memoryToMark := getAllMemory(b)[pageSize : pageSize+roundToPageSize(len(b.buffer)+32)]
-	memcall.Protect(memoryToMark, true, true)
-
-	// Tell everyone about the change we made.
-	b.readOnly = false
 
 	// Everything went well.
 	return nil
@@ -323,13 +268,13 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return ErrDestroyed
 	}
 
-	// Check if it's marked as ReadOnly.
-	if b.readOnly {
-		return ErrReadOnly
+	// Check if it's immutable.
+	if !b.IsMutable() {
+		return ErrImmutable
 	}
 
 	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
@@ -384,7 +329,7 @@ pseudo-random bytes.
 */
 func (b *container) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
-	return b.FillRandomBytesAt(0, len(b.buffer))
+	return b.FillRandomBytesAt(0, b.Size())
 }
 
 /*
@@ -398,13 +343,13 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return ErrDestroyed
 	}
 
-	// Check if it's marked as ReadOnly.
-	if b.readOnly {
-		return ErrReadOnly
+	// Check if it's immutable.
+	if !b.IsMutable() {
+		return ErrImmutable
 	}
 
 	// Fill with random bytes.
@@ -452,7 +397,7 @@ func (b *container) Destroy() {
 
 		// Verify the canary.
 		if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], canary) {
-			panic("memguard.Destroy(): buffer underflow detected")
+			panic("memguard.Destroy(): buffer overflow detected")
 		}
 
 		// Make all of the memory readable and writable.
@@ -468,8 +413,7 @@ func (b *container) Destroy() {
 		memcall.Free(memory)
 
 		// Set the metadata appropriately.
-		b.readOnly = false
-		b.destroyed = true
+		b.mutable = false
 
 		// Set the buffer to nil.
 		b.buffer = nil
@@ -493,13 +437,13 @@ func (b *container) Wipe() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return ErrDestroyed
 	}
 
-	// Check if it's marked as ReadOnly.
-	if b.readOnly {
-		return ErrReadOnly
+	// Check if it's immutable.
+	if !b.IsMutable() {
+		return ErrImmutable
 	}
 
 	// Wipe the buffer.
@@ -524,20 +468,20 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if a.destroyed || b.destroyed {
+	if a.IsDestroyed() || b.IsDestroyed() {
 		return nil, ErrDestroyed
 	}
 
 	// Create a new LockedBuffer to hold the concatenated value.
-	c, _ := New(len(a.buffer)+len(b.buffer), false)
+	c, _ := NewMutable(len(a.buffer) + len(b.buffer))
 
 	// Copy the values across.
 	c.Copy(a.buffer)
 	c.CopyAt(b.buffer, len(a.buffer))
 
 	// Set permissions accordingly.
-	if a.readOnly || b.readOnly {
-		c.MarkAsReadOnly()
+	if !a.IsMutable() || !b.IsMutable() {
+		c.MakeImmutable()
 	}
 
 	// Return the resulting LockedBuffer.
@@ -554,19 +498,19 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return nil, ErrDestroyed
 	}
 
 	// Create new LockedBuffer.
-	newBuf, _ := New(len(b.buffer), false)
+	newBuf, _ := NewMutable(b.Size())
 
 	// Copy bytes into it.
 	newBuf.Copy(b.buffer)
 
 	// Set permissions accordingly.
-	if b.readOnly {
-		newBuf.MarkAsReadOnly()
+	if !b.IsMutable() {
+		newBuf.MakeImmutable()
 	}
 
 	// Return duplicated.
@@ -584,12 +528,12 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if a.destroyed || b.destroyed {
+	if a.IsDestroyed() || b.IsDestroyed() {
 		return false, ErrDestroyed
 	}
 
 	// Do a time-constant comparison on the two buffers.
-	if equal := subtle.ConstantTimeCompare(a.buffer, b.buffer); equal == 1 {
+	if subtle.ConstantTimeCompare(a.buffer, b.buffer) == 1 {
 		// They're equal.
 		return true, nil
 	}
@@ -610,17 +554,17 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return nil, nil, ErrDestroyed
 	}
 
 	// Create two new LockedBuffers.
-	firstBuf, err := New(len(b.buffer[:offset]), false)
+	firstBuf, err := NewMutable(len(b.buffer[:offset]))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	secondBuf, err := New(len(b.buffer[offset:]), false)
+	secondBuf, err := NewMutable(len(b.buffer[offset:]))
 	if err != nil {
 		firstBuf.Destroy()
 		return nil, nil, err
@@ -631,9 +575,9 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	secondBuf.Copy(b.buffer[offset:])
 
 	// Copy over permissions.
-	if b.readOnly {
-		firstBuf.MarkAsReadOnly()
-		secondBuf.MarkAsReadOnly()
+	if !b.IsMutable() {
+		firstBuf.MakeImmutable()
+		secondBuf.MakeImmutable()
 	}
 
 	// Return the new LockedBuffers.
@@ -654,20 +598,20 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.destroyed {
+	if b.IsDestroyed() {
 		return nil, ErrDestroyed
 	}
 
 	// Create new LockedBuffer and copy over the old.
-	newBuf, err := New(size, false)
+	newBuf, err := NewMutable(size)
 	if err != nil {
 		return nil, err
 	}
 	newBuf.Copy(b.buffer[offset : offset+size])
 
 	// Copy over permissions.
-	if b.readOnly {
-		newBuf.MarkAsReadOnly()
+	if !b.IsMutable() {
+		newBuf.MakeImmutable()
 	}
 
 	// Return the new LockedBuffer.
