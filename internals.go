@@ -35,18 +35,18 @@ func createCanary() []byte {
 	// Allocate it.
 	memory := memcall.Alloc(totalLen)
 
-	// Lock the pages that will hold the canary.
-	memcall.Lock(memory[pageSize : pageSize+roundedLen])
-
 	// Make the guard pages inaccessible.
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLen:], false, false)
+
+	// Lock the pages that will hold the canary.
+	memcall.Lock(memory[pageSize : pageSize+roundedLen])
 
 	// Fill the memory with cryptographically-secure random bytes (the canary value).
 	c := getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
 	fillRandBytes(c)
 
-	// Mark the middle page as read-only.
+	// Tell the kernel that the canary value should be immutable.
 	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
 
 	// Return a slice that describes the correct portion of memory.
@@ -60,11 +60,11 @@ func roundToPageSize(length int) int {
 
 // Get a slice that describes all memory related to a LockedBuffer.
 func getAllMemory(b *container) []byte {
-	// Calculate the length of the buffer and the associated rounded value.
-	bufLen, roundedBufLen := len(b.buffer), roundToPageSize(len(b.buffer)+32)
+	// Calculate the size of the entire container's memory.
+	roundedBufLen := roundToPageSize(len(b.buffer) + 32)
 
 	// Calculate the address of the start of the memory.
-	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-len(b.buffer))+pageSize)
 
 	// Calculate the size of the entire memory.
 	memLen := (pageSize * 2) + roundedBufLen
