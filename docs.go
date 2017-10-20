@@ -1,29 +1,50 @@
 /*
 Package memguard lets you easily handle sensitive values in memory.
 
-The general working cycle is as follows:
+    package main
 
-    // Create a new writable LockedBuffer of length 16.
-    encryptionKey, err := memguard.New(16, false)
-    if err != nil {
-        panic(err)
+    import (
+        "fmt"
+
+        "github.com/awnumar/memguard"
+    )
+
+    func main() {
+        // Tell memguard to listen out for interrupts, and cleanup in case of one.
+        memguard.CatchInterrupt(func() {
+            fmt.Println("Interrupt signal received. Exiting...")
+        })
+        // Make sure to destroy all LockedBuffers when returning.
+        defer memguard.DestroyAll()
+
+        // Normal code continues from here.
+        foo()
     }
-    defer encryptionKey.Destroy()
 
-    // Move bytes into the buffer.
-    // Do not append or assign, use API call.
-    encryptionKey.Move([]byte("yellow submarine"))
+    func foo() {
+        // Create a 32 byte, immutable, random key.
+        key, err := memguard.NewImmutableRandom(32)
+        if err != nil {
+            // Oh no, an error. Safely exit.
+            fmt.Println(err)
+            memguard.SafeExit(1)
+        }
+        // Remember to destroy this key when the function returns.
+        defer key.Destroy()
 
-    // Use the buffer wherever you need it.
-    Encrypt(encryptionKey.Buffer(), plaintext)
+        // Do something with the key.
+        fmt.Printf("This is a %d byte key.\n", key.Size())
+        fmt.Printf("This key starts with %x\n", key.Buffer()[0])
+    }
 
 The number of LockedBuffers that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on LockedBuffers that you no longer need, or simply defer a Destroy call after creating a new LockedBuffer.
 
 If a function that you're using requires an array, you can cast the buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
-    key, err := memguard.NewRandom(16, false)
+    key, err := memguard.NewImmutableRandom(16)
     if err != nil {
-        panic(err)
+        fmt.Println(err)
+        memguard.SafeExit(1)
     }
     defer key.Destroy()
 
@@ -45,6 +66,6 @@ When terminating your application, care should be taken to securely cleanup ever
     defer memguard.DestroyAll()
 
     // Use memguard.SafeExit() instead of os.Exit().
-    memguard.SafeExit(0) // 0 is the status code.
+    memguard.SafeExit(1) // 1 is the exit code.
 */
 package memguard

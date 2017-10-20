@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://cdn.rawgit.com/awnumar/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
-  <p align="center">Pure go library for secure handling of sensitive memory.</p>
+  <p align="center">Easy and secure handling of sensitive memory, in pure Go.</p>
   <p align="center">
     <a href="https://travis-ci.org/awnumar/memguard"><img src="https://travis-ci.org/awnumar/memguard.svg?branch=master"></a>
     <a href="https://ci.appveyor.com/project/awnumar/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/nrtqmdolndm0pcac/branch/master?svg=true"></a>
@@ -16,13 +16,14 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 ## Features
 
-* Memory is allocated using system calls, thereby bypassing the Go runtime and preventing the GC from messing with it.
-* To prevent buffer overflows and underflows, the secure buffer is sandwiched between two protected guard pages. If these pages are accessed, a SIGSEGV violation is triggered.
-* The secure buffer is prepended with a random canary. If this value changes, the process will panic. This is designed to prevent buffer underflows.
-* All pages between the two guards are locked to stop them from being swapped to disk.
-* The secure buffer can be made read-only so that any other action triggers a SIGSEGV violation.
-* When freeing, all secure memory is wiped.
-* The API also includes functions for time-constant copying and comparison, disabling system core dumps, and catching signals.
+* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory ourselves.
+* It is very difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
+* Buffer overflows are further protected against using a random canary value. If this value changes, the process will panic.
+* We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never include the secure memory in dumps.
+* True kernel-level immutability is implemented. That means that if _anything_ attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
+* All sensitive data is wiped before the associated memory is released back to the operating system.
+* Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
+* Accidental memory leaks are mitigated against by harnessing Go's own garbage-collector to automatically destroy containers that have run out of scope.
 
 Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
