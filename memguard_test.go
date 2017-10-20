@@ -137,7 +137,7 @@ func TestGetMetadata(t *testing.T) {
 func TestEqualTo(t *testing.T) {
 	a, _ := NewImmutableFromBytes([]byte("test"))
 
-	equal, err := a.EqualTo([]byte("test"))
+	equal, err := a.EqualBytes([]byte("test"))
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -146,7 +146,7 @@ func TestEqualTo(t *testing.T) {
 		t.Error("should be equal")
 	}
 
-	equal, err = a.EqualTo([]byte("toast"))
+	equal, err = a.EqualBytes([]byte("toast"))
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -157,7 +157,7 @@ func TestEqualTo(t *testing.T) {
 
 	a.Destroy()
 
-	if equal, err := a.EqualTo([]byte("test")); equal || err != ErrDestroyed {
+	if equal, err := a.EqualBytes([]byte("test")); equal || err != ErrDestroyed {
 		t.Error("unexpected return values with destroyed LockedBuffer")
 	}
 }

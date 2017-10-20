@@ -11,37 +11,29 @@ import (
 )
 
 /*
-NewImmutable creates a new, immutable LockedBuffer of a
-specified size.
+NewImmutable creates a new, immutable LockedBuffer of a specified size.
 
-The mutability can later be toggled with the MakeImmutable and
-MakeMutable methods.
+The mutability can later be toggled with the MakeImmutable and MakeMutable methods.
 
-If the given length is less than one, the call will return
-an ErrInvalidLength.
+If the given length is less than one, the call will return an ErrInvalidLength.
 */
 func NewImmutable(size int) (*LockedBuffer, error) {
 	return newContainer(size, false)
 }
 
 /*
-NewMutable creates a new, mutable LockedBuffer of a specified
-length.
+NewMutable creates a new, mutable LockedBuffer of a specified length.
 
-The mutability can later be toggled with the MakeImmutable and
-MakeMutable methods.
+The mutability can later be toggled with the MakeImmutable and MakeMutable methods.
 
-If the given length is less than one, the call will return
-an ErrInvalidLength.
+If the given length is less than one, the call will return an ErrInvalidLength.
 */
 func NewMutable(size int) (*LockedBuffer, error) {
 	return newContainer(size, true)
 }
 
 /*
-NewImmutableFromBytes is identical to NewImmutable but for the fact that
-the created LockedBuffer is of the same length and has the same contents
-as a given slice. The slice is wiped after the bytes have been copied over.
+NewImmutableFromBytes is identical to NewImmutable but for the fact that the created LockedBuffer is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
@@ -60,9 +52,7 @@ func NewImmutableFromBytes(buf []byte) (*LockedBuffer, error) {
 }
 
 /*
-NewMutableFromBytes is identical to New but for the fact that the created
-LockedBuffer is of the same length and has the same contents as a
-given slice. The slice is wiped after the bytes have been copied over.
+NewMutableFromBytes is identical to NewMutable but for the fact that the created LockedBuffer is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
@@ -81,9 +71,7 @@ func NewMutableFromBytes(buf []byte) (*LockedBuffer, error) {
 }
 
 /*
-NewImmutableRandom is identical to NewImmutable but for the fact that the created LockedBuffer is filled with cryptographically-secure pseudo-random
-bytes instead of zeroes. Therefore a LockedBuffer created with
-NewImmutableRandom can safely be used as an encryption key.
+NewImmutableRandom is identical to NewImmutable but for the fact that the created LockedBuffer is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a LockedBuffer created with NewImmutableRandom can safely be used as an encryption key.
 */
 func NewImmutableRandom(size int) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
@@ -100,10 +88,7 @@ func NewImmutableRandom(size int) (*LockedBuffer, error) {
 }
 
 /*
-NewMutableRandom is identical to NewImmutable but for the fact that
-the created LockedBuffer is filled with cryptographically-secure
-pseudo-random bytes instead of zeroes. Therefore a LockedBuffer
-created with NewMutableRandom can safely be used as an encryption key.
+NewMutableRandom is identical to NewMutable but for the fact that the created LockedBuffer is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a LockedBuffer created with NewMutableRandom can safely be used as an encryption key.
 */
 func NewMutableRandom(size int) (*LockedBuffer, error) {
 	// Create a new LockedBuffer for the key.
@@ -122,36 +107,29 @@ func NewMutableRandom(size int) (*LockedBuffer, error) {
 /*
 Buffer returns a slice that references the secure, protected portion of memory.
 
-If the LockedBuffer that you call Buffer on has been destroyed, the returned
-slice will be nil (it will have a length and capacity of zero). Thus, checking
-the size of the returned slice is a very good indication of whether it has been
-destroyed.
+If the LockedBuffer that you call Buffer on has been destroyed, the returned slice will be nil (it will have a length and capacity of zero).
 
-If a function that you're using requires an array, you can cast the buffer to
-an array and then pass around a pointer:
+If a function that you're using requires an array, you can cast the buffer to an array and then pass around a pointer:
 
     // Make sure the size of the array matches the size of the buffer.
     // In this case that size is 16. This is *very* important.
     keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Buffer()[0]))
 
-Make sure that you do not dereference the pointer and pass around the resulting
-value, as this will leave copies all over the place.
+Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 */
 func (b *container) Buffer() []byte {
 	return b.buffer
 }
 
 /*
-IsMutable returns a boolean value indicating if a LockedBuffer is
-marked read-only.
+IsMutable returns a boolean value indicating if a LockedBuffer is marked read-only.
 */
 func (b *container) IsMutable() bool {
 	return b.mutable
 }
 
 /*
-IsDestroyed returns a boolean value indicating if a LockedBuffer
-has been destroyed.
+IsDestroyed returns a boolean value indicating if a LockedBuffer has been destroyed.
 */
 func (b *container) IsDestroyed() bool {
 	// Return the appropriate value.
@@ -159,9 +137,9 @@ func (b *container) IsDestroyed() bool {
 }
 
 /*
-EqualTo compares a LockedBuffer to a byte slice in constant time.
+EqualBytes compares a LockedBuffer to a byte slice in constant time.
 */
-func (b *container) EqualTo(buf []byte) (bool, error) {
+func (b *container) EqualBytes(buf []byte) (bool, error) {
 	// Get a mutex lock on this LockedBuffer.
 	b.Lock()
 	defer b.Unlock()
@@ -182,10 +160,7 @@ func (b *container) EqualTo(buf []byte) (bool, error) {
 }
 
 /*
-MakeImmutable asks the kernel to mark the LockedBuffer's
-memory as immutable. Any subsequent attempts to modify
-this memory will result in the process crashing with a
-SIGSEGV memory violation.
+MakeImmutable asks the kernel to mark the LockedBuffer's memory as immutable. Any subsequent attempts to modify this memory will result in the process crashing with a SIGSEGV memory violation.
 
 To make the memory mutable again, MakeMutable is called.
 */
@@ -239,19 +214,13 @@ func (b *container) MakeMutable() error {
 }
 
 /*
-Copy copies bytes from a byte slice into a LockedBuffer in
-constant-time. Just like Golang's built-in copy function,
-Copy only copies up to the smallest of the two buffers.
+Copy copies bytes from a byte slice into a LockedBuffer in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
 
-It does not wipe the original slice so using Copy is less
-secure than using Move. Therefore Move should be favoured
-unless you have a good reason.
+It does not wipe the original slice so using Copy is less secure than using Move. Therefore Move should be favoured unless you have a good reason.
 
-You should aim to call WipeBytes on the original slice as
-soon as possible.
+You should aim to call WipeBytes on the original slice as soon as possible.
 
-If the LockedBuffer is marked as read-only, the call will
-fail and return an ErrReadOnly.
+If the LockedBuffer is marked as read-only, the call will fail and return an ErrReadOnly.
 */
 func (b *container) Copy(buf []byte) error {
 	// Just call CopyAt with a zero offset.
@@ -259,8 +228,7 @@ func (b *container) Copy(buf []byte) error {
 }
 
 /*
-CopyAt is identical to Copy but it copies into the LockedBuffer
-at a specified offset.
+CopyAt is identical to Copy but it copies into the LockedBuffer at a specified offset.
 */
 func (b *container) CopyAt(buf []byte, offset int) error {
 	// Get a mutex lock on this LockedBuffer.
@@ -290,16 +258,11 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 }
 
 /*
-Move moves bytes from a byte slice into a LockedBuffer in
-constant-time. Just like Golang's built-in copy function,
-Move only moves up to the smallest of the two buffers.
+Move moves bytes from a byte slice into a LockedBuffer in constant-time. Just like Golang's built-in copy function, Move only moves up to the smallest of the two buffers.
 
-Unlike Copy, Move wipes the entire original slice after
-copying the appropriate number of bytes over, and so it
-should be favoured unless you have a good reason.
+Unlike Copy, Move wipes the entire original slice after copying the appropriate number of bytes over, and so it should be favoured unless you have a good reason.
 
-If the LockedBuffer is marked as read-only, the call will
-fail and return an ErrReadOnly.
+If the LockedBuffer is marked as read-only, the call will fail and return an ErrReadOnly.
 */
 func (b *container) Move(buf []byte) error {
 	// Just call MoveAt with a zero offset.
@@ -307,8 +270,7 @@ func (b *container) Move(buf []byte) error {
 }
 
 /*
-MoveAt is identical to Move but it copies into the LockedBuffer
-at a specified offset.
+MoveAt is identical to Move but it copies into the LockedBuffer at a specified offset.
 */
 func (b *container) MoveAt(buf []byte, offset int) error {
 	// Copy buf into the LockedBuffer.
@@ -324,8 +286,7 @@ func (b *container) MoveAt(buf []byte, offset int) error {
 }
 
 /*
-FillRandomBytes fills a LockedBuffer with cryptographically-secure
-pseudo-random bytes.
+FillRandomBytes fills a LockedBuffer with cryptographically-secure pseudo-random bytes.
 */
 func (b *container) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
@@ -333,9 +294,7 @@ func (b *container) FillRandomBytes() error {
 }
 
 /*
-FillRandomBytesAt fills a LockedBuffer with cryptographically-secure
-pseudo-random bytes, starting at an offset and ending after a given
-number of bytes.
+FillRandomBytesAt fills a LockedBuffer with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes.
 */
 func (b *container) FillRandomBytesAt(offset, length int) error {
 	// Get a mutex lock on this LockedBuffer.
@@ -360,16 +319,11 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 }
 
 /*
-Destroy verifies that no buffer underflows occurred and then wipes,
-unlocks, and frees all related memory. If a buffer underflow is
-detected, the process panics.
+Destroy verifies that no buffer underflows occurred and then wipes, unlocks, and frees all related memory. If a buffer underflow is detected, the process panics.
 
-This function must be called on all LockedBuffers before exiting.
-DestroyAll is designed for this purpose, as is CatchInterrupt and
-SafeExit. We recommend using all of them together.
+This function must be called on all LockedBuffers before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using all of them together.
 
-If the LockedBuffer has already been destroyed then the call
-makes no changes.
+If the LockedBuffer has already been destroyed then the call makes no changes.
 */
 func (b *container) Destroy() {
 	// Remove this one from global slice.
@@ -422,6 +376,7 @@ func (b *container) Destroy() {
 
 /*
 Size returns an integer representing the total length, in bytes, of a LockedBuffer.
+
 If this size is zero, it is safe to assume that the LockedBuffer has been destroyed.
 */
 func (b *container) Size() int {
@@ -456,9 +411,7 @@ func (b *container) Wipe() error {
 /*
 Concatenate takes two LockedBuffers and concatenates them.
 
-If one of the given LockedBuffers is read-only, the resulting
-LockedBuffer will also be read-only. The original LockedBuffers
-are not destroyed.
+If one of the given LockedBuffers is immutable, the resulting LockedBuffer will also be immutable. The original LockedBuffers are not destroyed.
 */
 func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	// Get a mutex lock on the LockedBuffers.
@@ -489,8 +442,7 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 }
 
 /*
-Duplicate takes a LockedBuffer and creates a new one with
-the same contents and permissions as the original.
+Duplicate takes a LockedBuffer and creates a new one with the same contents and mutability state as the original.
 */
 func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
@@ -543,10 +495,7 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 }
 
 /*
-Split takes a LockedBuffer, splits it at a specified offset, and
-then returns the two newly created LockedBuffers. The permissions
-of the original are preserved and the original LockedBuffer is not
-destroyed.
+Split takes a LockedBuffer, splits it at a specified offset, and then returns the two newly created LockedBuffers. The mutability state of the original is preserved in the new LockedBuffers, and the original LockedBuffer is not destroyed.
 */
 func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
@@ -585,12 +534,9 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 }
 
 /*
-Trim shortens a LockedBuffer according to the given specifications.
-The permissions of the original are preserved and the original
-LockedBuffer is not destroyed.
+Trim shortens a LockedBuffer according to the given specifications. The mutability state of the original is preserved in the new LockedBuffer, and the original LockedBuffer is not destroyed.
 
-Trim takes an offset and a size as arguments. The resulting LockedBuffer
-starts at index [offset] and ends at index [offset+size].
+Trim takes an offset and a size as arguments. The resulting LockedBuffer starts at index [offset] and ends at index [offset+size].
 */
 func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	// Get a mutex lock on this LockedBuffer.
@@ -619,8 +565,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 }
 
 /*
-DestroyAll calls Destroy on all LockedBuffers that have not already
-been destroyed.
+DestroyAll calls Destroy on all LockedBuffers that have not already been destroyed.
 
 CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
@@ -637,12 +582,9 @@ func DestroyAll() {
 }
 
 /*
-CatchInterrupt starts a goroutine that monitors for
-interrupt signals. It accepts a function of type func()
-and executes that before calling SafeExit(0).
+CatchInterrupt starts a goroutine that monitors for interrupt signals. It accepts a function of type func() and executes that before calling SafeExit(0).
 
-If CatchInterrupt is called multiple times, only the first
-call is executed and all subsequent calls are ignored.
+If CatchInterrupt is called multiple times, only the first call is executed and all subsequent calls are ignored.
 */
 func CatchInterrupt(f func()) {
 	// Only do this if it hasn't been done before.
@@ -676,12 +618,9 @@ func SafeExit(c int) {
 /*
 DisableUnixCoreDumps disables core-dumps.
 
-Since core-dumps are only relevant on Unix systems,
-if DisableUnixCoreDumps is called on any other system it
-will do nothing and return immediately.
+Since core-dumps are only relevant on Unix systems, if DisableUnixCoreDumps is called on any other system it will do nothing and return immediately.
 
-This function is precautonary as core-dumps are usually
-disabled by default on most systems.
+This function is precautonary as core-dumps are usually disabled by default on most systems.
 */
 func DisableUnixCoreDumps() {
 	memcall.DisableCoreDumps()
