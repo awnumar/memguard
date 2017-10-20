@@ -16,11 +16,11 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 ## Features
 
-* Interference from the garbage-collector is blocked by allocating pages using system calls, thus allowing us full control of the associated memory.
-* It is very difficult for another process to access the memory as the data is sandwiched between two guard-pages. This feature also acts as an immediate alarm in case of buffer overflows.
+* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory ourselves.
+* It is very difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
 * Buffer overflows are further protected against using a random canary value. If this value changes, the process will panic.
-* We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never dump the secure memory.
-* True, kernel-level immutability is implemented. That means that if _anything_ attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
+* We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never include the secure memory in dumps.
+* True kernel-level immutability is implemented. That means that if _anything_ attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
 * All sensitive data is wiped before the associated memory is released back to the operating system.
 * Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
 * Accidental memory leaks are mitigated against by harnessing Go's own garbage-collector to automatically destroy containers that have run out of scope.
