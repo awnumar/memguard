@@ -125,6 +125,10 @@ func (b *container) Buffer() []byte {
 IsMutable returns a boolean value indicating if a LockedBuffer is marked read-only.
 */
 func (b *container) IsMutable() bool {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
 	return b.mutable
 }
 
@@ -132,6 +136,10 @@ func (b *container) IsMutable() bool {
 IsDestroyed returns a boolean value indicating if a LockedBuffer has been destroyed.
 */
 func (b *container) IsDestroyed() bool {
+	// Get a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
 	// Return the appropriate value.
 	return len(b.buffer) == 0
 }
@@ -145,7 +153,7 @@ func (b *container) EqualBytes(buf []byte) (bool, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return false, ErrDestroyed
 	}
 
@@ -170,7 +178,7 @@ func (b *container) MakeImmutable() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return ErrDestroyed
 	}
 
@@ -197,7 +205,7 @@ func (b *container) MakeMutable() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return ErrDestroyed
 	}
 
@@ -236,12 +244,12 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return ErrDestroyed
 	}
 
 	// Check if it's immutable.
-	if !b.IsMutable() {
+	if !b.mutable {
 		return ErrImmutable
 	}
 
@@ -302,12 +310,12 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return ErrDestroyed
 	}
 
 	// Check if it's immutable.
-	if !b.IsMutable() {
+	if !b.mutable {
 		return ErrImmutable
 	}
 
@@ -392,12 +400,12 @@ func (b *container) Wipe() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return ErrDestroyed
 	}
 
 	// Check if it's immutable.
-	if !b.IsMutable() {
+	if !b.mutable {
 		return ErrImmutable
 	}
 
@@ -421,7 +429,7 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if a.IsDestroyed() || b.IsDestroyed() {
+	if len(a.buffer) == 0 || len(b.buffer) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -433,7 +441,7 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 	c.CopyAt(b.buffer, len(a.buffer))
 
 	// Set permissions accordingly.
-	if !a.IsMutable() || !b.IsMutable() {
+	if !a.mutable || !b.mutable {
 		c.MakeImmutable()
 	}
 
@@ -450,7 +458,7 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -461,7 +469,7 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	newBuf.Copy(b.buffer)
 
 	// Set permissions accordingly.
-	if !b.IsMutable() {
+	if !b.mutable {
 		newBuf.MakeImmutable()
 	}
 
@@ -480,7 +488,7 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if a.IsDestroyed() || b.IsDestroyed() {
+	if len(a.buffer) == 0 || len(b.buffer) == 0 {
 		return false, ErrDestroyed
 	}
 
@@ -503,7 +511,7 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return nil, nil, ErrDestroyed
 	}
 
@@ -524,7 +532,7 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	secondBuf.Copy(b.buffer[offset:])
 
 	// Copy over permissions.
-	if !b.IsMutable() {
+	if !b.mutable {
 		firstBuf.MakeImmutable()
 		secondBuf.MakeImmutable()
 	}
@@ -544,7 +552,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if b.IsDestroyed() {
+	if len(b.buffer) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -556,7 +564,7 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	newBuf.Copy(b.buffer[offset : offset+size])
 
 	// Copy over permissions.
-	if !b.IsMutable() {
+	if !b.mutable {
 		newBuf.MakeImmutable()
 	}
 
