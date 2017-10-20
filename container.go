@@ -12,25 +12,13 @@ import (
 /*
 LockedBuffer is a structure that holds secure values.
 
-The protected memory itself can be accessed with the Buffer()
-method. The varous status flags can be accessed with the
-IsDestroyed() and IsReadOnly() methods, both of which
-are pretty self-explanatory.
+The protected memory itself can be accessed with the Buffer() method. The various states can be accessed with the IsDestroyed() and IsMutable() methods, both of which are pretty self-explanatory.
 
-The number of LockedBuffers that you are able to create is
-limited by how much memory your system kernel allows each
-process to mlock/VirtualLock. Therefore you should call
-Destroy on LockedBuffers that you no longer need, or simply
-defer a Destroy call after creating a new LockedBuffer.
+The number of LockedBuffers that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on LockedBuffers that you no longer need, or simply defer a Destroy call after creating a new LockedBuffer.
 
-The entire memguard API handles and passes around pointers
-to LockedBuffers, and so, for both security and convenience,
-you should refrain from dereferencing a LockedBuffer.
+The entire memguard API handles and passes around pointers to LockedBuffers, and so, for both security and convenience, you should refrain from dereferencing a LockedBuffer.
 
-If an API function that needs to edit a LockedBuffer is given
-one that is immutable, the call will return an ErrImmutable.
-Similarly, if a function is given a LockedBuffer that has been
-destroyed, the call will return an ErrDestroyed.
+If an API function that needs to edit a LockedBuffer is given one that is immutable, the call will return an ErrImmutable. Similarly, if a function is given a LockedBuffer that has been destroyed, the call will return an ErrDestroyed.
 */
 type LockedBuffer struct {
 	*container  // Import all the container fields.
@@ -69,12 +57,12 @@ func newContainer(size int, mutable bool) (*LockedBuffer, error) {
 	// Allocate it all.
 	memory := memcall.Alloc(totalSize)
 
-	// Lock the pages that will hold the sensitive data.
-	memcall.Lock(memory[pageSize : pageSize+roundedLength])
-
 	// Make the guard pages inaccessible.
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLength:], false, false)
+
+	// Lock the pages that will hold the sensitive data.
+	memcall.Lock(memory[pageSize : pageSize+roundedLength])
 
 	// Set the canary.
 	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], canary)
