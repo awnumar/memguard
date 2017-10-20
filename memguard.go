@@ -334,52 +334,53 @@ This function must be called on all LockedBuffers before exiting. DestroyAll is 
 If the LockedBuffer has already been destroyed then the call makes no changes.
 */
 func (b *container) Destroy() {
+	// Attain a mutex lock on this LockedBuffer.
+	b.Lock()
+	defer b.Unlock()
+
+	// Return if it's already destroyed.
+	if len(b.buffer) == 0 {
+		return
+	}
+
 	// Remove this one from global slice.
-	var exists bool
 	allLockedBuffersMutex.Lock()
 	for i, v := range allLockedBuffers {
 		if v == b {
 			allLockedBuffers = append(allLockedBuffers[:i], allLockedBuffers[i+1:]...)
-			exists = true
 			break
 		}
 	}
 	allLockedBuffersMutex.Unlock()
 
-	if exists {
-		// Attain a Mutex lock to this LockedBuffer first.
-		b.Lock()
-		defer b.Unlock()
+	// Get all of the memory related to this LockedBuffer.
+	memory := getAllMemory(b)
 
-		// Get all of the memory related to this LockedBuffer.
-		memory := getAllMemory(b)
+	// Get the total size of all the pages between the guards.
+	roundedLength := len(memory) - (pageSize * 2)
 
-		// Get the total size of all the pages between the guards.
-		roundedLength := len(memory) - (pageSize * 2)
-
-		// Verify the canary.
-		if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], canary) {
-			panic("memguard.Destroy(): buffer overflow detected")
-		}
-
-		// Make all of the memory readable and writable.
-		memcall.Protect(memory, true, true)
-
-		// Wipe the pages that hold our data.
-		wipeBytes(memory[pageSize : pageSize+roundedLength])
-
-		// Unlock the pages that hold our data.
-		memcall.Unlock(memory[pageSize : pageSize+roundedLength])
-
-		// Free all related memory.
-		memcall.Free(memory)
-
-		// Set the metadata appropriately.
-		b.mutable = false
-
-		// Set the buffer to nil.
-		b.buffer = nil
+	// Verify the canary.
+	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], canary) {
+		panic("memguard.Destroy(): buffer overflow detected")
 	}
+
+	// Make all of the memory readable and writable.
+	memcall.Protect(memory, true, true)
+
+	// Wipe the pages that hold our data.
+	wipeBytes(memory[pageSize : pageSize+roundedLength])
+
+	// Unlock the pages that hold our data.
+	memcall.Unlock(memory[pageSize : pageSize+roundedLength])
+
+	// Free all related memory.
+	memcall.Free(memory)
+
+	// Set the metadata appropriately.
+	b.mutable = false
+
+	// Set the buffer to nil.
+	b.buffer = nil
 }
 
 /*
