@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"crypto/rand"
-	"crypto/subtle"
 	"os"
 	"sync"
 	"unsafe"
@@ -11,30 +10,19 @@ import (
 )
 
 var (
-	// Grab the system page size.
+	// Ascertain and store the system memory page size.
 	pageSize = os.Getpagesize()
 
-	// Once object to ensure CatchInterrupt is only executed once.
+	// Canary value that acts as an alarm in case of disallowed memory access.
+	canary = createCanary()
+
+	// Create a dedicated sync object for the CatchInterrupt function.
 	catchInterruptOnce sync.Once
 
-	// Store pointers to all of the LockedBuffers.
+	// Array of all active containers, and associated mutex.
 	allLockedBuffers      []*container
 	allLockedBuffersMutex = &sync.Mutex{}
 )
-
-// container implements the actual data container.
-type container struct {
-	sync.Mutex // Local mutex lock.
-
-	buffer []byte // Slice that references protected memory.
-
-	readOnly  bool // Is this memory read-only?
-	destroyed bool // Is this LockedBuffer destroyed?
-}
-
-// finaliserHint is a value that we monitor instead of the LockedBuffer
-// itself. It allows us to tell the GC to auto-destroy LockedBuffers.
-type finaliserHint [16]byte
 
 // Create and allocate a canary value. Return to caller.
 func createCanary() []byte {
@@ -47,22 +35,22 @@ func createCanary() []byte {
 	// Allocate it.
 	memory := memcall.Alloc(totalLen)
 
-	// Lock the pages that will hold the canary.
-	memcall.Lock(memory[pageSize : pageSize+roundedLen])
-
 	// Make the guard pages inaccessible.
 	memcall.Protect(memory[:pageSize], false, false)
 	memcall.Protect(memory[pageSize+roundedLen:], false, false)
 
-	// Generate and copy the canary to the correct location.
-	c := getRandBytes(32)
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLen-32:pageSize+roundedLen], c)
+	// Lock the pages that will hold the canary.
+	memcall.Lock(memory[pageSize : pageSize+roundedLen])
 
-	// Mark the middle page as read-only.
+	// Fill the memory with cryptographically-secure random bytes (the canary value).
+	c := getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
+	fillRandBytes(c)
+
+	// Tell the kernel that the canary value should be immutable.
 	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
 
 	// Return a slice that describes the correct portion of memory.
-	return getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
+	return c
 }
 
 // Round a length to a multiple of the system page size.
@@ -72,11 +60,11 @@ func roundToPageSize(length int) int {
 
 // Get a slice that describes all memory related to a LockedBuffer.
 func getAllMemory(b *container) []byte {
-	// Calculate the length of the buffer and the associated rounded value.
-	bufLen, roundedBufLen := len(b.buffer), roundToPageSize(len(b.buffer)+32)
+	// Calculate the size of the entire container's memory.
+	roundedBufLen := roundToPageSize(len(b.buffer) + 32)
 
 	// Calculate the address of the start of the memory.
-	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-bufLen)+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-len(b.buffer))+pageSize)
 
 	// Calculate the size of the entire memory.
 	memLen := (pageSize * 2) + roundedBufLen
@@ -103,14 +91,11 @@ func fillRandBytes(b []byte) {
 	}
 }
 
-// Create and return a slice of length n, filled with random data.
-func getRandBytes(n int) []byte {
-	// Create a buffer to hold this data.
-	b := make([]byte, n)
-
-	// Read len(b) bytes into the created buffer.
-	fillRandBytes(b)
-
-	// Return the buffer.
-	return b
+// Wipes a byte slice with zeroes.
+func wipeBytes(buf []byte) {
+	// Iterate over the slice...
+	for i := 0; i < len(buf); i++ {
+		// ... setting each element to zero.
+		buf[i] = byte(0)
+	}
 }
