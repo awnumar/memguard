@@ -48,3 +48,5 @@ The releases are cryptographically signed with my PGP key, which can be found on
 ```
 $ curl https://keybase.io/awn/pgp_keys.asc | gpg --import
 ```
+
+We **strongly** encourage you to vendor your dependencies for a clean and reliable build. [Glide](http://glide.sh/) makes this task relatively frictionless.
