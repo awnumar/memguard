@@ -184,7 +184,7 @@ func (b *container) MakeImmutable() error {
 
 	if b.mutable {
 		// Mark the memory as mutable.
-		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(b.Size()+32)], true, false)
+		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false)
 
 		// Tell everyone about the change we made.
 		b.mutable = false
@@ -211,7 +211,7 @@ func (b *container) MakeMutable() error {
 
 	if !b.mutable {
 		// Mark the memory as mutable.
-		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(b.Size()+32)], true, true)
+		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true)
 
 		// Tell everyone about the change we made.
 		b.mutable = true
