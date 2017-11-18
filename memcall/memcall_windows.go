@@ -29,7 +29,7 @@ func Unlock(b []byte) {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) []byte {
 	// Allocate the memory.
-	ptr, err := windows.VirtualAlloc(_zero, uintptr(n), 0x00001000|0x00002000, 0x04)
+	ptr, err := windows.VirtualAlloc(_zero, uintptr(n), 0x1000|0x2000, 0x4)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
@@ -50,11 +50,11 @@ func Protect(b []byte, read, write bool) {
 	// Ascertain protection value from arguments.
 	var prot int
 	if write {
-		prot = 0x04 // PAGE_READWRITE
+		prot = 0x4 // PAGE_READWRITE
 	} else if read {
-		prot = 0x02 // PAGE_READ
+		prot = 0x2 // PAGE_READ
 	} else {
-		prot = 0x01 // PAGE_NOACCESS
+		prot = 0x1 // PAGE_NOACCESS
 	}
 
 	var oldProtect uint32
