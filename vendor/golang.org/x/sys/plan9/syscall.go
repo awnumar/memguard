@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build darwin dragonfly freebsd linux netbsd openbsd solaris
+// +build plan9
 
-// Package unix contains an interface to the low-level operating system
+// Package plan9 contains an interface to the low-level operating system
 // primitives. OS details vary depending on the underlying system, and
-// by default, godoc will display OS-specific documentation for the current
-// system. If you want godoc to display OS documentation for another
+// by default, godoc will display the OS-specific documentation for the current
+// system. If you want godoc to display documentation for another
 // system, set $GOOS and $GOARCH to the desired system. For example, if
 // you want to view documentation for freebsd/arm on linux/amd64, set $GOOS
 // to freebsd and $GOARCH to arm.
@@ -18,8 +18,10 @@
 // the manuals for the appropriate operating system.
 // These calls return err == nil to indicate success; otherwise
 // err represents an operating system error describing the failure and
-// holds a value of type syscall.Errno.
-package unix // import "golang.org/x/sys/unix"
+// holds a value of type syscall.ErrorString.
+package plan9 // import "golang.org/x/sys/plan9"
+
+import "unsafe"
 
 // ByteSliceFromString returns a NUL-terminated slice of bytes
 // containing the text of s. If s contains a NUL byte at any
@@ -47,5 +49,26 @@ func BytePtrFromString(s string) (*byte, error) {
 }
 
 // Single-word zero for use when we need a valid pointer to 0 bytes.
-// See mkunix.pl.
+// See mksyscall.pl.
 var _zero uintptr
+
+func (ts *Timespec) Unix() (sec int64, nsec int64) {
+	return int64(ts.Sec), int64(ts.Nsec)
+}
+
+func (tv *Timeval) Unix() (sec int64, nsec int64) {
+	return int64(tv.Sec), int64(tv.Usec) * 1000
+}
+
+func (ts *Timespec) Nano() int64 {
+	return int64(ts.Sec)*1e9 + int64(ts.Nsec)
+}
+
+func (tv *Timeval) Nano() int64 {
+	return int64(tv.Sec)*1e9 + int64(tv.Usec)*1000
+}
+
+// use is a no-op, but the compiler cannot see that it is.
+// Calling use(p) ensures that p is kept live until that point.
+//go:noescape
+func use(p unsafe.Pointer)
