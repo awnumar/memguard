@@ -30,6 +30,11 @@ func Alloc(n int) []byte {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
 
+	// Fill memory with weird bytes in order to help catch bugs due to uninitialized data.
+	for i := 0; i < n; i++ {
+		b[i] = byte(0xdb)
+	}
+
 	// Return the allocated memory.
 	return b
 }
