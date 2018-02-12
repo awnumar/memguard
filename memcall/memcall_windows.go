@@ -34,8 +34,16 @@ func Alloc(n int) []byte {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
 	}
 
+	// Convert into a byte slice.
+	b := _getBytes(ptr, n, n)
+
+	// Fill memory with weird bytes in order to help catch bugs due to uninitialized data.
+	for i := 0; i < n; i++ {
+		b[i] = byte(0xdb)
+	}
+
 	// Return the allocated memory.
-	return _getBytes(ptr, n, n)
+	return b
 }
 
 // Free unallocates the byte slice specified.
