@@ -16,7 +16,7 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 ## Features
 
-* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory ourselves.
+* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory.
 * It is very difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
 * Buffer overflows are further protected against using a random canary value. If this value changes, the process will panic.
 * We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never include the secure memory in dumps.
