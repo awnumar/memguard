@@ -1,4 +1,4 @@
-// +build !windows,!darwin,!openbsd
+// +build !windows,!darwin,!openbsd,!freebsd
 
 package memcall
 
@@ -32,6 +32,11 @@ func Alloc(n int) []byte {
 	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS)
 	if err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err))
+	}
+
+	// Fill memory with weird bytes in order to help catch bugs due to uninitialized data.
+	for i := 0; i < n; i++ {
+		b[i] = byte(0xdb)
 	}
 
 	// Return the allocated memory.

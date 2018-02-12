@@ -16,7 +16,7 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 ## Features
 
-* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory ourselves.
+* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory.
 * It is very difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
 * Buffer overflows are further protected against using a random canary value. If this value changes, the process will panic.
 * We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never include the secure memory in dumps.
@@ -43,10 +43,10 @@ If you would prefer a signed release that you can verify and manually compile yo
 $ go install -v ./
 ```
 
-The releases are cryptographically signed with my PGP key, which can be found on [keybase](https://keybase.io/awn). To import it directly into GPG, run:
+The [latest release](https://github.com/awnumar/memguard/releases/latest) is guaranteed to be cryptographically signed with my most recent PGP key, which can be found on [keybase](https://keybase.io/awn). To import it directly into GPG, run:
 
 ```
 $ curl https://keybase.io/awn/pgp_keys.asc | gpg --import
 ```
 
-We **strongly** encourage you to vendor your dependencies for a clean and reliable build. [Glide](http://glide.sh/) makes this task relatively frictionless.
+We **strongly** encourage you to vendor your dependencies for a clean and reliable build. Go's [dep](https://github.com/golang/dep) makes this task relatively frictionless.
