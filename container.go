@@ -70,6 +70,9 @@ func newContainer(size int, mutable bool) (*LockedBuffer, error) {
 	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
 	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
 
+	// The buffer is filled with weird bytes so let's wipe it.
+	wipeBytes(b.buffer)
+
 	// Set appropriate mutability state.
 	b.mutable = true
 	if !mutable {
