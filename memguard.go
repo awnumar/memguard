@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"unsafe"
 
 	"github.com/awnumar/memguard/memcall"
 )
@@ -120,6 +121,24 @@ Make sure that you do not dereference the pointer and pass around the resulting 
 func (b *container) Buffer() []byte {
 	return b.buffer
 }
+
+//BufferPointer8 returns a pointer to the slice that references the secure, protected portion of memroy that has been cast to a [8]byte
+func (b *container) BufferPointer8() *[8]byte { return (*[8]byte)(unsafe.Pointer(&b.buffer[0])) }
+
+//BufferPointer12 returns a pointer to the slice that references the secure, protected portion of memroy that has been cast to a [12]byte
+func (b *container) BufferPointer12() *[12]byte { return (*[12]byte)(unsafe.Pointer(&b.buffer[0])) }
+
+//BufferPointer16 returns a pointer to the slice that references the secure, protected portion of memroy that has been cast to a [16]byte
+func (b *container) BufferPointer16() *[16]byte { return (*[16]byte)(unsafe.Pointer(&b.buffer[0])) }
+
+//BufferPointer32 returns a pointer to the slice that references the secure, protected portion of memroy that has been cast to a [32]byte
+func (b *container) BufferPointer32() *[32]byte { return (*[32]byte)(unsafe.Pointer(&b.buffer[0])) }
+
+//BufferPointer64 returns a pointer to the slice that references the secure, protected portion of memroy that has been cast to a [64]byte
+func (b *container) BufferPointer64() *[64]byte { return (*[64]byte)(unsafe.Pointer(&b.buffer[0])) }
+
+//BufferPointer returns a pointer to the slice that references the secure, protected portion of memory
+func (b *container) BufferPointer() *[]byte { return (*[]byte)(unsafe.Pointer(&b.buffer)) }
 
 /*
 IsMutable returns a boolean value indicating if a LockedBuffer is marked read-only.
