@@ -113,6 +113,163 @@ func TestBuffer(t *testing.T) {
 	}
 }
 
+func TestBufferPointer8(t *testing.T) {
+	b, _ := NewImmutable(8)
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
+	var buf interface{}
+	buf = b.BufferPointer8()
+
+	if _, ok := buf.(*[8]byte); !ok {
+		t.Error("Buffer wasn't cast to *[8]byte")
+	}
+
+	var buf2 interface{}
+	buf2 = *b.BufferPointer8()
+
+	if _, ok := buf2.([8]byte); !ok {
+		t.Error("Buffer wasn't cast to [8]byte")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
+	}
+}
+func TestBufferPointer12(t *testing.T) {
+	b, _ := NewImmutable(24)
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
+	var buf interface{}
+	buf = b.BufferPointer12()
+
+	if _, ok := buf.(*[12]byte); !ok {
+		t.Error("Buffer wasn't cast to *[12]byte")
+	}
+
+	var buf2 interface{}
+	buf2 = *b.BufferPointer12()
+
+	if _, ok := buf2.([12]byte); !ok {
+		t.Error("Buffer wasn't cast to [12]byte")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
+	}
+}
+func TestBufferPointer16(t *testing.T) {
+	b, _ := NewImmutable(32)
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
+	var buf interface{}
+	buf = b.BufferPointer16()
+
+	if _, ok := buf.(*[16]byte); !ok {
+		t.Error("Buffer wasn't cast to *[16]byte")
+	}
+
+	var buf2 interface{}
+	buf2 = *b.BufferPointer16()
+
+	if _, ok := buf2.([16]byte); !ok {
+		t.Error("Buffer wasn't cast to [16]byte")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
+	}
+}
+func TestBufferPointer32(t *testing.T) {
+	b, _ := NewImmutable(32)
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
+	var buf interface{}
+	buf = b.BufferPointer32()
+
+	if _, ok := buf.(*[32]byte); !ok {
+		t.Error("Buffer wasn't cast to *[32]byte")
+	}
+
+	var buf2 interface{}
+	buf2 = *b.BufferPointer32()
+
+	if _, ok := buf2.([32]byte); !ok {
+		t.Error("Buffer wasn't cast to [32]byte")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
+	}
+}
+func TestBufferPointer64(t *testing.T) {
+	b, _ := NewImmutable(64)
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
+	var buf interface{}
+	buf = b.BufferPointer64()
+
+	if _, ok := buf.(*[64]byte); !ok {
+		t.Error("Buffer wasn't cast to *[64]byte")
+	}
+
+	var buf2 interface{}
+	buf2 = *b.BufferPointer64()
+
+	if _, ok := buf2.([64]byte); !ok {
+		t.Error("Buffer wasn't cast to [64]byte")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
+	}
+}
+func TestBufferPointer(t *testing.T) {
+	b, _ := NewImmutable(8)
+
+	if !bytes.Equal(b.buffer, b.Buffer()) {
+		t.Error("buffers inequal")
+	}
+	var buf interface{}
+	buf = b.BufferPointer()
+
+	if _, ok := buf.(*[]byte); !ok {
+		t.Error("Buffer wasn't cast to *[]byte")
+	}
+
+	var buf2 interface{}
+	buf2 = *b.BufferPointer()
+
+	if _, ok := buf2.([]byte); !ok {
+		t.Error("Buffer wasn't cast to []byte")
+	}
+
+	b.Destroy()
+
+	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+		t.Error("expected zero length")
+	}
+}
+
 func TestGetMetadata(t *testing.T) {
 	b, _ := NewMutable(8)
 
