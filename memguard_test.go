@@ -100,7 +100,7 @@ func TestNewRandom(t *testing.T) {
 }
 
 func TestBuffer(t *testing.T) {
-	b, _ := NewImmutable(8)
+	b, _ := NewImmutableRandom(8)
 
 	if !bytes.Equal(b.buffer, b.Buffer()) {
 		t.Error("buffers inequal")
@@ -110,6 +110,223 @@ func TestBuffer(t *testing.T) {
 
 	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
 		t.Error("expected zero length")
+	}
+}
+
+func TestUint8(t *testing.T) {
+	b, _ := NewImmutableRandom(8)
+
+	x, err := b.Uint8()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !bytes.Equal(b.buffer, x) {
+		t.Error("conversion failed")
+	}
+
+	if &b.buffer[0] != &x[0] {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 8 || cap(x) != 8 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+
+	if _, err := b.Uint8(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestUint16(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Uint16()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	_, err = c.Uint16()
+	if err != ErrInvalidConversion {
+		t.Error("expected ErrInvalidConversion")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 4 || cap(x) != 4 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Uint16(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestUint32(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Uint32()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	_, err = c.Uint32()
+	if err != ErrInvalidConversion {
+		t.Error("expected ErrInvalidConversion")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 2 || cap(x) != 2 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Uint32(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestUint64(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Uint64()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	_, err = c.Uint64()
+	if err != ErrInvalidConversion {
+		t.Error("expected ErrInvalidConversion")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 1 || cap(x) != 1 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Uint64(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestInt8(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Int8()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 8 || cap(x) != 8 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Int8(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestInt16(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Int16()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	_, err = c.Int16()
+	if err != ErrInvalidConversion {
+		t.Error("expected ErrInvalidConversion")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 4 || cap(x) != 4 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Int16(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestInt32(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Int32()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	_, err = c.Int32()
+	if err != ErrInvalidConversion {
+		t.Error("expected ErrInvalidConversion")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 2 || cap(x) != 2 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Int32(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
+func TestInt64(t *testing.T) {
+	b, _ := NewImmutable(8)
+	c, _ := NewImmutable(9)
+
+	x, err := b.Int64()
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	_, err = c.Int64()
+	if err != ErrInvalidConversion {
+		t.Error("expected ErrInvalidConversion")
+	}
+
+	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+		t.Error("conversion points incorrectly")
+	}
+	if len(x) != 1 || cap(x) != 1 {
+		t.Error("unexpected length or capacity")
+	}
+
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := b.Int64(); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
 	}
 }
 
