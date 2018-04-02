@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"unsafe"
 
 	"github.com/awnumar/memguard/memcall"
 )
@@ -119,6 +120,235 @@ Make sure that you do not dereference the pointer and pass around the resulting 
 */
 func (b *container) Buffer() []byte {
 	return b.buffer
+}
+
+/*
+Uint8 returns a slice (of type []uint8) that references the secure, protected portion of memory.
+
+Uint8 is practically identical to Buffer, but it has been added for completeness' sake. Buffer will usually be the faster and easier option.
+*/
+func (b *container) Uint8() ([]uint8, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Return the slice.
+	return []uint8(b.buffer), nil
+}
+
+/*
+Uint16 returns a slice (of type []uint16) that references the secure, protected portion of memory.
+
+The LockedBuffer must be a multiple of 2 bytes in length, or else an error will be returned.
+*/
+func (b *container) Uint16() ([]uint16, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's an appropriate length.
+	if len(b.buffer)%2 != 0 {
+		return nil, ErrInvalidConversion
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 2, b.Size() / 2}
+
+	// Return the new slice.
+	return *(*[]uint16)(unsafe.Pointer(&sl)), nil
+}
+
+/*
+Uint32 returns a slice (of type []uint32) that references the secure, protected portion of memory.
+
+The LockedBuffer must be a multiple of 4 bytes in length, or else an error will be returned.
+*/
+func (b *container) Uint32() ([]uint32, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's an appropriate length.
+	if len(b.buffer)%4 != 0 {
+		return nil, ErrInvalidConversion
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 4, b.Size() / 4}
+
+	// Return the new slice.
+	return *(*[]uint32)(unsafe.Pointer(&sl)), nil
+}
+
+/*
+Uint64 returns a slice (of type []uint64) that references the secure, protected portion of memory.
+
+The LockedBuffer must be a multiple of 8 bytes in length, or else an error will be returned.
+*/
+func (b *container) Uint64() ([]uint64, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's an appropriate length.
+	if len(b.buffer)%8 != 0 {
+		return nil, ErrInvalidConversion
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 8, b.Size() / 8}
+
+	// Return the new slice.
+	return *(*[]uint64)(unsafe.Pointer(&sl)), nil
+}
+
+/*
+Int8 returns a slice (of type []int8) that references the secure, protected portion of memory.
+*/
+func (b *container) Int8() ([]int8, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size(), b.Size()}
+
+	// Return the new slice.
+	return *(*[]int8)(unsafe.Pointer(&sl)), nil
+}
+
+/*
+Int16 returns a slice (of type []int16) that references the secure, protected portion of memory.
+
+The LockedBuffer must be a multiple of 2 bytes in length, or else an error will be returned.
+*/
+func (b *container) Int16() ([]int16, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's an appropriate length.
+	if len(b.buffer)%2 != 0 {
+		return nil, ErrInvalidConversion
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 2, b.Size() / 2}
+
+	// Return the new slice.
+	return *(*[]int16)(unsafe.Pointer(&sl)), nil
+}
+
+/*
+Int32 returns a slice (of type []int32) that references the secure, protected portion of memory.
+
+The LockedBuffer must be a multiple of 4 bytes in length, or else an error will be returned.
+*/
+func (b *container) Int32() ([]int32, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's an appropriate length.
+	if len(b.buffer)%4 != 0 {
+		return nil, ErrInvalidConversion
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 4, b.Size() / 4}
+
+	// Return the new slice.
+	return *(*[]int32)(unsafe.Pointer(&sl)), nil
+}
+
+/*
+Int64 returns a slice (of type []int64) that references the secure, protected portion of memory.
+
+The LockedBuffer must be a multiple of 8 bytes in length, or else an error will be returned.
+*/
+func (b *container) Int64() ([]int64, error) {
+	// Attain the mutex lock.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check to see if it's destroyed.
+	if len(b.buffer) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's an appropriate length.
+	if len(b.buffer)%8 != 0 {
+		return nil, ErrInvalidConversion
+	}
+
+	// Perform the conversion.
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 8, b.Size() / 8}
+
+	// Return the new slice.
+	return *(*[]int64)(unsafe.Pointer(&sl)), nil
 }
 
 /*
