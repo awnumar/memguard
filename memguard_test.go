@@ -693,6 +693,27 @@ func TestTrim(t *testing.T) {
 	}
 }
 
+func TestWipeBytes(t *testing.T) {
+	// Create random byte slice.
+	b := make([]byte, 32)
+	fillRandBytes(b)
+
+	// Wipe it.
+	WipeBytes(b)
+
+	// Check.
+	if !bytes.Equal(b, make([]byte, 32)) {
+		t.Error("unsuccessful wipe")
+	}
+
+	// Try with empty list.
+	ebuf := make([]byte, 0)
+	WipeBytes(ebuf)
+	if len(ebuf) != 0 || cap(ebuf) != 0 {
+		t.Error("changes made to zero-sized slice")
+	}
+}
+
 func TestCatchInterrupt(t *testing.T) {
 	CatchInterrupt(func() {})
 
