@@ -804,6 +804,15 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 }
 
 /*
+WipeBytes zeroes out a given byte slice. It is recommeded that you call WipeBytes on slices after utilizing the Copy or CopyAt methods.
+
+Due to the nature of memory allocated by the Go runtime, WipeBytes cannot guarantee that the data does not exist elsewhere in memory. Therefore, your program should aim to (when possible) store sensitive data only in LockedBuffers.
+*/
+func WipeBytes(b []byte) {
+	wipeBytes(b)
+}
+
+/*
 DestroyAll calls Destroy on all LockedBuffers that have not already been destroyed.
 
 CatchInterrupt and SafeExit both call DestroyAll before exiting.
