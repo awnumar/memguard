@@ -758,7 +758,9 @@ func TestConcurrent(t *testing.T) {
 }
 
 func TestDisableUnixCoreDumps(t *testing.T) {
-	DisableUnixCoreDumps()
+	if err := DisableUnixCoreDumps(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestRoundPage(t *testing.T) {

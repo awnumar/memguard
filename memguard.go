@@ -414,7 +414,9 @@ func (b *container) MakeImmutable() error {
 
 	if b.mutable {
 		// Mark the memory as mutable.
-		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false)
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false); err != nil {
+			SafePanic(err)
+		}
 
 		// Tell everyone about the change we made.
 		b.mutable = false
@@ -441,7 +443,9 @@ func (b *container) MakeMutable() error {
 
 	if !b.mutable {
 		// Mark the memory as mutable.
-		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true)
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true); err != nil {
+			SafePanic(err)
+		}
 
 		// Tell everyone about the change we made.
 		b.mutable = true
@@ -595,16 +599,22 @@ func (b *container) Destroy() {
 	}
 
 	// Make all of the memory readable and writable.
-	memcall.Protect(memory, true, true)
+	if err := memcall.Protect(memory, true, true); err != nil {
+		SafePanic(err)
+	}
 
 	// Wipe the pages that hold our data.
 	wipeBytes(memory[pageSize : pageSize+roundedLength])
 
 	// Unlock the pages that hold our data.
-	memcall.Unlock(memory[pageSize : pageSize+roundedLength])
+	if err := memcall.Unlock(memory[pageSize : pageSize+roundedLength]); err != nil {
+		SafePanic(err)
+	}
 
 	// Free all related memory.
-	memcall.Free(memory)
+	if err := memcall.Free(memory); err != nil {
+		SafePanic(err)
+	}
 
 	// Set the metadata appropriately.
 	b.mutable = false
@@ -853,7 +863,27 @@ func CatchInterrupt(f func()) {
 }
 
 /*
-SafeExit exits the program with a specified exit-code, but calls DestroyAll first.
+SafePanic is identical to Go's panic except it wipes all it can before panicking. It is much preferred to call SafeExit.
+*/
+func SafePanic(v interface{}) {
+	// Get a Mutex lock on the global list of buffers. Don't release it.
+	allLockedBuffersMutex.Lock()
+
+	// Grab a copy of the list.
+	containers := make([]*container, len(allLockedBuffers))
+	copy(containers, allLockedBuffers)
+
+	// Wipe them all.
+	for _, b := range containers {
+		wipeBytes(b.buffer)
+	}
+
+	// Panic.
+	panic(v)
+}
+
+/*
+SafeExit exits the program with a specified exit-code, but cleans up first.
 */
 func SafeExit(c int) {
 	// Cleanup protected memory.
@@ -870,6 +900,6 @@ Since core-dumps are only relevant on Unix systems, if DisableUnixCoreDumps is c
 
 This function is precautonary as core-dumps are usually disabled by default on most systems.
 */
-func DisableUnixCoreDumps() {
-	memcall.DisableCoreDumps()
+func DisableUnixCoreDumps() error {
+	return memcall.DisableCoreDumps()
 }

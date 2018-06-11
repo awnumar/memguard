@@ -55,14 +55,23 @@ func newContainer(size int, mutable bool) (*LockedBuffer, error) {
 	totalSize := (2 * pageSize) + roundedLength
 
 	// Allocate it all.
-	memory := memcall.Alloc(totalSize)
+	memory, err := memcall.Alloc(totalSize)
+	if err != nil {
+		SafePanic(err)
+	}
 
 	// Make the guard pages inaccessible.
-	memcall.Protect(memory[:pageSize], false, false)
-	memcall.Protect(memory[pageSize+roundedLength:], false, false)
+	if err := memcall.Protect(memory[:pageSize], false, false); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Protect(memory[pageSize+roundedLength:], false, false); err != nil {
+		SafePanic(err)
+	}
 
 	// Lock the pages that will hold the sensitive data.
-	memcall.Lock(memory[pageSize : pageSize+roundedLength])
+	if err := memcall.Lock(memory[pageSize : pageSize+roundedLength]); err != nil {
+		SafePanic(err)
+	}
 
 	// Set the canary.
 	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], canary)
