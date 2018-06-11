@@ -14,7 +14,7 @@ Package memguard lets you easily handle sensitive values in memory.
         memguard.CatchInterrupt(func() {
             fmt.Println("Interrupt signal received. Exiting...")
         })
-        // Make sure to destroy all LockedBuffers when returning.
+        // Make sure to destroy all Enclaves when returning.
         defer memguard.DestroyAll()
 
         // Normal code continues from here.
@@ -37,7 +37,7 @@ Package memguard lets you easily handle sensitive values in memory.
         fmt.Printf("This key starts with %x\n", key.Buffer()[0])
     }
 
-The number of LockedBuffers that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on LockedBuffers that you no longer need, or simply defer a Destroy call after creating a new LockedBuffer.
+The number of Enclaves that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on Enclaves that you no longer need, or simply defer a Destroy call after creating a new Enclave.
 
 If a function that you're using requires an array, you can cast the buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
@@ -52,7 +52,7 @@ If a function that you're using requires an array, you can cast the buffer to an
     // In this case that size is 16. This is very important.
     keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer()[0]))
 
-The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer exposes. Don't use the mutex when calling a function that is part of the MemGuard API though, or the process will deadlock.
+The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each Enclave exposes. Don't use the mutex when calling a function that is part of the MemGuard API though, or the process will deadlock.
 
 When terminating your application, care should be taken to securely cleanup everything.
 
