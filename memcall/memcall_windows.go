@@ -53,7 +53,7 @@ func Alloc(n int) ([]byte, error) {
 // Free unallocates the byte slice specified.
 func Free(b []byte) error {
 	if err := windows.VirtualFree(_getPtr(b), uintptr(0), 0x8000); err != nil {
-		return fmt.Errorf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err)s
+		return fmt.Errorf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err)
 	}
 
 	return nil
