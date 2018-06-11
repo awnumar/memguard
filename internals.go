@@ -33,21 +33,32 @@ func createCanary() []byte {
 	totalLen := (2 * pageSize) + roundedLen
 
 	// Allocate it.
-	memory := memcall.Alloc(totalLen)
+	memory, err := memcall.Alloc(totalLen)
+	if err != nil {
+		SafePanic(err)
+	}
 
 	// Make the guard pages inaccessible.
-	memcall.Protect(memory[:pageSize], false, false)
-	memcall.Protect(memory[pageSize+roundedLen:], false, false)
+	if err := memcall.Protect(memory[:pageSize], false, false); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Protect(memory[pageSize+roundedLen:], false, false); err != nil {
+		SafePanic(err)
+	}
 
 	// Lock the pages that will hold the canary.
-	memcall.Lock(memory[pageSize : pageSize+roundedLen])
+	if err := memcall.Lock(memory[pageSize : pageSize+roundedLen]); err != nil {
+		SafePanic(err)
+	}
 
 	// Fill the memory with cryptographically-secure random bytes (the canary value).
 	c := getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
 	fillRandBytes(c)
 
 	// Tell the kernel that the canary value should be immutable.
-	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
+	if err := memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false); err != nil {
+		SafePanic(err)
+	}
 
 	// Return a slice that describes the correct portion of memory.
 	return c
