@@ -8,16 +8,13 @@ func TestCycle(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Test if the whole memory is filled with 0xdb.
-	for i := 0; i < 32; i++ {
-		if buffer[i] != byte(0xdb) {
-			t.Error("unexpected byte:", buffer[i])
+	// Test if the allocated memory is zeroed.
+	for i := range buffer {
+		if buffer[i] != 0 {
+			t.Error("allocated memory not zeroed:", buffer)
 		}
 	}
 
-	if err := Protect(buffer, true, true); err != nil {
-		t.Error(err)
-	}
 	if err := Lock(buffer); err != nil {
 		t.Error(err)
 	}
