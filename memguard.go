@@ -597,7 +597,7 @@ func (b *container) Destroy() {
 	c := canary.getView()
 	defer c.destroy()
 	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], c.buffer) {
-		panic("memguard.Destroy(): buffer overflow detected")
+		SafePanic("memguard.Destroy(): buffer overflow detected")
 	}
 
 	// If this was the last Enclave (so there aren't any left now), refresh the canary value.

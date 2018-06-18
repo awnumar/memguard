@@ -56,7 +56,7 @@ func getBytes(ptr uintptr, len int) []byte {
 func fillRandBytes(b []byte) {
 	// Read len(b) bytes into the buffer.
 	if _, err := rand.Read(b); err != nil {
-		panic("memguard.csprng(): could not get random bytes")
+		SafePanic("memguard.csprng(): could not get random bytes")
 	}
 }
 
