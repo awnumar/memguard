@@ -12,7 +12,7 @@ import (
 /*
 Enclave is a structure that holds secure values.
 
-The protected memory itself can be accessed with the Buffer() method. The various states can be accessed with the IsDestroyed() and IsMutable() methods, both of which are pretty self-explanatory.
+The protected memory itself can be accessed with the Bytes() method. The various states can be accessed with the IsDestroyed() and IsMutable() methods, both of which are pretty self-explanatory.
 
 The number of Enclaves that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on Enclaves that you no longer need, or simply defer a Destroy call after creating a new Enclave.
 

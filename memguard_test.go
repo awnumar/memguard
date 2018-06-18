@@ -109,7 +109,7 @@ func TestNewRandom(t *testing.T) {
 	a.Destroy()
 }
 
-func TestBuffer(t *testing.T) {
+func TestBytes(t *testing.T) {
 	b, _ := NewImmutableRandom(8)
 
 	if !bytes.Equal(b.buffer, b.Bytes()) {

@@ -34,7 +34,7 @@ Package memguard lets you easily handle sensitive values in memory.
 
         // Do something with the key.
         fmt.Printf("This is a %d byte key.\n", key.Size())
-        fmt.Printf("This key starts with %x\n", key.Buffer()[0])
+        fmt.Printf("This key starts with %x\n", key.Bytes()[0])
     }
 
 The number of Enclaves that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on Enclaves that you no longer need, or simply defer a Destroy call after creating a new Enclave.
@@ -50,7 +50,7 @@ If a function that you're using requires an array, you can cast the buffer to an
 
     // Make sure the size of the array matches the size of the Buffer.
     // In this case that size is 16. This is very important.
-    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer()[0]))
+    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Bytes()[0]))
 
 The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each Enclave exposes. Don't use the mutex when calling a function that is part of the MemGuard API though, or the process will deadlock.
 
