@@ -74,7 +74,7 @@ func newContainer(size int, mutable bool) (*LockedBuffer, error) {
 	}
 
 	// Set the canary.
-	c := canary.get()
+	c := canary.getView()
 	defer c.destroy()
 	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.buffer)
 

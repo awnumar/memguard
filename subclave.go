@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/awnumar/memguard/memcall"
@@ -12,7 +13,24 @@ var (
 	// Array of all active subclaves, and associated mutex.
 	subclaves      []*subclave
 	subclavesMutex = &sync.Mutex{}
+
+	// Sync object to ensure we only start a single rekey routine.
+	rekeyOnce sync.Once
+
+	// Set the interval between rekeys, in seconds.
+	interval uint = 8
 )
+
+/*
+SetRekeyInterval lets you decide the time interval, in seconds, between the rekeys of the subclaves.
+
+Subclaves are special containers used only internally to protect sensitive values that are used in the protection of normal LockedBuffers. These subclaves are re-keyed at regular intervals, with the default being every 8 seconds.
+
+This is the only public function exposed by the subclave implementation. Please refrain from calling this function unless you know what you're doing.
+*/
+func SetRekeyInterval(t uint) {
+	interval = t
+}
 
 // The subclave container is similar to a normal container but it is only used internally to protect 32 byte values that are used in the protection of normal containers.
 type subclave struct {
@@ -22,6 +40,7 @@ type subclave struct {
 	y []byte
 }
 
+// This is an immutable and ephemeral LockedBuffer-like object that allows you to view and use the value stored inside a subclave. It holds a copy and so will not reflect any changes to the subclave upon which it's based. It should be destroyed as soon as possible after use.
 type subclaveView struct {
 	buffer []byte
 }
@@ -54,7 +73,7 @@ func newSubclave() *subclave {
 		SafePanic(err)
 	}
 
-	// Initialise a subclave with a random 32 byte value.
+	// Initialise the subclave with a random 32 byte value.
 	fillRandBytes(s.x)
 	fillRandBytes(s.y)
 	hr := h(s.y)
@@ -67,12 +86,33 @@ func newSubclave() *subclave {
 	subclaves = append(subclaves, s)
 	subclavesMutex.Unlock()
 
+	// If we haven't already started a rekey routine, do it now.
+	rekeyOnce.Do(func() {
+		go func() {
+			for {
+				// Sleep for the specified interval.
+				time.Sleep(time.Duration(interval) * time.Second)
+
+				// Get a snapshot of the existing subclaves.
+				subclavesMutex.Lock()
+				subs := make([]*subclave, len(subclaves))
+				copy(subs, subclaves)
+				subclavesMutex.Unlock()
+
+				// Rekey them all.
+				for _, s := range subs {
+					s.rekey()
+				}
+			}
+		}()
+	})
+
 	// Return the created subclave object.
 	return s
 }
 
 // Returns the value stored in a subclave, wrapped in a subclaveView object. The caller should destroy this object as soon as possible.
-func (s *subclave) get() *subclaveView {
+func (s *subclave) getView() *subclaveView {
 	// Create a new subclaveView object.
 	sv := new(subclaveView)
 
@@ -148,6 +188,11 @@ func (sv *subclaveView) destroy() {
 
 // This method is used to update the value stored in a subclave.
 func (s *subclave) update(b []byte) {
+	// Check length is 32.
+	if len(b) != 32 {
+		SafePanic("memguard.subclave.update: input must be 32 bytes")
+	}
+
 	// Attain the mutex.
 	s.Lock()
 	defer s.Unlock()
@@ -156,6 +201,21 @@ func (s *subclave) update(b []byte) {
 	hy := h(s.y)
 	for i := range hy {
 		s.x[i] = hy[i] ^ b[i]
+	}
+}
+
+// This method is used to reset the value stored inside a subclave to a new 32 byte random value, wiping the old.
+func (s *subclave) refresh() {
+	// Attain the mutex.
+	s.Lock()
+	defer s.Unlock()
+
+	// Refresh the value.
+	fillRandBytes(s.x)
+	fillRandBytes(s.y)
+	hr := h(s.y)
+	for i := range hr {
+		s.x[i] ^= hr[i]
 	}
 }
 

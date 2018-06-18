@@ -594,10 +594,15 @@ func (b *container) Destroy() {
 	roundedLength := len(memory) - (pageSize * 2)
 
 	// Verify the canary.
-	c := canary.get()
+	c := canary.getView()
 	defer c.destroy()
 	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], c.buffer) {
 		panic("memguard.Destroy(): buffer overflow detected")
+	}
+
+	// If this was the last LockedBuffer (so there aren't any left now), refresh the canary value.
+	if len(allLockedBuffers) == 0 {
+		canary.refresh()
 	}
 
 	// Make all of the memory readable and writable.
@@ -830,12 +835,13 @@ DestroyAll calls Destroy on all LockedBuffers that have not already been destroy
 CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
 func DestroyAll() {
-	// Get a Mutex lock on allLockedBuffers, and get a copy.
+	// Get a snapshot of all existing LockedBuffers.
 	allLockedBuffersMutex.Lock()
 	containers := make([]*container, len(allLockedBuffers))
 	copy(containers, allLockedBuffers)
 	allLockedBuffersMutex.Unlock()
 
+	// Destroy them all.
 	for _, b := range containers {
 		b.Destroy()
 	}
@@ -868,16 +874,22 @@ func CatchInterrupt(f func()) {
 SafePanic is identical to Go's panic except it wipes all it can before panicking. It is much preferred to call SafeExit.
 */
 func SafePanic(v interface{}) {
-	// Get a Mutex lock on the global list of buffers. Don't release it.
-	allLockedBuffersMutex.Lock()
-
-	// Grab a copy of the list.
+	// Grab a copy of the LockedBuffers.
 	containers := make([]*container, len(allLockedBuffers))
 	copy(containers, allLockedBuffers)
 
 	// Wipe them all.
 	for _, b := range containers {
 		wipeBytes(b.buffer)
+	}
+
+	// Get a copy of the subclaves.
+	subs := make([]*subclave, len(subclaves))
+	copy(subs, subclaves)
+
+	// Wipe and overwrite them all.
+	for _, s := range subs {
+		s.refresh()
 	}
 
 	// Panic.
@@ -890,6 +902,17 @@ SafeExit exits the program with a specified exit-code, but cleans up first.
 func SafeExit(c int) {
 	// Cleanup protected memory.
 	DestroyAll()
+
+	// Get a snapshot of the existing subclaves.
+	subclavesMutex.Lock()
+	subs := make([]*subclave, len(subclaves))
+	copy(subs, subclaves)
+	subclavesMutex.Unlock()
+
+	// Wipe and overwrite them all.
+	for _, s := range subs {
+		s.refresh()
+	}
 
 	// Exit with a specified exit-code.
 	os.Exit(c)
