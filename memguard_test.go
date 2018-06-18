@@ -496,6 +496,9 @@ func TestFillRandomBytes(t *testing.T) {
 }
 
 func TestDestroyAll(t *testing.T) {
+	oldCanary := canary.getView()
+	defer oldCanary.destroy()
+
 	b, _ := NewMutable(16)
 	c, _ := NewMutable(16)
 
@@ -514,6 +517,13 @@ func TestDestroyAll(t *testing.T) {
 
 	if !b.IsDestroyed() || !c.IsDestroyed() {
 		t.Error("expected it to be destroyed")
+	}
+
+	newCanary := canary.getView()
+	defer newCanary.destroy()
+
+	if bytes.Equal(oldCanary.buffer, newCanary.buffer) {
+		t.Error("canary didn't refresh")
 	}
 }
 
@@ -835,5 +845,85 @@ func TestFinalizer(t *testing.T) {
 	runtime.GC() // should collect c
 	for ic.IsDestroyed() != true {
 		runtime.Gosched()
+	}
+}
+
+func TestSetRekeyInterval(t *testing.T) {
+	oldValue := interval
+	SetRekeyInterval(oldValue + 1)
+	if interval != oldValue+1 {
+		t.Error("unexpected interval value")
+	}
+}
+
+func TestNewSubclave(t *testing.T) {
+	s := newSubclave()
+	sv := s.getView()
+	defer sv.destroy()
+
+	if len(s.x) != 32 || len(s.y) != 32 {
+		t.Error("unexpected subclave length")
+	}
+	if cap(s.x) != 32 || cap(s.y) != 32 {
+		t.Error("unexpected subclave capacity")
+	}
+
+	if bytes.Equal(sv.buffer, make([]byte, 32)) {
+		t.Error("subclave is zero")
+	}
+}
+
+func TestSubclaveIO(t *testing.T) {
+	s := newSubclave()
+	sv := s.getView()
+	defer sv.destroy()
+
+	randVal := r()
+	s.update(randVal)
+	nsv := s.getView()
+	defer nsv.destroy()
+
+	if bytes.Equal(sv.buffer, nsv.buffer) {
+		t.Error("update subclave val didn't work")
+	}
+}
+
+func TestSubclaveViewDestroy(t *testing.T) {
+	s := newSubclave()
+	sv := s.getView()
+	val := sv.buffer
+	sv.destroy()
+
+	if sv.buffer != nil {
+		t.Error("could not properly destroy subclave")
+	}
+
+	sv = s.getView()
+	if !bytes.Equal(sv.buffer, val) {
+		t.Error("unexpectedly changed subclave value")
+	}
+}
+
+func TestSubclaveRefresh(t *testing.T) {
+	s := newSubclave()
+	oldValue := s.getView()
+	defer oldValue.destroy()
+	s.refresh()
+	newValue := s.getView()
+	defer newValue.destroy()
+	if bytes.Equal(oldValue.buffer, newValue.buffer) {
+		t.Error("subclave refresh unsuccessful")
+	}
+}
+
+func TestSubclaveRekey(t *testing.T) {
+	s := newSubclave()
+	oldValue := s.getView()
+	defer oldValue.destroy()
+	s.rekey()
+	newValue := s.getView()
+	defer newValue.destroy()
+	if !bytes.Equal(oldValue.buffer, newValue.buffer) {
+		t.Error("subclave rekey changed value")
 	}
 }
