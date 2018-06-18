@@ -75,8 +75,8 @@ func newContainer(size int, mutable bool) (*LockedBuffer, error) {
 
 	// Set the canary.
 	c := canary.get()
-	defer c.Destroy()
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.Buffer())
+	defer c.destroy()
+	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.buffer)
 
 	// Set Buffer to a byte slice that describes the region of memory that is protected.
 	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)

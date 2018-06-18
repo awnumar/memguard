@@ -22,6 +22,10 @@ type subclave struct {
 	y []byte
 }
 
+type subclaveView struct {
+	buffer []byte
+}
+
 // Creates and returns a new subclave object.
 func newSubclave() *subclave {
 	// Allocate a new subclave object.
@@ -67,23 +71,79 @@ func newSubclave() *subclave {
 	return s
 }
 
-// Returns the value stored in a subclave, wrapped in a normal LockedBuffer. The caller should destroy this object as soon as possible.
-func (s *subclave) get() *LockedBuffer {
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
+// Returns the value stored in a subclave, wrapped in a subclaveView object. The caller should destroy this object as soon as possible.
+func (s *subclave) get() *subclaveView {
+	// Create a new subclaveView object.
+	sv := new(subclaveView)
 
-	// Create a new LockedBuffer.
-	b, _ := NewMutable(32)
+	// Calculate the total size of memory including the guard pages.
+	roundedSize := roundToPageSize(32)
+	totalSize := (2 * pageSize) + roundedSize
 
-	// Create a copy of the subclave data inside the LockedBuffer.
-	h := h(s.y)
-	for i := range b.buffer {
-		b.buffer[i] = h[i] ^ s.x[i]
+	// Allocate it all.
+	memory, err := memcall.Alloc(totalSize)
+	if err != nil {
+		SafePanic(err)
 	}
 
-	// Return the LockedBuffer.
-	return b
+	// Make the guard pages inaccessible.
+	if err := memcall.Protect(memory[:pageSize], false, false); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Protect(memory[pageSize+roundedSize:], false, false); err != nil {
+		SafePanic(err)
+	}
+
+	// Lock the pages that will hold the sensitive data.
+	if err := memcall.Lock(memory[pageSize : pageSize+roundedSize]); err != nil {
+		SafePanic(err)
+	}
+
+	// Set Buffer to a byte slice that describes the region of memory that is protected.
+	sv.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
+
+	// Create a copy of the subclave data inside the subclaveView.
+	h := h(s.y)
+	for i := range sv.buffer {
+		sv.buffer[i] = h[i] ^ s.x[i]
+	}
+
+	// Make the subclaveView immutable.
+	if err := memcall.Protect(memory[pageSize:pageSize+roundedSize], true, false); err != nil {
+		SafePanic(err)
+	}
+
+	// Return the subclaveView object.
+	return sv
+}
+
+func (sv *subclaveView) destroy() {
+	// Get a slice referencing all the memory associated with this subclaveView object.
+	roundedSize := roundToPageSize(32)
+	memLen := (pageSize * 2) + roundedSize
+	memAddr := uintptr(unsafe.Pointer(&sv.buffer[0])) - uintptr((roundedSize-32)+pageSize)
+	memory := getBytes(memAddr, memLen)
+
+	// Make all of the memory readable and writable.
+	if err := memcall.Protect(memory, true, true); err != nil {
+		SafePanic(err)
+	}
+
+	// Wipe the pages that hold our data.
+	wipeBytes(memory[pageSize : pageSize+roundedSize])
+
+	// Unlock the pages that hold our data.
+	if err := memcall.Unlock(memory[pageSize : pageSize+roundedSize]); err != nil {
+		SafePanic(err)
+	}
+
+	// Free all related memory.
+	if err := memcall.Free(memory); err != nil {
+		SafePanic(err)
+	}
+
+	// Set the buffer to nil.
+	sv.buffer = nil
 }
 
 // This method is used to update the value stored in a subclave.

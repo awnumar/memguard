@@ -595,8 +595,8 @@ func (b *container) Destroy() {
 
 	// Verify the canary.
 	c := canary.get()
-	defer c.Destroy()
-	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], c.Buffer()) {
+	defer c.destroy()
+	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], c.buffer) {
 		panic("memguard.Destroy(): buffer overflow detected")
 	}
 
