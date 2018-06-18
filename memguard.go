@@ -600,7 +600,7 @@ func (b *container) Destroy() {
 		panic("memguard.Destroy(): buffer overflow detected")
 	}
 
-	// If this was the last LockedBuffer (so there aren't any left now), refresh the canary value.
+	// If this was the last Enclave (so there aren't any left now), refresh the canary value.
 	if len(enclaves) == 0 {
 		canary.refresh()
 	}
