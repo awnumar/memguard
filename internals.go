@@ -20,8 +20,8 @@ var (
 	catchInterruptOnce sync.Once
 
 	// Array of all active containers, and associated mutex.
-	allEnclaves      []*container
-	allEnclavesMutex = &sync.Mutex{}
+	enclaves      []*container
+	enclavesMutex = &sync.Mutex{}
 )
 
 // Create and allocate a canary value. Return to caller.

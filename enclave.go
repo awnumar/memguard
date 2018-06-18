@@ -90,11 +90,11 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 		go ib.Destroy()
 	})
 
-	// Append the container to allEnclaves. We have to add container
+	// Append the container to enclaves. We have to add container
 	// instead of Enclave so that littleBird can become unreachable.
-	allEnclavesMutex.Lock()
-	allEnclaves = append(allEnclaves, ib)
-	allEnclavesMutex.Unlock()
+	enclavesMutex.Lock()
+	enclaves = append(enclaves, ib)
+	enclavesMutex.Unlock()
 
 	// Return a pointer to the Enclave.
 	return b, nil

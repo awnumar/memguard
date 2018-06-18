@@ -578,14 +578,14 @@ func (b *container) Destroy() {
 	}
 
 	// Remove this one from global slice.
-	allEnclavesMutex.Lock()
-	for i, v := range allEnclaves {
+	enclavesMutex.Lock()
+	for i, v := range enclaves {
 		if v == b {
-			allEnclaves = append(allEnclaves[:i], allEnclaves[i+1:]...)
+			enclaves = append(enclaves[:i], enclaves[i+1:]...)
 			break
 		}
 	}
-	allEnclavesMutex.Unlock()
+	enclavesMutex.Unlock()
 
 	// Get all of the memory related to this Enclave.
 	memory := getAllMemory(b)
@@ -828,11 +828,11 @@ DestroyAll calls Destroy on all Enclaves that have not already been destroyed.
 CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
 func DestroyAll() {
-	// Get a Mutex lock on allEnclaves, and get a copy.
-	allEnclavesMutex.Lock()
-	containers := make([]*container, len(allEnclaves))
-	copy(containers, allEnclaves)
-	allEnclavesMutex.Unlock()
+	// Get a Mutex lock on enclaves, and get a copy.
+	enclavesMutex.Lock()
+	containers := make([]*container, len(enclaves))
+	copy(containers, enclaves)
+	enclavesMutex.Unlock()
 
 	for _, b := range containers {
 		b.Destroy()
@@ -867,11 +867,11 @@ SafePanic is identical to Go's panic except it wipes all it can before panicking
 */
 func SafePanic(v interface{}) {
 	// Get a Mutex lock on the global list of buffers. Don't release it.
-	allEnclavesMutex.Lock()
+	enclavesMutex.Lock()
 
 	// Grab a copy of the list.
-	containers := make([]*container, len(allEnclaves))
-	copy(containers, allEnclaves)
+	containers := make([]*container, len(enclaves))
+	copy(containers, enclaves)
 
 	// Wipe them all.
 	for _, b := range containers {
