@@ -24,7 +24,7 @@ var (
 /*
 SetRekeyInterval lets you decide the time interval, in seconds, between the rekeys of the subclaves.
 
-Subclaves are special containers used only internally to protect sensitive values that are used in the protection of normal LockedBuffers. These subclaves are re-keyed at regular intervals, with the default being every 8 seconds.
+Subclaves are special containers used only internally to protect sensitive values that are used in the protection of normal Enclaves. These subclaves are re-keyed at regular intervals, with the default being every 8 seconds.
 
 This is the only public function exposed by the subclave implementation. Please refrain from calling this function unless you know what you're doing.
 */
@@ -40,7 +40,7 @@ type subclave struct {
 	y []byte
 }
 
-// This is an immutable and ephemeral LockedBuffer-like object that allows you to view and use the value stored inside a subclave. It holds a copy and so will not reflect any changes to the subclave upon which it's based. It should be destroyed as soon as possible after use.
+// This is an immutable and ephemeral Enclave-like object that allows you to view and use the value stored inside a subclave. It holds a copy and so will not reflect any changes to the subclave upon which it's based. It should be destroyed as soon as possible after use.
 type subclaveView struct {
 	buffer []byte
 }

@@ -18,8 +18,8 @@ var (
 	catchInterruptOnce sync.Once
 
 	// Array of all active containers, and associated mutex.
-	allLockedBuffers      []*container
-	allLockedBuffersMutex = &sync.Mutex{}
+	enclaves      []*container
+	enclavesMutex = &sync.Mutex{}
 )
 
 // Round a length to a multiple of the system page size.
@@ -27,7 +27,7 @@ func roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }
 
-// Get a slice that describes all memory related to a LockedBuffer.
+// Get a slice that describes all memory related to a Enclave.
 func getAllMemory(b *container) []byte {
 	// Calculate the size of the entire container's memory.
 	roundedBufLen := roundToPageSize(len(b.buffer) + 32)

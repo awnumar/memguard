@@ -18,8 +18,8 @@ func TestNew(t *testing.T) {
 			t.Error("buffer not zero-filled", b.buffer)
 		}
 	}
-	if len(b.Buffer()) != 8 || cap(b.Buffer()) != 8 {
-		t.Error("length or capacity != required; len, cap =", len(b.Buffer()), cap(b.Buffer()))
+	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
+		t.Error("length or capacity != required; len, cap =", len(b.Bytes()), cap(b.Bytes()))
 	}
 	if b.IsMutable() {
 		t.Error("unexpected state")
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 		t.Error("expected err; got nil")
 	}
 	if c != nil {
-		t.Error("expected nil, got *LockedBuffer")
+		t.Error("expected nil, got *Enclave")
 	}
 
 	a, err := NewMutable(8)
@@ -54,8 +54,8 @@ func TestNewFromBytes(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("test")) {
-		t.Error("b.Buffer() != required")
+	if !bytes.Equal(b.Bytes(), []byte("test")) {
+		t.Error("b.Bytes() != required")
 	}
 	if b.IsMutable() {
 		t.Error("unexpected state")
@@ -67,7 +67,7 @@ func TestNewFromBytes(t *testing.T) {
 		t.Error("expected err; got nil")
 	}
 	if c != nil {
-		t.Error("expected nil, got *LockedBuffer")
+		t.Error("expected nil, got *Enclave")
 	}
 
 	a, err := NewMutableFromBytes([]byte("test"))
@@ -82,7 +82,7 @@ func TestNewFromBytes(t *testing.T) {
 
 func TestNewRandom(t *testing.T) {
 	b, _ := NewImmutableRandom(32)
-	if bytes.Equal(b.Buffer(), make([]byte, 32)) {
+	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("was not filled with random data")
 	}
 	if b.IsMutable() {
@@ -96,7 +96,7 @@ func TestNewRandom(t *testing.T) {
 		t.Error("expected ErrInvalidLength")
 	}
 	if c != nil {
-		t.Error("expected nil, got *LockedBuffer")
+		t.Error("expected nil, got *Enclave")
 	}
 
 	a, err := NewMutableRandom(8)
@@ -109,16 +109,16 @@ func TestNewRandom(t *testing.T) {
 	a.Destroy()
 }
 
-func TestBuffer(t *testing.T) {
+func TestBytes(t *testing.T) {
 	b, _ := NewImmutableRandom(8)
 
-	if !bytes.Equal(b.buffer, b.Buffer()) {
+	if !bytes.Equal(b.buffer, b.Bytes()) {
 		t.Error("buffers inequal")
 	}
 
 	b.Destroy()
 
-	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+	if len(b.Bytes()) != 0 || cap(b.Bytes()) != 0 {
 		t.Error("expected zero length")
 	}
 }
@@ -385,7 +385,7 @@ func TestEqualTo(t *testing.T) {
 	a.Destroy()
 
 	if equal, err := a.EqualBytes([]byte("test")); equal || err != ErrDestroyed {
-		t.Error("unexpected return values with destroyed LockedBuffer")
+		t.Error("unexpected return values with destroyed Enclave")
 	}
 }
 
@@ -417,41 +417,41 @@ func TestReadOnly(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	// When buf is larger than LockedBuffer.
+	// When buf is larger than Enclave.
 	b, _ := NewMutable(16)
 	buf := []byte("this is a very large buffer")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("this is a very l")) {
+	if !bytes.Equal(b.Bytes(), []byte("this is a very l")) {
 		t.Error("bytes were't copied properly")
 	}
 	b.Destroy()
 
-	// When buf is smaller than LockedBuffer.
+	// When buf is smaller than Enclave.
 	b, _ = NewMutable(16)
 	buf = []byte("diz small buf")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer()[:len(buf)], []byte("diz small buf")) {
+	if !bytes.Equal(b.Bytes()[:len(buf)], []byte("diz small buf")) {
 		t.Error("bytes weren't copied properly")
 	}
-	if !bytes.Equal(b.Buffer()[len(buf):], make([]byte, 16-len(buf))) {
-		t.Error("bytes were't copied properly;", b.Buffer()[len(buf):])
+	if !bytes.Equal(b.Bytes()[len(buf):], make([]byte, 16-len(buf))) {
+		t.Error("bytes were't copied properly;", b.Bytes()[len(buf):])
 	}
 	b.Destroy()
 
-	// When buf is equal in size to LockedBuffer.
+	// When buf is equal in size to Enclave.
 	b, _ = NewMutable(16)
 	buf = []byte("yellow submarine")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("yellow submarine")) {
+	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("bytes were't copied properly")
 	}
 
@@ -473,15 +473,15 @@ func TestFillRandomBytes(t *testing.T) {
 	a, _ := NewMutable(32)
 	a.FillRandomBytes()
 
-	if bytes.Equal(a.Buffer(), make([]byte, 32)) {
+	if bytes.Equal(a.Bytes(), make([]byte, 32)) {
 		t.Error("not random")
 	}
 
 	a.Wipe()
 	a.FillRandomBytesAt(16, 16)
 
-	if !bytes.Equal(a.Buffer()[:16], make([]byte, 16)) || bytes.Equal(a.Buffer()[16:], make([]byte, 16)) {
-		t.Error("incorrect offset/size;", a.Buffer()[:16], a.Buffer()[16:])
+	if !bytes.Equal(a.Bytes()[:16], make([]byte, 16)) || bytes.Equal(a.Bytes()[16:], make([]byte, 16)) {
+		t.Error("incorrect offset/size;", a.Bytes()[:16], a.Bytes()[16:])
 	}
 
 	a.MakeImmutable()
@@ -507,7 +507,7 @@ func TestDestroyAll(t *testing.T) {
 
 	DestroyAll()
 
-	if b.Buffer() != nil || c.Buffer() != nil {
+	if b.Bytes() != nil || c.Bytes() != nil {
 		t.Error("expected buffers to be nil")
 	}
 
@@ -548,8 +548,8 @@ func TestWipe(t *testing.T) {
 		t.Error("failed to wipe:", err)
 	}
 
-	if !bytes.Equal(b.Buffer(), make([]byte, 16)) {
-		t.Error("bytes not wiped; b =", b.Buffer())
+	if !bytes.Equal(b.Bytes(), make([]byte, 16)) {
+		t.Error("bytes not wiped; b =", b.Bytes())
 	}
 
 	b.FillRandomBytes()
@@ -559,7 +559,7 @@ func TestWipe(t *testing.T) {
 		t.Error("expected ErrImmutable")
 	}
 
-	if bytes.Equal(b.Buffer(), make([]byte, 16)) {
+	if bytes.Equal(b.Bytes(), make([]byte, 16)) {
 		t.Error("bytes wiped")
 	}
 
@@ -581,8 +581,8 @@ func TestConcatenate(t *testing.T) {
 		t.Error("unexpected error")
 	}
 
-	if !bytes.Equal(c.Buffer(), []byte("xxxxyyyy")) {
-		t.Error("unexpected output;", c.Buffer())
+	if !bytes.Equal(c.Bytes(), []byte("xxxxyyyy")) {
+		t.Error("unexpected output;", c.Bytes())
 	}
 	if c.IsMutable() {
 		t.Error("expected immutability")
@@ -604,7 +604,7 @@ func TestDuplicate(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer(), c.Buffer()) {
+	if !bytes.Equal(b.Bytes(), c.Bytes()) {
 		t.Error("duplicated buffer has different contents")
 	}
 	if c.IsMutable() {
@@ -655,16 +655,16 @@ func TestSplit(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("xxxx")) {
+	if !bytes.Equal(b.Bytes(), []byte("xxxx")) {
 		t.Error("first buffer has unexpected value")
 	}
-	if !bytes.Equal(c.Buffer(), []byte("yyyy")) {
+	if !bytes.Equal(c.Bytes(), []byte("yyyy")) {
 		t.Error("second buffer has unexpected value")
 	}
 	if b.IsMutable() || c.IsMutable() {
 		t.Error("permissions not preserved")
 	}
-	if !bytes.Equal(a.Buffer(), []byte("xxxxyyyy")) {
+	if !bytes.Equal(a.Bytes(), []byte("xxxxyyyy")) {
 		t.Error("original is not preserved")
 	}
 
@@ -693,8 +693,8 @@ func TestTrim(t *testing.T) {
 		t.Error("unexpected error")
 	}
 
-	if !bytes.Equal(c.Buffer(), []byte("xxyy")) {
-		t.Error("unexpected value:", c.Buffer())
+	if !bytes.Equal(c.Bytes(), []byte("xxyy")) {
+		t.Error("unexpected value:", c.Bytes())
 	}
 
 	if c.IsMutable() {
