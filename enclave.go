@@ -43,7 +43,7 @@ type container struct {
 type littleBird [16]byte
 
 // Global internal function used to create new secure containers.
-func newContainer(size int, mutable bool) (*Enclave, error) {
+func newContainer(size int) (*Enclave, error) {
 	// Return an error if length < 1.
 	if size < 1 {
 		return nil, ErrInvalidLength
@@ -86,14 +86,12 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 	// Set Buffer to a byte slice that describes the region of memory that is protected.
 	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
 
-	// Set appropriate mutability state.
-	b.mutable = true
-	if !mutable {
-		b.MakeImmutable()
-	}
-
 	// Create and set the key subclave.
 	b.key = newSubclave()
+
+	// Set the metadata values appropriately.
+	b.mutable = true
+	b.sealed = false
 
 	// Use a finalizer to make sure the buffer gets destroyed if forgotten.
 	runtime.SetFinalizer(b.littleBird, func(_ *littleBird) {

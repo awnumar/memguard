@@ -76,7 +76,7 @@ func newSubclave() *subclave {
 			time.Sleep(time.Duration(interval) * time.Second)
 
 			// Check if the subclave still exists.
-			if s == nil {
+			if len(s.x) == 0 {
 				break
 			}
 

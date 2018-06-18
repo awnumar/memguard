@@ -12,54 +12,22 @@ import (
 )
 
 /*
-NewImmutable creates a new, immutable Enclave of a specified size.
-
-The mutability can later be toggled with the MakeImmutable and MakeMutable methods.
+New creates a new Enclave of a specified size. The created object will be mutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Seal, and Unseal methods.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
-func NewImmutable(size int) (*Enclave, error) {
-	return newContainer(size, false)
+func New(size int) (*Enclave, error) {
+	return newContainer(size)
 }
 
 /*
-NewMutable creates a new, mutable Enclave of a specified length.
-
-The mutability can later be toggled with the MakeImmutable and MakeMutable methods.
-
-If the given length is less than one, the call will return an ErrInvalidLength.
-*/
-func NewMutable(size int) (*Enclave, error) {
-	return newContainer(size, true)
-}
-
-/*
-NewImmutableFromBytes is identical to NewImmutable but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
+NewFromBytes is identical to New but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
-func NewImmutableFromBytes(buf []byte) (*Enclave, error) {
+func NewFromBytes(buf []byte) (*Enclave, error) {
 	// Create a new Enclave.
-	b, err := NewMutableFromBytes(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	// Mark as immutable.
-	b.MakeImmutable()
-
-	// Return a pointer to the Enclave.
-	return b, nil
-}
-
-/*
-NewMutableFromBytes is identical to NewMutable but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
-
-If the size of the slice is zero, the call will return an ErrInvalidLength.
-*/
-func NewMutableFromBytes(buf []byte) (*Enclave, error) {
-	// Create a new Enclave.
-	b, err := newContainer(len(buf), true)
+	b, err := newContainer(len(buf))
 	if err != nil {
 		return nil, err
 	}
@@ -72,28 +40,13 @@ func NewMutableFromBytes(buf []byte) (*Enclave, error) {
 }
 
 /*
-NewImmutableRandom is identical to NewImmutable but for the fact that the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a Enclave created with NewImmutableRandom can safely be used as an encryption key.
+NewRandom is identical to New but for the fact that the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a Enclave created with NewRandom can safely be used as an encryption key.
+
+If the given length is less than one, the call will return an ErrInvalidLength.
 */
-func NewImmutableRandom(size int) (*Enclave, error) {
+func NewRandom(size int) (*Enclave, error) {
 	// Create a new Enclave for the key.
-	b, err := NewMutableRandom(size)
-	if err != nil {
-		return nil, err
-	}
-
-	// Mark as immutable if specified.
-	b.MakeImmutable()
-
-	// Return the Enclave.
-	return b, nil
-}
-
-/*
-NewMutableRandom is identical to NewMutable but for the fact that the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a Enclave created with NewMutableRandom can safely be used as an encryption key.
-*/
-func NewMutableRandom(size int) (*Enclave, error) {
-	// Create a new Enclave for the key.
-	b, err := newContainer(size, true)
+	b, err := newContainer(size)
 	if err != nil {
 		return nil, err
 	}
@@ -685,7 +638,7 @@ func Concatenate(a, b *Enclave) (*Enclave, error) {
 	}
 
 	// Create a new Enclave to hold the concatenated value.
-	c, _ := NewMutable(len(a.buffer) + len(b.buffer))
+	c, _ := New(len(a.buffer) + len(b.buffer))
 
 	// Copy the values across.
 	c.Copy(a.buffer)
@@ -714,7 +667,7 @@ func Duplicate(b *Enclave) (*Enclave, error) {
 	}
 
 	// Create new Enclave.
-	newBuf, _ := NewMutable(b.Size())
+	newBuf, _ := New(b.Size())
 
 	// Copy bytes into it.
 	newBuf.Copy(b.buffer)
@@ -767,12 +720,12 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 	}
 
 	// Create two new Enclaves.
-	firstBuf, err := NewMutable(len(b.buffer[:offset]))
+	firstBuf, err := New(len(b.buffer[:offset]))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	secondBuf, err := NewMutable(len(b.buffer[offset:]))
+	secondBuf, err := New(len(b.buffer[offset:]))
 	if err != nil {
 		firstBuf.Destroy()
 		return nil, nil, err
@@ -808,7 +761,7 @@ func Trim(b *Enclave, offset, size int) (*Enclave, error) {
 	}
 
 	// Create new Enclave and copy over the old.
-	newBuf, err := NewMutable(size)
+	newBuf, err := New(size)
 	if err != nil {
 		return nil, err
 	}

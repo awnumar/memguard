@@ -9,7 +9,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	b, err := NewImmutable(8)
+	b, err := New(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -21,96 +21,63 @@ func TestNew(t *testing.T) {
 	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
 		t.Error("length or capacity != required; len, cap =", len(b.Bytes()), cap(b.Bytes()))
 	}
-	if b.IsMutable() {
+	if !b.IsMutable() {
 		t.Error("unexpected state")
 	}
 	b.Destroy()
 
-	c, err := NewImmutable(0)
+	c, err := New(0)
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	if c != nil {
 		t.Error("expected nil, got *Enclave")
 	}
-
-	a, err := NewMutable(8)
-	if err != nil {
-		t.Error("unexpected error")
-	}
-	for i := range b.buffer {
-		if b.buffer[i] != 0 {
-			t.Error("buffer not zero-filled", b.buffer)
-		}
-	}
-	if !a.IsMutable() {
-		t.Error("unexpected state")
-	}
-	a.Destroy()
 }
 
 func TestNewFromBytes(t *testing.T) {
-	b, err := NewImmutableFromBytes([]byte("test"))
+	b, err := NewFromBytes([]byte("test"))
 	if err != nil {
 		t.Error("unexpected error")
 	}
 	if !bytes.Equal(b.Bytes(), []byte("test")) {
 		t.Error("b.Bytes() != required")
 	}
-	if b.IsMutable() {
+	if !b.IsMutable() {
 		t.Error("unexpected state")
 	}
 	b.Destroy()
 
-	c, err := NewImmutableFromBytes([]byte(""))
+	c, err := NewFromBytes([]byte(""))
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	if c != nil {
 		t.Error("expected nil, got *Enclave")
 	}
-
-	a, err := NewMutableFromBytes([]byte("test"))
-	if err != nil {
-		t.Error("unexpected error")
-	}
-	if !a.IsMutable() {
-		t.Error("unexpected state")
-	}
-	a.Destroy()
 }
 
 func TestNewRandom(t *testing.T) {
-	b, _ := NewImmutableRandom(32)
+	b, _ := NewRandom(32)
 	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("was not filled with random data")
 	}
-	if b.IsMutable() {
+	if !b.IsMutable() {
 		t.Error("unexpected state")
 	}
-
 	b.Destroy()
 
-	c, err := NewImmutableRandom(0)
+	c, err := NewRandom(0)
 	if err != ErrInvalidLength {
 		t.Error("expected ErrInvalidLength")
 	}
 	if c != nil {
 		t.Error("expected nil, got *Enclave")
 	}
-
-	a, err := NewMutableRandom(8)
-	if err != nil {
-		t.Error("unexpected error")
-	}
-	if !a.IsMutable() {
-		t.Error("unexpected state")
-	}
-	a.Destroy()
 }
 
 func TestBytes(t *testing.T) {
-	b, _ := NewImmutableRandom(8)
+	b, _ := NewRandom(8)
 
 	if !bytes.Equal(b.buffer, b.Bytes()) {
 		t.Error("buffers inequal")
@@ -124,7 +91,7 @@ func TestBytes(t *testing.T) {
 }
 
 func TestUint8(t *testing.T) {
-	b, _ := NewImmutableRandom(8)
+	b, _ := NewRandom(8)
 
 	x, err := b.Uint8()
 	if err != nil {
@@ -149,8 +116,8 @@ func TestUint8(t *testing.T) {
 }
 
 func TestUint16(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Uint16()
 	if err != nil {
@@ -177,8 +144,8 @@ func TestUint16(t *testing.T) {
 }
 
 func TestUint32(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Uint32()
 	if err != nil {
@@ -205,8 +172,8 @@ func TestUint32(t *testing.T) {
 }
 
 func TestUint64(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Uint64()
 	if err != nil {
@@ -233,8 +200,8 @@ func TestUint64(t *testing.T) {
 }
 
 func TestInt8(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Int8()
 	if err != nil {
@@ -257,8 +224,8 @@ func TestInt8(t *testing.T) {
 }
 
 func TestInt16(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Int16()
 	if err != nil {
@@ -285,8 +252,8 @@ func TestInt16(t *testing.T) {
 }
 
 func TestInt32(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Int32()
 	if err != nil {
@@ -313,8 +280,8 @@ func TestInt32(t *testing.T) {
 }
 
 func TestInt64(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := New(8)
+	c, _ := New(9)
 
 	x, err := b.Int64()
 	if err != nil {
@@ -341,7 +308,7 @@ func TestInt64(t *testing.T) {
 }
 
 func TestGetMetadata(t *testing.T) {
-	b, _ := NewMutable(8)
+	b, _ := New(8)
 
 	if b.IsMutable() != true {
 		t.Error("incorrect value")
@@ -362,7 +329,7 @@ func TestGetMetadata(t *testing.T) {
 }
 
 func TestEqualTo(t *testing.T) {
-	a, _ := NewImmutableFromBytes([]byte("test"))
+	a, _ := NewFromBytes([]byte("test"))
 
 	equal, err := a.EqualBytes([]byte("test"))
 	if err != nil {
@@ -390,7 +357,7 @@ func TestEqualTo(t *testing.T) {
 }
 
 func TestReadOnly(t *testing.T) {
-	b, _ := NewMutable(8)
+	b, _ := New(8)
 
 	if err := b.MakeImmutable(); err != nil {
 		t.Error("unexpected error")
@@ -418,7 +385,7 @@ func TestReadOnly(t *testing.T) {
 
 func TestMove(t *testing.T) {
 	// When buf is larger than Enclave.
-	b, _ := NewMutable(16)
+	b, _ := New(16)
 	buf := []byte("this is a very large buffer")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
@@ -430,7 +397,7 @@ func TestMove(t *testing.T) {
 	b.Destroy()
 
 	// When buf is smaller than Enclave.
-	b, _ = NewMutable(16)
+	b, _ = New(16)
 	buf = []byte("diz small buf")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
@@ -445,7 +412,7 @@ func TestMove(t *testing.T) {
 	b.Destroy()
 
 	// When buf is equal in size to Enclave.
-	b, _ = NewMutable(16)
+	b, _ = New(16)
 	buf = []byte("yellow submarine")
 	b.Move(buf)
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
@@ -470,7 +437,7 @@ func TestMove(t *testing.T) {
 }
 
 func TestFillRandomBytes(t *testing.T) {
-	a, _ := NewMutable(32)
+	a, _ := New(32)
 	a.FillRandomBytes()
 
 	if bytes.Equal(a.Bytes(), make([]byte, 32)) {
@@ -499,8 +466,8 @@ func TestDestroyAll(t *testing.T) {
 	oldCanary := canary.getView()
 	defer oldCanary.destroy()
 
-	b, _ := NewMutable(16)
-	c, _ := NewMutable(16)
+	b, _ := New(16)
+	c, _ := New(16)
 
 	b.Copy([]byte("yellow submarine"))
 	c.Copy([]byte("yellow submarine"))
@@ -532,7 +499,7 @@ func TestDestroyAll(t *testing.T) {
 }
 
 func TestSize(t *testing.T) {
-	b, _ := NewMutable(16)
+	b, _ := New(16)
 
 	if b.Size() != 16 {
 		t.Error("unexpected size")
@@ -546,7 +513,7 @@ func TestSize(t *testing.T) {
 }
 
 func TestWipe(t *testing.T) {
-	b, _ := NewMutableFromBytes([]byte("yellow submarine"))
+	b, _ := NewFromBytes([]byte("yellow submarine"))
 
 	if err := b.Wipe(); err != nil {
 		t.Error("failed to wipe:", err)
@@ -577,8 +544,10 @@ func TestWipe(t *testing.T) {
 }
 
 func TestConcatenate(t *testing.T) {
-	a, _ := NewImmutableFromBytes([]byte("xxxx"))
-	b, _ := NewMutableFromBytes([]byte("yyyy"))
+	a, _ := NewFromBytes([]byte("xxxx"))
+	b, _ := NewFromBytes([]byte("yyyy"))
+
+	a.MakeImmutable()
 
 	c, err := Concatenate(a, b)
 	if err != nil {
@@ -602,7 +571,8 @@ func TestConcatenate(t *testing.T) {
 }
 
 func TestDuplicate(t *testing.T) {
-	b, _ := NewImmutableFromBytes([]byte("test"))
+	b, _ := NewFromBytes([]byte("test"))
+	b.MakeImmutable()
 
 	c, err := Duplicate(b)
 	if err != nil {
@@ -623,8 +593,8 @@ func TestDuplicate(t *testing.T) {
 }
 
 func TestEqual(t *testing.T) {
-	b, _ := NewMutable(16)
-	c, _ := NewMutable(16)
+	b, _ := New(16)
+	c, _ := New(16)
 
 	equal, err := Equal(b, c)
 	if err != nil {
@@ -634,7 +604,7 @@ func TestEqual(t *testing.T) {
 		t.Error("should be equal")
 	}
 
-	a, _ := NewMutable(8)
+	a, _ := New(8)
 	equal, err = Equal(a, b)
 	if err != nil {
 		t.Error("unexpected error")
@@ -653,7 +623,8 @@ func TestEqual(t *testing.T) {
 }
 
 func TestSplit(t *testing.T) {
-	a, _ := NewImmutableFromBytes([]byte("xxxxyyyy"))
+	a, _ := NewFromBytes([]byte("xxxxyyyy"))
+	a.MakeImmutable()
 
 	b, c, err := Split(a, 4)
 	if err != nil {
@@ -690,7 +661,8 @@ func TestSplit(t *testing.T) {
 }
 
 func TestTrim(t *testing.T) {
-	b, _ := NewImmutableFromBytes([]byte("xxxxyyyy"))
+	b, _ := NewFromBytes([]byte("xxxxyyyy"))
+	b.MakeImmutable()
 
 	c, err := Trim(b, 2, 4)
 	if err != nil {
@@ -755,7 +727,7 @@ func TestCatchInterrupt(t *testing.T) {
 func TestConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 
-	b, _ := NewMutable(16)
+	b, _ := New(16)
 	for i := 0; i < 1024; i++ {
 		wg.Add(1)
 		go func() {
@@ -812,13 +784,13 @@ func TestGetBytes(t *testing.T) {
 }
 
 func TestFinalizer(t *testing.T) {
-	b, err := NewMutable(8)
+	b, err := New(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
 	ib := b.container
 
-	c, err := NewImmutable(8)
+	c, err := New(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
