@@ -29,8 +29,13 @@ type Enclave struct {
 type container struct {
 	sync.Mutex // Local mutex lock.
 
-	buffer  []byte // Slice that references the protected memory.
-	mutable bool   // Is this Enclave mutable?
+	buffer []byte // Slice that references the protected memory.
+
+	ciphertext []byte    // Slice that references the ciphertext when sealed.
+	key        *subclave // The encryption key used to protect this Enclave.
+
+	mutable bool // Is this Enclave mutable?
+	sealed  bool // Is this Enclave encrypted and sealed?
 }
 
 // littleBird is a value that we monitor instead of the Enclave
@@ -87,6 +92,9 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 		b.MakeImmutable()
 	}
 
+	// Create and set the key subclave.
+	b.key = newSubclave()
+
 	// Use a finalizer to make sure the buffer gets destroyed if forgotten.
 	runtime.SetFinalizer(b.littleBird, func(_ *littleBird) {
 		go ib.Destroy()
@@ -100,4 +108,14 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 
 	// Return a pointer to the Enclave.
 	return b, nil
+}
+
+// Internal seal method encrypts the data inside an enclave.
+func (b *container) seal() {
+
+}
+
+// Internal unseal method decrypts the data inside an enclave.
+func (b *container) unseal() {
+
 }

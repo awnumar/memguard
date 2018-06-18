@@ -519,6 +519,10 @@ func TestDestroyAll(t *testing.T) {
 		t.Error("expected it to be destroyed")
 	}
 
+	if b.key.x != nil || c.key.x != nil {
+		t.Error("keys not destroyed")
+	}
+
 	newCanary := canary.getView()
 	defer newCanary.destroy()
 
@@ -858,6 +862,7 @@ func TestSetRekeyInterval(t *testing.T) {
 
 func TestNewSubclave(t *testing.T) {
 	s := newSubclave()
+	defer s.destroy()
 	sv := s.getView()
 	defer sv.destroy()
 
@@ -875,6 +880,7 @@ func TestNewSubclave(t *testing.T) {
 
 func TestSubclaveIO(t *testing.T) {
 	s := newSubclave()
+	defer s.destroy()
 	sv := s.getView()
 	defer sv.destroy()
 
@@ -890,6 +896,7 @@ func TestSubclaveIO(t *testing.T) {
 
 func TestSubclaveViewDestroy(t *testing.T) {
 	s := newSubclave()
+	defer s.destroy()
 	sv := s.getView()
 	val := sv.buffer
 	sv.destroy()
@@ -906,6 +913,7 @@ func TestSubclaveViewDestroy(t *testing.T) {
 
 func TestSubclaveRefresh(t *testing.T) {
 	s := newSubclave()
+	defer s.destroy()
 	oldValue := s.getView()
 	defer oldValue.destroy()
 	s.refresh()
@@ -918,6 +926,7 @@ func TestSubclaveRefresh(t *testing.T) {
 
 func TestSubclaveRekey(t *testing.T) {
 	s := newSubclave()
+	defer s.destroy()
 	oldValue := s.getView()
 	defer oldValue.destroy()
 	s.rekey()
@@ -925,5 +934,13 @@ func TestSubclaveRekey(t *testing.T) {
 	defer newValue.destroy()
 	if !bytes.Equal(oldValue.buffer, newValue.buffer) {
 		t.Error("subclave rekey changed value")
+	}
+}
+
+func TestSubclaveDestroy(t *testing.T) {
+	s := newSubclave()
+	s.destroy()
+	if len(s.x) != 0 || len(s.y) != 0 {
+		t.Error("could not destroy")
 	}
 }

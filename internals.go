@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"os"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -12,7 +13,7 @@ var (
 	pageSize = os.Getpagesize()
 
 	// Canary value that acts as an alarm in case of disallowed memory access.
-	canary = newSubclave()
+	canary = createCanary()
 
 	// Create a dedicated sync object for the CatchInterrupt function.
 	catchInterruptOnce sync.Once
@@ -21,6 +22,25 @@ var (
 	enclaves      []*container
 	enclavesMutex = &sync.Mutex{}
 )
+
+func createCanary() *subclave {
+	// Create the canary.
+	c := newSubclave()
+
+	// Create a goroutine to rekey it regularly.
+	go func(c *subclave) {
+		for {
+			// Sleep for the specified interval.
+			time.Sleep(time.Duration(interval) * time.Second)
+
+			// Rekey it.
+			c.rekey()
+		}
+	}(c)
+
+	// Return the canary we just created.
+	return c
+}
 
 // Round a length to a multiple of the system page size.
 func roundToPageSize(length int) int {

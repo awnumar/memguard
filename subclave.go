@@ -10,13 +10,6 @@ import (
 )
 
 var (
-	// Array of all active subclaves, and associated mutex.
-	subclaves      []*subclave
-	subclavesMutex = &sync.Mutex{}
-
-	// Sync object to ensure we only start a single rekey routine.
-	rekeyOnce sync.Once
-
 	// Set the interval between rekeys, in seconds.
 	interval uint = 8
 )
@@ -74,38 +67,23 @@ func newSubclave() *subclave {
 	}
 
 	// Initialise the subclave with a random 32 byte value.
-	fillRandBytes(s.x)
-	fillRandBytes(s.y)
-	hr := h(s.y)
-	for i := range hr {
-		s.x[i] ^= hr[i]
-	}
+	s.refresh()
 
-	// Store a global reference to this subclave.
-	subclavesMutex.Lock()
-	subclaves = append(subclaves, s)
-	subclavesMutex.Unlock()
+	// Start a goroutine to regularly rekey this subclave.
+	go func(s *subclave) {
+		for {
+			// Sleep for the specified interval.
+			time.Sleep(time.Duration(interval) * time.Second)
 
-	// If we haven't already started a rekey routine, do it now.
-	rekeyOnce.Do(func() {
-		go func() {
-			for {
-				// Sleep for the specified interval.
-				time.Sleep(time.Duration(interval) * time.Second)
-
-				// Get a snapshot of the existing subclaves.
-				subclavesMutex.Lock()
-				subs := make([]*subclave, len(subclaves))
-				copy(subs, subclaves)
-				subclavesMutex.Unlock()
-
-				// Rekey them all.
-				for _, s := range subs {
-					s.rekey()
-				}
+			// Check if the subclave still exists.
+			if s == nil {
+				break
 			}
-		}()
-	})
+
+			// Rekey the subclave.
+			s.rekey()
+		}
+	}(s)
 
 	// Return the created subclave object.
 	return s
@@ -240,7 +218,51 @@ func (s *subclave) rekey() {
 	}
 
 	// Overwrite the old s.y value with the new one.
-	s.y = rr
+	for i := range s.y {
+		s.y[i] = rr[i]
+	}
+}
+
+func (s *subclave) destroy() {
+	// Attain the mutex.
+	s.Lock()
+	defer s.Unlock()
+
+	// Check if it's already destroyed.
+	if len(s.x) == 0 {
+		return
+	}
+
+	// Wipe and overwrite the fields.
+	fillRandBytes(s.x)
+	fillRandBytes(s.y)
+	hr := h(s.y)
+	for i := range hr {
+		s.x[i] ^= hr[i]
+	}
+
+	// Unlock the pages that are mlocked.
+	if err := memcall.Unlock(s.x); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Unlock(s.y); err != nil {
+		SafePanic(err)
+	}
+
+	// Free all related memory.
+	roundedSize := roundToPageSize(32)
+	x := getBytes(uintptr(unsafe.Pointer(&s.x[0])), roundedSize)
+	y := getBytes(uintptr(unsafe.Pointer(&s.y[0])), roundedSize)
+	if err := memcall.Free(x); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Free(y); err != nil {
+		SafePanic(err)
+	}
+
+	// Clear the fields.
+	s.x = nil
+	s.y = nil
 }
 
 // generate a random 32 byte value

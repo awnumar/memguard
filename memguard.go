@@ -587,6 +587,9 @@ func (b *container) Destroy() {
 	}
 	enclavesMutex.Unlock()
 
+	// Wipe and overwrite the key.
+	b.key.destroy()
+
 	// Get all of the memory related to this Enclave.
 	memory := getAllMemory(b)
 
@@ -623,11 +626,11 @@ func (b *container) Destroy() {
 		SafePanic(err)
 	}
 
-	// Set the metadata appropriately.
-	b.mutable = false
-
-	// Set the buffer to nil.
+	// Clear the fields.
 	b.buffer = nil
+	b.ciphertext = nil
+	b.mutable = false
+	b.sealed = false
 }
 
 /*
@@ -878,18 +881,10 @@ func SafePanic(v interface{}) {
 	containers := make([]*container, len(enclaves))
 	copy(containers, enclaves)
 
-	// Wipe them all.
+	// Wipe them all and overwrite the key subclaves.
 	for _, b := range containers {
 		wipeBytes(b.buffer)
-	}
-
-	// Get a copy of the subclaves.
-	subs := make([]*subclave, len(subclaves))
-	copy(subs, subclaves)
-
-	// Wipe and overwrite them all.
-	for _, s := range subs {
-		s.refresh()
+		b.key.refresh()
 	}
 
 	// Panic.
@@ -902,17 +897,6 @@ SafeExit exits the program with a specified exit-code, but cleans up first.
 func SafeExit(c int) {
 	// Cleanup protected memory.
 	DestroyAll()
-
-	// Get a snapshot of the existing subclaves.
-	subclavesMutex.Lock()
-	subs := make([]*subclave, len(subclaves))
-	copy(subs, subclaves)
-	subclavesMutex.Unlock()
-
-	// Wipe and overwrite them all.
-	for _, s := range subs {
-		s.refresh()
-	}
 
 	// Exit with a specified exit-code.
 	os.Exit(c)
