@@ -5,8 +5,6 @@ import (
 	"os"
 	"sync"
 	"unsafe"
-
-	"github.com/awnumar/memguard/memcall"
 )
 
 var (
@@ -14,7 +12,7 @@ var (
 	pageSize = os.Getpagesize()
 
 	// Canary value that acts as an alarm in case of disallowed memory access.
-	canary = createCanary()
+	canary = newSubclave()
 
 	// Create a dedicated sync object for the CatchInterrupt function.
 	catchInterruptOnce sync.Once
@@ -23,46 +21,6 @@ var (
 	allLockedBuffers      []*container
 	allLockedBuffersMutex = &sync.Mutex{}
 )
-
-// Create and allocate a canary value. Return to caller.
-func createCanary() []byte {
-	// Canary length rounded to page size.
-	roundedLen := roundToPageSize(32)
-
-	// Therefore the total length is...
-	totalLen := (2 * pageSize) + roundedLen
-
-	// Allocate it.
-	memory, err := memcall.Alloc(totalLen)
-	if err != nil {
-		SafePanic(err)
-	}
-
-	// Make the guard pages inaccessible.
-	if err := memcall.Protect(memory[:pageSize], false, false); err != nil {
-		SafePanic(err)
-	}
-	if err := memcall.Protect(memory[pageSize+roundedLen:], false, false); err != nil {
-		SafePanic(err)
-	}
-
-	// Lock the pages that will hold the canary.
-	if err := memcall.Lock(memory[pageSize : pageSize+roundedLen]); err != nil {
-		SafePanic(err)
-	}
-
-	// Fill the memory with cryptographically-secure random bytes (the canary value).
-	c := getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
-	fillRandBytes(c)
-
-	// Tell the kernel that the canary value should be immutable.
-	if err := memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false); err != nil {
-		SafePanic(err)
-	}
-
-	// Return a slice that describes the correct portion of memory.
-	return c
-}
 
 // Round a length to a multiple of the system page size.
 func roundToPageSize(length int) int {
