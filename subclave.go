@@ -42,6 +42,10 @@ func newSubclave() *subclave {
 		SafePanic(err)
 	}
 
+	// Set the subclave object's buffers to the allocated memory.
+	s.x = getBytes(uintptr(unsafe.Pointer(&x[0])), 32)
+	s.y = getBytes(uintptr(unsafe.Pointer(&y[0])), 32)
+
 	// Lock the pages into RAM.
 	if err := memcall.Lock(s.x); err != nil {
 		SafePanic(err)
@@ -49,10 +53,6 @@ func newSubclave() *subclave {
 	if err := memcall.Lock(s.y); err != nil {
 		SafePanic(err)
 	}
-
-	// Set the subclave object's buffers to the allocated memory.
-	s.x = getBytes(uintptr(unsafe.Pointer(&x[0])), 32)
-	s.y = getBytes(uintptr(unsafe.Pointer(&y[0])), 32)
 
 	// Initialise a subclave with a random 32 byte value.
 	fillRandBytes(s.x)
