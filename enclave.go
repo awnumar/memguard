@@ -48,7 +48,7 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 	ib := new(container)
 	b := &Enclave{ib, new(littleBird)}
 
-	// Round length + 32 bytes for the canary to a multiple of the page size..
+	// Round length + 32 bytes for the canary to a multiple of the page size.
 	roundedLength := roundToPageSize(size + 32)
 
 	// Calculate the total size of memory including the guard pages.
@@ -74,9 +74,11 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 	}
 
 	// Set the canary.
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], canary)
+	c := canary.getView()
+	defer c.destroy()
+	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.buffer)
 
-	// Set Buffer to a byte slice that describes the reigon of memory that is protected.
+	// Set Buffer to a byte slice that describes the region of memory that is protected.
 	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
 
 	// Set appropriate mutability state.
