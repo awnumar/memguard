@@ -104,11 +104,7 @@ func fillRandBytes(b []byte) {
 
 // Wipes a byte slice with zeroes.
 func wipeBytes(buf []byte) {
-	if len(buf) == 0 {
-		return
-	}
-	buf[0] = 0
-	for bp := 1; bp < len(buf); bp *= 2 {
-		copy(buf[bp:], buf[:bp])
+	for i := range buf {
+		buf[i] = 0
 	}
 }

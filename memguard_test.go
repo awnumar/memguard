@@ -13,6 +13,11 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
+	for i := range b.buffer {
+		if b.buffer[i] != 0 {
+			t.Error("buffer not zero-filled", b.buffer)
+		}
+	}
 	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
 		t.Error("length or capacity != required; len, cap =", len(b.Bytes()), cap(b.Bytes()))
 	}
@@ -32,6 +37,11 @@ func TestNew(t *testing.T) {
 	a, err := NewMutable(8)
 	if err != nil {
 		t.Error("unexpected error")
+	}
+	for i := range b.buffer {
+		if b.buffer[i] != 0 {
+			t.Error("buffer not zero-filled", b.buffer)
+		}
 	}
 	if !a.IsMutable() {
 		t.Error("unexpected state")
