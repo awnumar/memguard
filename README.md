@@ -12,11 +12,11 @@
 
 ---
 
-This is a thread-safe package, designed to allow you to easily handle sensitive values in memory. It supports all major operating systems and is written in pure Go.
+This is a thread-safe package designed to allow you to easily and securely handle sensitive data in memory. It supports all major operating systems and is written in pure Go.
 
 ## Features
 
-* We encrypt and authenticate all sensitive data in RAM using xSalsa20 and Poly1305, respectively.
+* All sensitive data is encrypted and authenticated in RAM using xSalsa20 and Poly1305 respectively. This is implemented with Go's native NaCl library.
 * Sensitive internal values (like encryption keys) are split and stored in multiple locations in memory and are regularly re-keyed and regenerated.
 * Instead of asking the Go runtime to allocate memory for us, we bypass it entirely and use system-calls to ask the kernel directly. This blocks interference from the garbage-collector.
 * It is difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.

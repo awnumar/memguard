@@ -866,7 +866,7 @@ func SafePanic(v interface{}) {
 SafeExit exits the program with a specified exit-code, but cleans up first.
 */
 func SafeExit(c int) {
-	// Cleanup protected memory.
+	// Clean-up protected memory.
 	DestroyAll()
 
 	// Exit with a specified exit-code.
