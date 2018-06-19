@@ -8,7 +8,7 @@ import (
 )
 
 // Seal takes a plaintext message and a key and returns an authenticated ciphertext.
-func Seal(m []byte, key []byte) ([]byte, error) {
+func Seal(plaintext, key []byte) ([]byte, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
 		return nil, errors.New("crypto.Seal: key must be exactly 32 bytes")
@@ -24,11 +24,11 @@ func Seal(m []byte, key []byte) ([]byte, error) {
 	}
 
 	// Encrypt m and return the result.
-	return secretbox.Seal(nonce[:], m, &nonce, k), nil
+	return secretbox.Seal(nonce[:], plaintext, &nonce, k), nil
 }
 
 // Open takes an authenticated ciphertext and a key, and returns the plaintext.
-func Open(x []byte, key []byte) ([]byte, error) {
+func Open(ciphertext, key []byte) ([]byte, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
 		return nil, errors.New("crypto.Open: key must be exactly 32 bytes")
@@ -39,10 +39,10 @@ func Open(x []byte, key []byte) ([]byte, error) {
 
 	// Retrieve and store the nonce value.
 	var nonce [24]byte
-	copy(nonce[:], x[:24])
+	copy(nonce[:], ciphertext[:24])
 
 	// Decrypt and return the result.
-	m, ok := secretbox.Open(nil, x[24:], &nonce, k)
+	m, ok := secretbox.Open(nil, ciphertext[24:], &nonce, k)
 	if ok {
 		// Decryption successful.
 		return m, nil
