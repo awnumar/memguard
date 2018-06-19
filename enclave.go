@@ -16,9 +16,9 @@ The protected memory itself can be accessed with the Bytes() method. The various
 
 The number of Enclaves that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on Enclaves that you no longer need, or simply defer a Destroy call after creating a new Enclave.
 
-The entire memguard API handles and passes around pointers to Enclaves, and so, for both security and convenience, you should refrain from dereferencing a Enclave.
+The entire memguard API handles and passes around pointers to Enclaves, and so, for both security and convenience, you should refrain from dereferencing an Enclave.
 
-If an API function that needs to edit a Enclave is given one that is immutable, the call will return an ErrImmutable. Similarly, if a function is given a Enclave that has been destroyed, the call will return an ErrDestroyed.
+If an API function that needs to edit an Enclave is given one that is immutable, the call will return an ErrImmutable. Similarly, if a function is given an Enclave that has been destroyed, the call will return an ErrDestroyed.
 */
 type Enclave struct {
 	*container  // Import all the container fields.
@@ -109,8 +109,23 @@ func newContainer(size int) (*Enclave, error) {
 }
 
 // Internal seal method encrypts the data inside an enclave.
-func (b *container) seal() {
+func (b *container) seal() error {
+	// Attain the mutex.
+	b.Lock()
+	defer b.Unlock()
 
+	// Verify that the Enclave is not destroyed.
+	if b.IsDestroyed() {
+		return ErrDestroyed
+	}
+
+	// Check if the Enclave is already sealed.
+	if b.IsSealed() {
+		return nil
+	}
+
+	// TODO:
+	return nil
 }
 
 // Internal unseal method decrypts the data inside an enclave.

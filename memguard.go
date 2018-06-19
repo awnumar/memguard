@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
 )
 
@@ -40,7 +41,7 @@ func NewFromBytes(buf []byte) (*Enclave, error) {
 }
 
 /*
-NewRandom is identical to New but for the fact that the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a Enclave created with NewRandom can safely be used as an encryption key.
+NewRandom is identical to New but for the fact that the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore an Enclave created with NewRandom can safely be used as an encryption key.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
@@ -52,7 +53,9 @@ func NewRandom(size int) (*Enclave, error) {
 	}
 
 	// Fill it with random data.
-	fillRandBytes(b.buffer)
+	if err := crypto.MemScr(b.buffer); err != nil {
+		SafePanic(err)
+	}
 
 	// Return the Enclave.
 	return b, nil
@@ -305,7 +308,20 @@ func (b *container) Int64() ([]int64, error) {
 }
 
 /*
-IsMutable returns a boolean value indicating if a Enclave is marked read-only.
+IsSealed returns a boolean value indicating if an Enclave is Sealed.
+*/
+func (b *container) IsSealed() bool {
+	// Attain the mutex.
+	b.Lock()
+	defer b.Unlock()
+
+	return b.sealed
+
+	// TODO: Write tests.
+}
+
+/*
+IsMutable returns a boolean value indicating if an Enclave is marked read-only.
 */
 func (b *container) IsMutable() bool {
 	// Get a mutex lock on this Enclave.
@@ -316,7 +332,7 @@ func (b *container) IsMutable() bool {
 }
 
 /*
-IsDestroyed returns a boolean value indicating if a Enclave has been destroyed.
+IsDestroyed returns a boolean value indicating if an Enclave has been destroyed.
 */
 func (b *container) IsDestroyed() bool {
 	// Get a mutex lock on this Enclave.
@@ -328,7 +344,7 @@ func (b *container) IsDestroyed() bool {
 }
 
 /*
-EqualBytes compares a Enclave to a byte slice in constant time.
+EqualBytes compares an Enclave to a byte slice in constant time.
 */
 func (b *container) EqualBytes(buf []byte) (bool, error) {
 	// Get a mutex lock on this Enclave.
@@ -409,7 +425,7 @@ func (b *container) MakeMutable() error {
 }
 
 /*
-Copy copies bytes from a byte slice into a Enclave in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
+Copy copies bytes from a byte slice into an Enclave in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
 
 It does not wipe the original slice so using Copy is less secure than using Move. Therefore Move should be favoured unless you have a good reason.
 
@@ -453,7 +469,7 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 }
 
 /*
-Move moves bytes from a byte slice into a Enclave in constant-time. Just like Golang's built-in copy function, Move only moves up to the smallest of the two buffers.
+Move moves bytes from a byte slice into an Enclave in constant-time. Just like Golang's built-in copy function, Move only moves up to the smallest of the two buffers.
 
 Unlike Copy, Move wipes the entire original slice after copying the appropriate number of bytes over, and so it should be favoured unless you have a good reason.
 
@@ -474,14 +490,14 @@ func (b *container) MoveAt(buf []byte, offset int) error {
 	}
 
 	// Wipe the old bytes.
-	wipeBytes(buf)
+	crypto.MemClr(buf)
 
 	// Everything went well.
 	return nil
 }
 
 /*
-FillRandomBytes fills a Enclave with cryptographically-secure pseudo-random bytes.
+FillRandomBytes fills an Enclave with cryptographically-secure pseudo-random bytes.
 */
 func (b *container) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
@@ -489,7 +505,7 @@ func (b *container) FillRandomBytes() error {
 }
 
 /*
-FillRandomBytesAt fills a Enclave with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes.
+FillRandomBytesAt fills an Enclave with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes.
 */
 func (b *container) FillRandomBytesAt(offset, length int) error {
 	// Get a mutex lock on this Enclave.
@@ -507,7 +523,9 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 	}
 
 	// Fill with random bytes.
-	fillRandBytes(b.buffer[offset : offset+length])
+	if err := crypto.MemScr(b.buffer[offset : offset+length]); err != nil {
+		SafePanic(err)
+	}
 
 	// Everything went well.
 	return nil
@@ -567,7 +585,7 @@ func (b *container) Destroy() {
 	}
 
 	// Wipe the pages that hold our data.
-	wipeBytes(memory[pageSize : pageSize+roundedLength])
+	crypto.MemClr(memory[pageSize : pageSize+roundedLength])
 
 	// Unlock the pages that hold our data.
 	if err := memcall.Unlock(memory[pageSize : pageSize+roundedLength]); err != nil {
@@ -587,7 +605,7 @@ func (b *container) Destroy() {
 }
 
 /*
-Size returns an integer representing the total length, in bytes, of a Enclave.
+Size returns an integer representing the total length, in bytes, of an Enclave.
 
 If this size is zero, it is safe to assume that the Enclave has been destroyed.
 */
@@ -596,7 +614,7 @@ func (b *container) Size() int {
 }
 
 /*
-Wipe wipes a Enclave's contents by overwriting the buffer with zeroes.
+Wipe wipes an Enclave's contents by overwriting the buffer with zeroes.
 */
 func (b *container) Wipe() error {
 	// Get a mutex lock on this Enclave.
@@ -614,7 +632,7 @@ func (b *container) Wipe() error {
 	}
 
 	// Wipe the buffer.
-	wipeBytes(b.buffer)
+	crypto.MemClr(b.buffer)
 
 	// Everything went well.
 	return nil
@@ -654,7 +672,7 @@ func Concatenate(a, b *Enclave) (*Enclave, error) {
 }
 
 /*
-Duplicate takes a Enclave and creates a new one with the same contents and mutability state as the original.
+Duplicate takes an Enclave and creates a new one with the same contents and mutability state as the original.
 */
 func Duplicate(b *Enclave) (*Enclave, error) {
 	// Get a mutex lock on this Enclave.
@@ -707,7 +725,7 @@ func Equal(a, b *Enclave) (bool, error) {
 }
 
 /*
-Split takes a Enclave, splits it at a specified offset, and then returns the two newly created Enclaves. The mutability state of the original is preserved in the new Enclaves, and the original Enclave is not destroyed.
+Split takes an Enclave, splits it at a specified offset, and then returns the two newly created Enclaves. The mutability state of the original is preserved in the new Enclaves, and the original Enclave is not destroyed.
 */
 func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 	// Get a mutex lock on this Enclave.
@@ -746,7 +764,7 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 }
 
 /*
-Trim shortens a Enclave according to the given specifications. The mutability state of the original is preserved in the new Enclave, and the original Enclave is not destroyed.
+Trim shortens an Enclave according to the given specifications. The mutability state of the original is preserved in the new Enclave, and the original Enclave is not destroyed.
 
 Trim takes an offset and a size as arguments. The resulting Enclave starts at index [offset] and ends at index [offset+size].
 */
@@ -782,7 +800,7 @@ WipeBytes zeroes out a given byte slice. It is recommended that you call WipeByt
 Due to the nature of memory allocated by the Go runtime, WipeBytes cannot guarantee that the data does not exist elsewhere in memory. Therefore, your program should aim to (when possible) store sensitive data only in Enclaves.
 */
 func WipeBytes(b []byte) {
-	wipeBytes(b)
+	crypto.MemClr(b)
 }
 
 /*
@@ -836,7 +854,7 @@ func SafePanic(v interface{}) {
 
 	// Wipe them all and overwrite the key subclaves.
 	for _, b := range containers {
-		wipeBytes(b.buffer)
+		crypto.MemClr(b.buffer)
 		b.key.refresh()
 	}
 

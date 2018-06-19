@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"unsafe"
+
+	"github.com/awnumar/memguard/crypto"
 )
 
 func TestNew(t *testing.T) {
@@ -692,7 +694,9 @@ func TestTrim(t *testing.T) {
 func TestWipeBytes(t *testing.T) {
 	// Create random byte slice.
 	b := make([]byte, 32)
-	fillRandBytes(b)
+	if err := crypto.MemScr(b); err != nil {
+		panic(err)
+	}
 
 	// Wipe it.
 	WipeBytes(b)
@@ -856,7 +860,10 @@ func TestSubclaveIO(t *testing.T) {
 	sv := s.getView()
 	defer sv.destroy()
 
-	randVal := r()
+	randVal, err := crypto.GetRandBytes(32)
+	if err != nil {
+		panic(err)
+	}
 	s.update(randVal)
 	nsv := s.getView()
 	defer nsv.destroy()

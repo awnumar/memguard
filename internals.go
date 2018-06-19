@@ -1,7 +1,6 @@
 package memguard
 
 import (
-	"crypto/rand"
 	"os"
 	"sync"
 	"time"
@@ -47,7 +46,7 @@ func roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }
 
-// Get a slice that describes all memory related to a Enclave.
+// Get a slice that describes all memory related to an Enclave.
 func getAllMemory(b *container) []byte {
 	// Calculate the size of the entire container's memory.
 	roundedBufLen := roundToPageSize(len(b.buffer) + 32)
@@ -70,19 +69,4 @@ func getBytes(ptr uintptr, len int) []byte {
 		cap  int
 	}{ptr, len, len}
 	return *(*[]byte)(unsafe.Pointer(&sl))
-}
-
-// Takes a byte slice and fills it with random data.
-func fillRandBytes(b []byte) {
-	// Read len(b) bytes into the buffer.
-	if _, err := rand.Read(b); err != nil {
-		SafePanic("memguard.csprng(): could not get random bytes")
-	}
-}
-
-// Wipes a byte slice with zeroes.
-func wipeBytes(buf []byte) {
-	for i := range buf {
-		buf[i] = 0
-	}
 }

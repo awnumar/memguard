@@ -5,8 +5,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
-	"golang.org/x/crypto/blake2b"
 )
 
 var (
@@ -80,6 +80,8 @@ func newSubclave() *subclave {
 				break
 			}
 
+			// TODO: Check if the subclave is sealed and don't rekey if it isn't.
+
 			// Rekey the subclave.
 			s.rekey()
 		}
@@ -121,7 +123,7 @@ func (s *subclave) getView() *subclaveView {
 	sv.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
 
 	// Create a copy of the subclave data inside the subclaveView.
-	h := h(s.y)
+	h := crypto.Hash(s.y)
 	for i := range sv.buffer {
 		sv.buffer[i] = h[i] ^ s.x[i]
 	}
@@ -148,7 +150,7 @@ func (sv *subclaveView) destroy() {
 	}
 
 	// Wipe the pages that hold our data.
-	wipeBytes(memory[pageSize : pageSize+roundedSize])
+	crypto.MemClr(memory[pageSize : pageSize+roundedSize])
 
 	// Unlock the pages that hold our data.
 	if err := memcall.Unlock(memory[pageSize : pageSize+roundedSize]); err != nil {
@@ -166,17 +168,17 @@ func (sv *subclaveView) destroy() {
 
 // This method is used to update the value stored in a subclave.
 func (s *subclave) update(b []byte) {
+	// Attain the mutex.
+	s.Lock()
+	defer s.Unlock()
+
 	// Check length is 32.
 	if len(b) != 32 {
 		SafePanic("memguard.subclave.update: input must be 32 bytes")
 	}
 
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
-
 	// Update the subclave with the new value, wiping the old.
-	hy := h(s.y)
+	hy := crypto.Hash(s.y)
 	for i := range hy {
 		s.x[i] = hy[i] ^ b[i]
 	}
@@ -189,9 +191,13 @@ func (s *subclave) refresh() {
 	defer s.Unlock()
 
 	// Refresh the value.
-	fillRandBytes(s.x)
-	fillRandBytes(s.y)
-	hr := h(s.y)
+	if err := crypto.MemScr(s.x); err != nil {
+		SafePanic(err)
+	}
+	if err := crypto.MemScr(s.y); err != nil {
+		SafePanic(err)
+	}
+	hr := crypto.Hash(s.y)
 	for i := range hr {
 		s.x[i] ^= hr[i]
 	}
@@ -204,15 +210,18 @@ func (s *subclave) rekey() {
 	defer s.Unlock()
 
 	// Compute the updated s.y, but don't overwrite the old value.
-	r := r()
+	r, err := crypto.GetRandBytes(32)
+	if err != nil {
+		SafePanic(err)
+	}
 	rr := make([]byte, 32)
 	for i := range s.y {
 		rr[i] = s.y[i] ^ r[i]
 	}
 
 	// Update s.x with the new s.y value.
-	hy := h(s.y)
-	hrr := h(rr)
+	hy := crypto.Hash(s.y)
+	hrr := crypto.Hash(rr)
 	for i := range r {
 		s.x[i] ^= hy[i] ^ hrr[i]
 	}
@@ -234,9 +243,13 @@ func (s *subclave) destroy() {
 	}
 
 	// Wipe and overwrite the fields.
-	fillRandBytes(s.x)
-	fillRandBytes(s.y)
-	hr := h(s.y)
+	if err := crypto.MemScr(s.x); err != nil {
+		SafePanic(err)
+	}
+	if err := crypto.MemScr(s.y); err != nil {
+		SafePanic(err)
+	}
+	hr := crypto.Hash(s.y)
 	for i := range hr {
 		s.x[i] ^= hr[i]
 	}
@@ -263,16 +276,4 @@ func (s *subclave) destroy() {
 	// Clear the fields.
 	s.x = nil
 	s.y = nil
-}
-
-// generate a random 32 byte value
-func r() []byte {
-	r := make([]byte, 32)
-	fillRandBytes(r)
-	return r
-}
-
-// Cryptographic hash function.
-func h(b []byte) [32]byte {
-	return blake2b.Sum256(b)
 }
