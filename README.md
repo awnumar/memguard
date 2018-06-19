@@ -16,16 +16,18 @@ This is a thread-safe package, designed to allow you to easily handle sensitive 
 
 ## Features
 
-* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory.
-* It is very difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
-* Buffer overflows are further protected against using a random canary value. If this value changes, the process will panic.
-* We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never include the secure memory in dumps.
-* True kernel-level immutability is implemented. That means that if _anything_ attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
+* We encrypt and authenticate all sensitive data in RAM using xSalsa20 and Poly1305, respectively.
+* Sensitive internal values (like encryption keys) are split and stored in multiple locations in memory and are regularly re-keyed and regenerated.
+* Instead of asking the Go runtime to allocate memory for us, we bypass it entirely and use system-calls to ask the kernel directly. This blocks interference from the garbage-collector.
+* It is difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
+* Buffer overflows are further protected against by using a random canary value. If this value changes, the process will panic.
+* We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never dump secure memory.
+* True---kernel-level---immutability is implemented. That means that if _anything_ attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
 * All sensitive data is wiped before the associated memory is released back to the operating system.
 * Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
 * Accidental memory leaks are mitigated against by harnessing Go's own garbage-collector to automatically destroy containers that have run out of scope.
 
-Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
+A few features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
 Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard).
 

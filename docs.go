@@ -1,5 +1,5 @@
 /*
-Package memguard lets you easily handle sensitive values in memory.
+Package memguard facilitates the easy and secure handling of sensitive memory, in pure Go.
 
     package main
 
