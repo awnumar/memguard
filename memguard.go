@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"bytes"
-	"crypto/subtle"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,12 +12,22 @@ import (
 )
 
 /*
-New creates a new Enclave of a specified size. The created object will be mutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Seal, and Unseal methods.
+New creates a new Enclave of a specified size. The created object will be mutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Unseal, and Reseal methods.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
 func New(size int) (*Enclave, error) {
-	return newContainer(size)
+	// Create a new Enclave.
+	b, err := newContainer(size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Seal the Enclave.
+	b.reseal()
+
+	// Return the Enclave object.
+	return b, nil
 }
 
 /*
@@ -36,12 +45,15 @@ func NewFromBytes(buf []byte) (*Enclave, error) {
 	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
 
+	// Seal the Enclave.
+	b.reseal()
+
 	// Return a pointer to the Enclave.
 	return b, nil
 }
 
 /*
-NewRandom is identical to New but for the fact that the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore an Enclave created with NewRandom can safely be used as an encryption key.
+NewRandom is identical to New except the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
@@ -57,22 +69,60 @@ func NewRandom(size int) (*Enclave, error) {
 		SafePanic(err)
 	}
 
+	// Seal the Enclave.
+	b.reseal()
+
 	// Return the Enclave.
 	return b, nil
 }
 
 /*
+Unseal decrypts and unseals a given Enclave.
+
+All new Enclaves are sealed by default and you should use this method to temporarily unseal them, so as to view or modify their contents, and then call Reseal again as soon as possible. There is no need to call Unseal if you are using MemGuard's own API since internal functions know how to handle sealed containers and will unseal and reseal them for you automatically. Instead, call Unseal before passing the contents of a container to another API, and reiterating, call Reseal again soon after.
+
+Calling Unseal on an unsealed Enclave will return ErrUnsealed. This is because the developer has assumed that a container is sealed when it isn't, and that is a dangerous assumption.
+
+If the Enclave is immutable, Unseal will automatically work around it and preserve the immutability state.
+*/
+func (b *container) Unseal() error {
+	// Attain the mutex.
+	b.Lock()
+	defer b.Unlock()
+
+	return b.unseal()
+}
+
+/*
+Reseal re-encrypts and reseals a given Enclave.
+
+All new Enclaves are sealed by default and you should use Unseal to unseal them them, so as to view or modify their contents, and then call this method again as soon as possible.
+
+Calling Reseal on a sealed Enclave does nothing. If the given Enclave is immutable, Reseal will automatically work around it and preserve the immutability state.
+*/
+func (b *container) Reseal() error {
+	// Attain the mutex.
+	b.Lock()
+	defer b.Unlock()
+
+	return b.reseal()
+}
+
+/*
 Bytes returns a slice that references the secure, protected portion of memory.
 
-If the Enclave that you call Bytes on has been destroyed, the returned slice will be nil (it will have a length and capacity of zero).
+If the Enclave that you call Bytes on is sealed, the data returned will be random and so Unseal should be called first (promptly followed by Reseal when done). Otherwise, if the Enclave has been destroyed then the returned slice will be nil (it will have a length and capacity of zero).
 
 If a function that you're using requires an array, you can cast the slice to an array and then pass around a pointer:
 
     // Make sure the size of the array matches the size of the buffer.
-    // In this case that size is 16. This is *very* important.
-    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Bytes()[0]))
+    // In this example that size is 16. This is VERY important.
+	keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Bytes()[0]))
 
-Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
+	// Pass around the array pointer WITHOUT dereferencing it.
+	Encrypt(plaintext, keyArrayPtr)
+
+Make sure that you do not dereference the pointer and pass around the resulting value as this will leave copies all over the place.
 */
 func (b *container) Bytes() []byte {
 	return b.buffer
@@ -81,7 +131,9 @@ func (b *container) Bytes() []byte {
 /*
 Uint8 returns a slice (of type []uint8) that references the secure, protected portion of memory.
 
-Uint8 is practically identical to Buffer, but it has been added for completeness' sake. Buffer will usually be the faster and easier option.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+Uint8 is practically identical to Bytes, but it has been added for completeness' sake. Uint8 also has added error reporting and will complain if called on a destroyed Enclave. Bytes will usually be the faster and easier option.
 */
 func (b *container) Uint8() ([]uint8, error) {
 	// Attain the mutex lock.
@@ -100,7 +152,9 @@ func (b *container) Uint8() ([]uint8, error) {
 /*
 Uint16 returns a slice (of type []uint16) that references the secure, protected portion of memory.
 
-The Enclave must be a multiple of 2 bytes in length, or else an error will be returned.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+The Enclave must be a multiple of 2 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Uint16() ([]uint16, error) {
 	// Attain the mutex lock.
@@ -131,7 +185,9 @@ func (b *container) Uint16() ([]uint16, error) {
 /*
 Uint32 returns a slice (of type []uint32) that references the secure, protected portion of memory.
 
-The Enclave must be a multiple of 4 bytes in length, or else an error will be returned.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+The Enclave must be a multiple of 4 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Uint32() ([]uint32, error) {
 	// Attain the mutex lock.
@@ -162,7 +218,9 @@ func (b *container) Uint32() ([]uint32, error) {
 /*
 Uint64 returns a slice (of type []uint64) that references the secure, protected portion of memory.
 
-The Enclave must be a multiple of 8 bytes in length, or else an error will be returned.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+The Enclave must be a multiple of 8 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Uint64() ([]uint64, error) {
 	// Attain the mutex lock.
@@ -192,6 +250,10 @@ func (b *container) Uint64() ([]uint64, error) {
 
 /*
 Int8 returns a slice (of type []int8) that references the secure, protected portion of memory.
+
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+An error will be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Int8() ([]int8, error) {
 	// Attain the mutex lock.
@@ -217,7 +279,9 @@ func (b *container) Int8() ([]int8, error) {
 /*
 Int16 returns a slice (of type []int16) that references the secure, protected portion of memory.
 
-The Enclave must be a multiple of 2 bytes in length, or else an error will be returned.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+The Enclave must be a multiple of 2 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Int16() ([]int16, error) {
 	// Attain the mutex lock.
@@ -248,7 +312,9 @@ func (b *container) Int16() ([]int16, error) {
 /*
 Int32 returns a slice (of type []int32) that references the secure, protected portion of memory.
 
-The Enclave must be a multiple of 4 bytes in length, or else an error will be returned.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+The Enclave must be a multiple of 4 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Int32() ([]int32, error) {
 	// Attain the mutex lock.
@@ -279,7 +345,9 @@ func (b *container) Int32() ([]int32, error) {
 /*
 Int64 returns a slice (of type []int64) that references the secure, protected portion of memory.
 
-The Enclave must be a multiple of 8 bytes in length, or else an error will be returned.
+If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
+
+The Enclave must be a multiple of 8 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Int64() ([]int64, error) {
 	// Attain the mutex lock.
@@ -316,12 +384,10 @@ func (b *container) IsSealed() bool {
 	defer b.Unlock()
 
 	return b.sealed
-
-	// TODO: Write tests.
 }
 
 /*
-IsMutable returns a boolean value indicating if an Enclave is marked read-only.
+IsMutable returns a boolean value indicating if an Enclave is mutable.
 */
 func (b *container) IsMutable() bool {
 	// Get a mutex lock on this Enclave.
@@ -344,7 +410,7 @@ func (b *container) IsDestroyed() bool {
 }
 
 /*
-EqualBytes compares an Enclave to a byte slice in constant time.
+EqualBytes compares an Enclave to a byte slice in constant time. If called on a sealed Enclave, EqualBytes will automatically unseal and reseal it for you.
 */
 func (b *container) EqualBytes(buf []byte) (bool, error) {
 	// Get a mutex lock on this Enclave.
@@ -356,20 +422,20 @@ func (b *container) EqualBytes(buf []byte) (bool, error) {
 		return false, ErrDestroyed
 	}
 
-	// Do a time-constant comparison.
-	if subtle.ConstantTimeCompare(b.buffer, buf) == 1 {
-		// They're equal.
-		return true, nil
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
 	}
 
-	// They're not equal.
-	return false, nil
+	// Do a time-constant comparison and return the result.
+	return crypto.Equal(b.buffer, buf), nil
 }
 
 /*
-MakeImmutable asks the kernel to mark the Enclave's memory as immutable. Any subsequent attempts to modify this memory will result in the process crashing with a SIGSEGV memory violation.
+MakeImmutable asks the kernel to mark the Enclave's contents immutable. Any subsequent attempts to modify this memory will result in the kernel raising an access violation and terminating the process. To make the buffer mutable again, call MakeMutable.
 
-To make the memory mutable again, MakeMutable is called.
+The API will respect your mutability state and so if a MemGuard function that needs to modify an Enclave is handed one that is immutable, it will return ErrImmutable.
 */
 func (b *container) MakeImmutable() error {
 	// Get a mutex lock on this Enclave.
@@ -396,9 +462,7 @@ func (b *container) MakeImmutable() error {
 }
 
 /*
-MakeMutable asks the kernel to mark the Enclave's memory as mutable.
-
-To make the memory immutable again, MakeImmutable is called.
+MakeMutable asks the kernel to mark the Enclave's contents mutable. To make the buffer immutable again, call MakeImmutable.
 */
 func (b *container) MakeMutable() error {
 	// Get a mutex lock on this Enclave.
@@ -425,13 +489,11 @@ func (b *container) MakeMutable() error {
 }
 
 /*
-Copy copies bytes from a byte slice into an Enclave in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
+Copy copies bytes from a byte slice into an Enclave, in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
 
-It does not wipe the original slice so using Copy is less secure than using Move. Therefore Move should be favoured unless you have a good reason.
+Copy does not wipe the original slice so using Move should be favoured unless you have a specific reason. You should aim to call WipeBytes on the original slice as soon as possible after copying.
 
-You should aim to call WipeBytes on the original slice as soon as possible.
-
-If the Enclave is marked as read-only, the call will fail and return an ErrReadOnly.
+If the Enclave is marked as immutable, the call will fail and return an ErrImmutable. If the Enclave is sealed, Copy will automatically unseal and reseal it for you.
 */
 func (b *container) Copy(buf []byte) error {
 	// Just call CopyAt with a zero offset.
@@ -456,14 +518,14 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 		return ErrImmutable
 	}
 
-	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
-	if len(b.buffer[offset:]) > len(buf) {
-		subtle.ConstantTimeCopy(1, b.buffer[offset:offset+len(buf)], buf)
-	} else if len(b.buffer[offset:]) < len(buf) {
-		subtle.ConstantTimeCopy(1, b.buffer[offset:], buf[:len(b.buffer[offset:])])
-	} else {
-		subtle.ConstantTimeCopy(1, b.buffer[offset:], buf)
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
 	}
+
+	// Do a time-constant copying of the bytes.
+	crypto.Copy(b.buffer[offset:], buf)
 
 	return nil
 }
@@ -471,9 +533,9 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 /*
 Move moves bytes from a byte slice into an Enclave in constant-time. Just like Golang's built-in copy function, Move only moves up to the smallest of the two buffers.
 
-Unlike Copy, Move wipes the entire original slice after copying the appropriate number of bytes over, and so it should be favoured unless you have a good reason.
+Unlike Copy, Move wipes the entire original slice after copying, and so it should be favoured unless you have a specific reason.
 
-If the Enclave is marked as read-only, the call will fail and return an ErrReadOnly.
+If the Enclave is marked as immutable, the call will fail and return an ErrImmutable. If the Enclave is sealed, Move will automatically unseal and reseal it for you.
 */
 func (b *container) Move(buf []byte) error {
 	// Just call MoveAt with a zero offset.
@@ -497,7 +559,7 @@ func (b *container) MoveAt(buf []byte, offset int) error {
 }
 
 /*
-FillRandomBytes fills an Enclave with cryptographically-secure pseudo-random bytes.
+FillRandomBytes fills an Enclave with cryptographically-secure pseudo-random bytes. If the Enclave is sealed, it will automatically unseal and reseal it for you.
 */
 func (b *container) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
@@ -505,7 +567,7 @@ func (b *container) FillRandomBytes() error {
 }
 
 /*
-FillRandomBytesAt fills an Enclave with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes.
+FillRandomBytesAt fills an Enclave with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes. If the Enclave is sealed, it will automatically unseal and reseal it for you.
 */
 func (b *container) FillRandomBytesAt(offset, length int) error {
 	// Get a mutex lock on this Enclave.
@@ -522,6 +584,12 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 		return ErrImmutable
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Fill with random bytes.
 	if err := crypto.MemScr(b.buffer[offset : offset+length]); err != nil {
 		SafePanic(err)
@@ -532,11 +600,11 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 }
 
 /*
-Destroy verifies that no buffer underflows occurred and then wipes, unlocks, and frees all related memory. If a buffer underflow is detected, the process panics.
+Destroy performs some security checks, securely wipes the contents of, and then releases an Enclave's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
 
-This function must be called on all Enclaves before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using all of them together.
+This function should be called on all Enclaves before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using all of them together.
 
-If the Enclave has already been destroyed then the call makes no changes.
+If the Enclave has already been destroyed, subsequent calls are idempotent.
 */
 func (b *container) Destroy() {
 	// Attain a mutex lock on this Enclave.
@@ -558,7 +626,7 @@ func (b *container) Destroy() {
 	}
 	enclavesMutex.Unlock()
 
-	// Wipe and overwrite the key.
+	// Destroy the key and its container.
 	b.key.destroy()
 
 	// Get all of the memory related to this Enclave.
@@ -571,12 +639,7 @@ func (b *container) Destroy() {
 	c := canary.getView()
 	defer c.destroy()
 	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], c.buffer) {
-		SafePanic("memguard.Destroy(): buffer overflow detected")
-	}
-
-	// If this was the last Enclave (so there aren't any left now), refresh the canary value.
-	if len(enclaves) == 0 {
-		canary.refresh()
+		SafePanic("memguard.Destroy(): canary check failed; possible buffer overflow")
 	}
 
 	// Make all of the memory readable and writable.
@@ -597,6 +660,9 @@ func (b *container) Destroy() {
 		SafePanic(err)
 	}
 
+	// Wipe the ciphertext field.
+	crypto.MemClr(b.ciphertext)
+
 	// Clear the fields.
 	b.buffer = nil
 	b.ciphertext = nil
@@ -614,7 +680,7 @@ func (b *container) Size() int {
 }
 
 /*
-Wipe wipes an Enclave's contents by overwriting the buffer with zeroes.
+Wipe wipes an Enclave's contents by overwriting the buffer with zeroes. If the Enclave is sealed, it will automatically unseal and reseal it for you.
 */
 func (b *container) Wipe() error {
 	// Get a mutex lock on this Enclave.
@@ -631,6 +697,12 @@ func (b *container) Wipe() error {
 		return ErrImmutable
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Wipe the buffer.
 	crypto.MemClr(b.buffer)
 
@@ -639,9 +711,9 @@ func (b *container) Wipe() error {
 }
 
 /*
-Concatenate takes two Enclaves and concatenates them.
+Concatenate takes two Enclaves, concatenates them, and returns a sealed container. The original Enclaves are preserved.
 
-If one of the given Enclaves is immutable, the resulting Enclave will also be immutable. The original Enclaves are not destroyed.
+If one of the given Enclaves is immutable, the resulting Enclave will also be immutable. If an Enclave is sealed, Concatenate will automatically unseal and reseal it for you.
 */
 func Concatenate(a, b *Enclave) (*Enclave, error) {
 	// Get a mutex lock on the Enclaves.
@@ -655,12 +727,25 @@ func Concatenate(a, b *Enclave) (*Enclave, error) {
 		return nil, ErrDestroyed
 	}
 
+	// Check to see if either are sealed.
+	if a.sealed {
+		a.unseal()
+		defer a.reseal()
+	}
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Create a new Enclave to hold the concatenated value.
-	c, _ := New(len(a.buffer) + len(b.buffer))
+	c, _ := newContainer(len(a.buffer) + len(b.buffer))
 
 	// Copy the values across.
 	c.Copy(a.buffer)
 	c.CopyAt(b.buffer, len(a.buffer))
+
+	// Seal the container.
+	c.reseal()
 
 	// Set permissions accordingly.
 	if !a.mutable || !b.mutable {
@@ -673,6 +758,8 @@ func Concatenate(a, b *Enclave) (*Enclave, error) {
 
 /*
 Duplicate takes an Enclave and creates a new one with the same contents and mutability state as the original.
+
+If the Enclave is sealed, it will automatically unseal and reseal it for you. The returned Enclave will be sealed regardless.
 */
 func Duplicate(b *Enclave) (*Enclave, error) {
 	// Get a mutex lock on this Enclave.
@@ -684,11 +771,20 @@ func Duplicate(b *Enclave) (*Enclave, error) {
 		return nil, ErrDestroyed
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Create new Enclave.
-	newBuf, _ := New(b.Size())
+	newBuf, _ := newContainer(b.Size())
 
 	// Copy bytes into it.
 	newBuf.Copy(b.buffer)
+
+	// Seal it.
+	newBuf.reseal()
 
 	// Set permissions accordingly.
 	if !b.mutable {
@@ -700,7 +796,7 @@ func Duplicate(b *Enclave) (*Enclave, error) {
 }
 
 /*
-Equal compares the contents of two Enclaves in constant time.
+Equal compares the contents of two Enclaves in constant time. If either are sealed, it will automatically unseal and reseal them for you.
 */
 func Equal(a, b *Enclave) (bool, error) {
 	// Get a mutex lock on the Enclaves.
@@ -714,18 +810,22 @@ func Equal(a, b *Enclave) (bool, error) {
 		return false, ErrDestroyed
 	}
 
-	// Do a time-constant comparison on the two buffers.
-	if subtle.ConstantTimeCompare(a.buffer, b.buffer) == 1 {
-		// They're equal.
-		return true, nil
+	// Check to see if either are sealed.
+	if a.sealed {
+		a.unseal()
+		defer a.reseal()
+	}
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
 	}
 
-	// They're not equal.
-	return false, nil
+	// Do a time-constant comparison on the two buffers; return the result.
+	return crypto.Equal(a.buffer, b.buffer), nil
 }
 
 /*
-Split takes an Enclave, splits it at a specified offset, and then returns the two newly created Enclaves. The mutability state of the original is preserved in the new Enclaves, and the original Enclave is not destroyed.
+Split takes an Enclave, splits it at a specified offset, and then returns the two newly created Enclaves. The mutability state of the original is preserved in the new (sealed) Enclaves, and the original Enclave is not destroyed. If the given Enclave is sealed, Split will automatically unseal and reseal it for you.
 */
 func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 	// Get a mutex lock on this Enclave.
@@ -737,13 +837,18 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 		return nil, nil, ErrDestroyed
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Create two new Enclaves.
-	firstBuf, err := New(len(b.buffer[:offset]))
+	firstBuf, err := newContainer(len(b.buffer[:offset]))
 	if err != nil {
 		return nil, nil, err
 	}
-
-	secondBuf, err := New(len(b.buffer[offset:]))
+	secondBuf, err := newContainer(len(b.buffer[offset:]))
 	if err != nil {
 		firstBuf.Destroy()
 		return nil, nil, err
@@ -752,6 +857,10 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 	// Copy the values into them.
 	firstBuf.Copy(b.buffer[:offset])
 	secondBuf.Copy(b.buffer[offset:])
+
+	// Seal them.
+	firstBuf.reseal()
+	secondBuf.reseal()
 
 	// Copy over permissions.
 	if !b.mutable {
@@ -764,9 +873,9 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 }
 
 /*
-Trim shortens an Enclave according to the given specifications. The mutability state of the original is preserved in the new Enclave, and the original Enclave is not destroyed.
+Trim shortens an Enclave according to the given specifications. It takes an offset and a size as arguments. The resulting Enclave starts at index [offset] and ends at index [offset+size].
 
-Trim takes an offset and a size as arguments. The resulting Enclave starts at index [offset] and ends at index [offset+size].
+The mutability state of the original is preserved in the new (sealed) Enclave, and the original Enclave is not destroyed. If Trim is called on a sealed Enclave, it will automatically unseal and reseal it for you.
 */
 func Trim(b *Enclave, offset, size int) (*Enclave, error) {
 	// Get a mutex lock on this Enclave.
@@ -778,12 +887,21 @@ func Trim(b *Enclave, offset, size int) (*Enclave, error) {
 		return nil, ErrDestroyed
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Create new Enclave and copy over the old.
-	newBuf, err := New(size)
+	newBuf, err := newContainer(size)
 	if err != nil {
 		return nil, err
 	}
 	newBuf.Copy(b.buffer[offset : offset+size])
+
+	// Seal it up.
+	newBuf.reseal()
 
 	// Copy over permissions.
 	if !b.mutable {
@@ -795,9 +913,9 @@ func Trim(b *Enclave, offset, size int) (*Enclave, error) {
 }
 
 /*
-WipeBytes zeroes out a given byte slice. It is recommended that you call WipeBytes on slices after utilizing the Copy or CopyAt methods.
+WipeBytes zeroes out a given buffer. It is recommended that you call WipeBytes on slices after utilizing the Copy or CopyAt methods.
 
-Due to the nature of memory allocated by the Go runtime, WipeBytes cannot guarantee that the data does not exist elsewhere in memory. Therefore, your program should aim to (when possible) store sensitive data only in Enclaves.
+Due to the nature of memory allocated by the Go runtime, WipeBytes cannot guarantee that the data does not exist elsewhere in memory. Therefore, your program should aim to (as far as possible) store sensitive data only in Enclaves, which expose their own Wipe method.
 */
 func WipeBytes(b []byte) {
 	crypto.MemClr(b)

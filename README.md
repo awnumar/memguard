@@ -27,7 +27,7 @@ This is a thread-safe package designed to allow you to easily and securely handl
 * Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
 * Accidental memory leaks are mitigated against by harnessing Go's own garbage-collector to automatically destroy containers that have run out of scope.
 
-A few features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
+Some features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
 Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard).
 

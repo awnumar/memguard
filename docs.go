@@ -17,7 +17,7 @@ Package memguard facilitates the easy and secure handling of sensitive memory, i
         // Make sure to destroy all Enclaves when returning.
         defer memguard.DestroyAll()
 
-        // Maybe even disable core dumps on unix hosts.
+        // Why not also disable core dumps on Unix hosts.
         memguard.DisableUnixCoreDumps()
 
         // Normal code continues from here.
@@ -25,17 +25,17 @@ Package memguard facilitates the easy and secure handling of sensitive memory, i
     }
 
     func foo() {
-        // Create a random, cryptographically-secure, 32 byte key.
-        key, err := memguard.NewRandom(32)
+        // Create a new 16 byte Enclave filled with cryptographically-secure random bytes.
+        key, err := memguard.NewRandom(16)
         if err != nil {
             // Oh no, an error. Safely exit.
             fmt.Println(err)
             memguard.SafeExit(1)
         }
-        // Remember to destroy this key when the function returns.
+        // Remember to destroy the key when the function returns.
         defer key.Destroy()
 
-        // Unseal the key so that we can view its contents.
+        // Unseal the key so that the contents can be accessed externally.
         key.Unseal()
 
         // Do something with the key.
@@ -44,6 +44,13 @@ Package memguard facilitates the easy and secure handling of sensitive memory, i
 
         // Remember to Reseal it, or defer the Reseal call.
         key.Reseal()
+
+        // Move something new into the Enclave. No need to unseal
+        // here since the memguard API handles this automatically.
+
+        key.Move([]byte("yellow submarine"))
+
+        // ...
     }
 
 The number of Enclaves that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on Enclaves that you no longer need, or simply defer a Destroy call after creating each new Enclave.
@@ -57,13 +64,19 @@ If a function that you're using requires an array, you can cast the buffer to an
     }
     defer key.Destroy()
 
-    // Unseal the key so that it's viewable.
-    key.Unseal()
-    defer key.Reseal()
-
-    // Make sure the size of the array matches the size of the Buffer.
-    // In this case that size is 16. This is very important.
+    // Get a reference to the buffer's underlying array without making a copy.
+    // Also make sure the size of the array matches the size of the buffer. In
+    // this case that size is 16. This is very important.
     keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Bytes()[0]))
+
+    // Unseal the key so that the buffer holds the actual data instead of random bytes.
+    key.Unseal()
+
+    // Do something with the key, passing the pointer without dereferencing.
+    Encrypt(plaintext, keyArrayPtr)
+
+    // RESEAL the Enclave afterwards, or defer the Reseal call.
+    key.Reseal()
 
 The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each Enclave exposes. Don't use the mutex when calling a function that is part of the MemGuard API though, or the process will deadlock.
 

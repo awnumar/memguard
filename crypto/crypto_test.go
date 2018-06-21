@@ -6,6 +6,66 @@ import (
 	"testing"
 )
 
+func TestCopy(t *testing.T) {
+	a, err := GetRandBytes(8)
+	if err != nil {
+		t.Error(err)
+	}
+	b, err := GetRandBytes(16)
+	if err != nil {
+		t.Error(err)
+	}
+	c, err := GetRandBytes(32)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// dst > src
+	Copy(b, a)
+	if !bytes.Equal(b[:8], a) {
+		t.Error("incorrect copying")
+	}
+
+	// dst < src
+	Copy(b, c)
+	if !bytes.Equal(b, c[:16]) {
+		t.Error("incorrect copying")
+	}
+
+	// dst = src
+	b2, err := GetRandBytes(16)
+	if err != nil {
+		t.Error(err)
+	}
+	Copy(b, b2)
+	if !bytes.Equal(b, b2) {
+		t.Error("incorrect copying")
+	}
+}
+
+func TestCompare(t *testing.T) {
+	a, err := GetRandBytes(8)
+	if err != nil {
+		t.Error(err)
+	}
+	b, err := GetRandBytes(16)
+	if err != nil {
+		t.Error(err)
+	}
+	c := make([]byte, 16)
+	copy(c, b)
+
+	// not equal
+	if Equal(a, b) {
+		t.Error("expected not equal")
+	}
+
+	// equal
+	if !Equal(b, c) {
+		t.Error("expected equal")
+	}
+}
+
 func TestGetRandBytes(t *testing.T) {
 	b, err := GetRandBytes(32)
 	if err != nil {
@@ -86,7 +146,7 @@ func TestSealOpen(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Decrypt the message and verify.
+	// Decrypt the message.
 	dm, err := Open(x, k)
 	if err != nil {
 		t.Error(err)
@@ -113,9 +173,11 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Modify the ciphertext somewhat.
-	x[0] = 0xdb
-	x[7] = 0xdb
-	x[19] = 0xdb
+	for i := range x {
+		if i%2 == 0 {
+			x[i] = 0xdb
+		}
+	}
 
 	// Attempt decryption of the invalid ciphertext with the correct key.
 	dm, err = Open(x, k)

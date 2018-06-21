@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/awnumar/memguard/crypto"
@@ -68,24 +67,6 @@ func newSubclave() *subclave {
 
 	// Initialise the subclave with a random 32 byte value.
 	s.refresh()
-
-	// Start a goroutine to regularly rekey this subclave.
-	go func(s *subclave) {
-		for {
-			// Sleep for the specified interval.
-			time.Sleep(time.Duration(interval) * time.Second)
-
-			// Check if the subclave still exists.
-			if len(s.x) == 0 {
-				break
-			}
-
-			// TODO: Check if the subclave is sealed and don't rekey if it isn't.
-
-			// Rekey the subclave.
-			s.rekey()
-		}
-	}(s)
 
 	// Return the created subclave object.
 	return s
@@ -248,10 +229,6 @@ func (s *subclave) destroy() {
 	}
 	if err := crypto.MemScr(s.y); err != nil {
 		SafePanic(err)
-	}
-	hr := crypto.Hash(s.y)
-	for i := range hr {
-		s.x[i] ^= hr[i]
 	}
 
 	// Unlock the pages that are mlocked.
