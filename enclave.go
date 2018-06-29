@@ -3,7 +3,6 @@ package memguard
 import (
 	"runtime"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/awnumar/memguard/crypto"
@@ -30,10 +29,8 @@ type Enclave struct {
 type container struct {
 	sync.Mutex // Local mutex lock.
 
-	buffer []byte // Slice that references the protected memory.
-
-	ciphertext []byte    // Slice that references the ciphertext when sealed.
-	key        *subclave // The encryption key used to protect this Enclave.
+	plaintext  []byte // Slice that references the plaintext when unsealed.
+	ciphertext []byte // Slice that references the ciphertext when sealed.
 
 	mutable bool // Is this Enclave mutable?
 	sealed  bool // Is this Enclave encrypted and sealed?
@@ -80,34 +77,12 @@ func newContainer(size int) (*Enclave, error) {
 	}
 
 	// Set the canary.
-	c := canary.getView()
+	c := subclaves.canary.getView()
 	defer c.destroy()
-	crypto.Copy(memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.buffer)
+	crypto.Copy(memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.plaintext)
 
 	// Set Buffer to a byte slice that describes the region of memory that is protected.
-	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
-
-	// Create and set the key subclave.
-	b.key = newSubclave()
-
-	// Regularly re-key the enclave's key while the Enclave is sealed.
-	go func(s *subclave, sealed *bool) {
-		for {
-			// Sleep for the specified interval.
-			time.Sleep(time.Duration(interval) * time.Second)
-
-			// Check if the Enclave still exists.
-			if len(s.x) == 0 {
-				break
-			}
-
-			// Check if the Enclave is sealed.
-			if *sealed {
-				// Re-key the subclave.
-				s.rekey()
-			}
-		}
-	}(b.key, &b.sealed)
+	b.plaintext = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
 
 	// Set the metadata values appropriately.
 	b.mutable = true
@@ -131,7 +106,7 @@ func newContainer(size int) (*Enclave, error) {
 // Internal seal method encrypts the data inside an enclave.
 func (b *container) reseal() error {
 	// Verify that the Enclave is not destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -143,18 +118,17 @@ func (b *container) reseal() error {
 	// Check if it's immutable.
 	if !b.mutable {
 		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true); err != nil {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
 			SafePanic(err)
 		}
 	}
 
-	// Generate a new encryption key before encrypting.
-	b.key.refresh()
-	k := b.key.getView()
+	// Get a temporary view of the key.
+	k := subclaves.enckey.getView()
 
 	// Encrypt the plaintext.
 	var err error
-	b.ciphertext, err = crypto.Seal(b.buffer, k.buffer)
+	b.ciphertext, err = crypto.Seal(b.plaintext, k.plaintext)
 	if err != nil {
 		SafePanic(err)
 	}
@@ -163,13 +137,13 @@ func (b *container) reseal() error {
 	defer k.destroy()
 
 	// Overwrite the plaintext with random bytes.
-	if err := crypto.MemScr(b.buffer); err != nil {
+	if err := crypto.MemScr(b.plaintext); err != nil {
 		SafePanic(err)
 	}
 
 	// If we switched the mutability state, switch it back.
 	if !b.mutable {
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false); err != nil {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
 			SafePanic(err)
 		}
 	}
@@ -183,7 +157,7 @@ func (b *container) reseal() error {
 // Internal unseal method decrypts the data inside an enclave.
 func (b *container) unseal() error {
 	// Verify that the Enclave is not destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -195,29 +169,28 @@ func (b *container) unseal() error {
 	// Check if it's immutable.
 	if !b.mutable {
 		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true); err != nil {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
 			SafePanic(err)
 		}
 	}
 
 	// Get a temporary view of the key.
-	k := b.key.getView()
+	k := subclaves.enckey.getView()
 
 	// Decrypt the ciphertext.
-	pt, err := crypto.Open(b.ciphertext, k.buffer)
+	pt, err := crypto.Open(b.ciphertext, k.plaintext)
 	if err != nil {
 		SafePanic(err)
 	}
 
+	// Wipe the key view.
+	k.destroy()
+
 	// Copy the plaintext over, wiping the old copy.
-	crypto.Copy(b.buffer, pt)
+	crypto.Copy(b.plaintext, pt)
 	if err := crypto.MemScr(pt); err != nil {
 		SafePanic(err)
 	}
-
-	// Wipe the key.
-	k.destroy()
-	b.key.refresh()
 
 	// Wipe the ciphertext.
 	if err := crypto.MemScr(b.ciphertext); err != nil {
@@ -226,7 +199,7 @@ func (b *container) unseal() error {
 
 	// If we switched the mutability state, switch it back.
 	if !b.mutable {
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false); err != nil {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
 			SafePanic(err)
 		}
 	}

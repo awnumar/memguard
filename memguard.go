@@ -65,7 +65,7 @@ func NewRandom(size int) (*Enclave, error) {
 	}
 
 	// Fill it with random data.
-	if err := crypto.MemScr(b.buffer); err != nil {
+	if err := crypto.MemScr(b.plaintext); err != nil {
 		SafePanic(err)
 	}
 
@@ -125,7 +125,7 @@ If a function that you're using requires an array, you can cast the slice to an 
 Make sure that you do not dereference the pointer and pass around the resulting value as this will leave copies all over the place.
 */
 func (b *container) Bytes() []byte {
-	return b.buffer
+	return b.plaintext
 }
 
 /*
@@ -141,12 +141,12 @@ func (b *container) Uint8() ([]uint8, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Return the slice.
-	return []uint8(b.buffer), nil
+	return []uint8(b.plaintext), nil
 }
 
 /*
@@ -162,12 +162,12 @@ func (b *container) Uint16() ([]uint16, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%2 != 0 {
+	if len(b.plaintext)%2 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -176,7 +176,7 @@ func (b *container) Uint16() ([]uint16, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 2, b.Size() / 2}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 2, b.Size() / 2}
 
 	// Return the new slice.
 	return *(*[]uint16)(unsafe.Pointer(&sl)), nil
@@ -195,12 +195,12 @@ func (b *container) Uint32() ([]uint32, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%4 != 0 {
+	if len(b.plaintext)%4 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -209,7 +209,7 @@ func (b *container) Uint32() ([]uint32, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 4, b.Size() / 4}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 4, b.Size() / 4}
 
 	// Return the new slice.
 	return *(*[]uint32)(unsafe.Pointer(&sl)), nil
@@ -228,12 +228,12 @@ func (b *container) Uint64() ([]uint64, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%8 != 0 {
+	if len(b.plaintext)%8 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -242,7 +242,7 @@ func (b *container) Uint64() ([]uint64, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 8, b.Size() / 8}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 8, b.Size() / 8}
 
 	// Return the new slice.
 	return *(*[]uint64)(unsafe.Pointer(&sl)), nil
@@ -261,7 +261,7 @@ func (b *container) Int8() ([]int8, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -270,7 +270,7 @@ func (b *container) Int8() ([]int8, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size(), b.Size()}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size(), b.Size()}
 
 	// Return the new slice.
 	return *(*[]int8)(unsafe.Pointer(&sl)), nil
@@ -289,12 +289,12 @@ func (b *container) Int16() ([]int16, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%2 != 0 {
+	if len(b.plaintext)%2 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -303,7 +303,7 @@ func (b *container) Int16() ([]int16, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 2, b.Size() / 2}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 2, b.Size() / 2}
 
 	// Return the new slice.
 	return *(*[]int16)(unsafe.Pointer(&sl)), nil
@@ -322,12 +322,12 @@ func (b *container) Int32() ([]int32, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%4 != 0 {
+	if len(b.plaintext)%4 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -336,7 +336,7 @@ func (b *container) Int32() ([]int32, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 4, b.Size() / 4}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 4, b.Size() / 4}
 
 	// Return the new slice.
 	return *(*[]int32)(unsafe.Pointer(&sl)), nil
@@ -355,12 +355,12 @@ func (b *container) Int64() ([]int64, error) {
 	defer b.Unlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%8 != 0 {
+	if len(b.plaintext)%8 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -369,7 +369,7 @@ func (b *container) Int64() ([]int64, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 8, b.Size() / 8}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 8, b.Size() / 8}
 
 	// Return the new slice.
 	return *(*[]int64)(unsafe.Pointer(&sl)), nil
@@ -406,7 +406,7 @@ func (b *container) IsDestroyed() bool {
 	defer b.Unlock()
 
 	// Return the appropriate value.
-	return len(b.buffer) == 0
+	return len(b.plaintext) == 0
 }
 
 /*
@@ -418,7 +418,7 @@ func (b *container) EqualBytes(buf []byte) (bool, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return false, ErrDestroyed
 	}
 
@@ -429,7 +429,7 @@ func (b *container) EqualBytes(buf []byte) (bool, error) {
 	}
 
 	// Do a time-constant comparison and return the result.
-	return crypto.Equal(b.buffer, buf), nil
+	return crypto.Equal(b.plaintext, buf), nil
 }
 
 /*
@@ -443,13 +443,13 @@ func (b *container) MakeImmutable() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
 	if b.mutable {
 		// Mark the memory as mutable.
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false); err != nil {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
 			SafePanic(err)
 		}
 
@@ -470,13 +470,13 @@ func (b *container) MakeMutable() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
 	if !b.mutable {
 		// Mark the memory as mutable.
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true); err != nil {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
 			SafePanic(err)
 		}
 
@@ -509,7 +509,7 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -525,7 +525,7 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 	}
 
 	// Do a time-constant copying of the bytes.
-	crypto.Copy(b.buffer[offset:], buf)
+	crypto.Copy(b.plaintext[offset:], buf)
 
 	return nil
 }
@@ -575,7 +575,7 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -591,7 +591,7 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 	}
 
 	// Fill with random bytes.
-	if err := crypto.MemScr(b.buffer[offset : offset+length]); err != nil {
+	if err := crypto.MemScr(b.plaintext[offset : offset+length]); err != nil {
 		SafePanic(err)
 	}
 
@@ -612,7 +612,7 @@ func (b *container) Destroy() {
 	defer b.Unlock()
 
 	// Return if it's already destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return
 	}
 
@@ -626,9 +626,6 @@ func (b *container) Destroy() {
 	}
 	enclavesMutex.Unlock()
 
-	// Destroy the key and its container.
-	b.key.destroy()
-
 	// Get all of the memory related to this Enclave.
 	memory := getAllMemory(b)
 
@@ -636,9 +633,9 @@ func (b *container) Destroy() {
 	roundedLength := len(memory) - (pageSize * 2)
 
 	// Verify the canary.
-	c := canary.getView()
+	c := subclaves.canary.getView()
 	defer c.destroy()
-	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], c.buffer) {
+	if !bytes.Equal(memory[pageSize+roundedLength-len(b.plaintext)-32:pageSize+roundedLength-len(b.plaintext)], c.plaintext) {
 		SafePanic("memguard.Destroy(): canary check failed; possible buffer overflow")
 	}
 
@@ -664,7 +661,7 @@ func (b *container) Destroy() {
 	crypto.MemClr(b.ciphertext)
 
 	// Clear the fields.
-	b.buffer = nil
+	b.plaintext = nil
 	b.ciphertext = nil
 	b.mutable = false
 	b.sealed = false
@@ -676,7 +673,7 @@ Size returns an integer representing the total length, in bytes, of an Enclave.
 If this size is zero, it is safe to assume that the Enclave has been destroyed.
 */
 func (b *container) Size() int {
-	return len(b.buffer)
+	return len(b.plaintext)
 }
 
 /*
@@ -688,7 +685,7 @@ func (b *container) Wipe() error {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -704,7 +701,7 @@ func (b *container) Wipe() error {
 	}
 
 	// Wipe the buffer.
-	crypto.MemClr(b.buffer)
+	crypto.MemClr(b.plaintext)
 
 	// Everything went well.
 	return nil
@@ -723,7 +720,7 @@ func Concatenate(a, b *Enclave) (*Enclave, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if len(a.buffer) == 0 || len(b.buffer) == 0 {
+	if len(a.plaintext) == 0 || len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -738,11 +735,11 @@ func Concatenate(a, b *Enclave) (*Enclave, error) {
 	}
 
 	// Create a new Enclave to hold the concatenated value.
-	c, _ := newContainer(len(a.buffer) + len(b.buffer))
+	c, _ := newContainer(len(a.plaintext) + len(b.plaintext))
 
 	// Copy the values across.
-	c.Copy(a.buffer)
-	c.CopyAt(b.buffer, len(a.buffer))
+	c.Copy(a.plaintext)
+	c.CopyAt(b.plaintext, len(a.plaintext))
 
 	// Seal the container.
 	c.reseal()
@@ -767,7 +764,7 @@ func Duplicate(b *Enclave) (*Enclave, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -781,7 +778,7 @@ func Duplicate(b *Enclave) (*Enclave, error) {
 	newBuf, _ := newContainer(b.Size())
 
 	// Copy bytes into it.
-	newBuf.Copy(b.buffer)
+	newBuf.Copy(b.plaintext)
 
 	// Seal it.
 	newBuf.reseal()
@@ -806,7 +803,7 @@ func Equal(a, b *Enclave) (bool, error) {
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if len(a.buffer) == 0 || len(b.buffer) == 0 {
+	if len(a.plaintext) == 0 || len(b.plaintext) == 0 {
 		return false, ErrDestroyed
 	}
 
@@ -821,7 +818,7 @@ func Equal(a, b *Enclave) (bool, error) {
 	}
 
 	// Do a time-constant comparison on the two buffers; return the result.
-	return crypto.Equal(a.buffer, b.buffer), nil
+	return crypto.Equal(a.plaintext, b.plaintext), nil
 }
 
 /*
@@ -833,7 +830,7 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, nil, ErrDestroyed
 	}
 
@@ -844,19 +841,19 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 	}
 
 	// Create two new Enclaves.
-	firstBuf, err := newContainer(len(b.buffer[:offset]))
+	firstBuf, err := newContainer(len(b.plaintext[:offset]))
 	if err != nil {
 		return nil, nil, err
 	}
-	secondBuf, err := newContainer(len(b.buffer[offset:]))
+	secondBuf, err := newContainer(len(b.plaintext[offset:]))
 	if err != nil {
 		firstBuf.Destroy()
 		return nil, nil, err
 	}
 
 	// Copy the values into them.
-	firstBuf.Copy(b.buffer[:offset])
-	secondBuf.Copy(b.buffer[offset:])
+	firstBuf.Copy(b.plaintext[:offset])
+	secondBuf.Copy(b.plaintext[offset:])
 
 	// Seal them.
 	firstBuf.reseal()
@@ -883,7 +880,7 @@ func Trim(b *Enclave, offset, size int) (*Enclave, error) {
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
@@ -898,7 +895,7 @@ func Trim(b *Enclave, offset, size int) (*Enclave, error) {
 	if err != nil {
 		return nil, err
 	}
-	newBuf.Copy(b.buffer[offset : offset+size])
+	newBuf.Copy(b.plaintext[offset : offset+size])
 
 	// Seal it up.
 	newBuf.reseal()
@@ -970,10 +967,11 @@ func SafePanic(v interface{}) {
 	containers := make([]*container, len(enclaves))
 	copy(containers, enclaves)
 
-	// Wipe them all and overwrite the key subclaves.
+	// Wipe.
+	crypto.MemClr(subclaves.enckey.x)
+	crypto.MemClr(subclaves.enckey.y)
 	for _, b := range containers {
-		crypto.MemClr(b.buffer)
-		b.key.refresh()
+		crypto.MemClr(b.plaintext)
 	}
 
 	// Panic.

@@ -3,42 +3,42 @@ package memguard
 import (
 	"os"
 	"sync"
-	"time"
 	"unsafe"
 )
 
 var (
-	// Ascertain and store the system memory page size.
-	pageSize = os.Getpagesize()
-
-	// Canary value that acts as an alarm in case of disallowed memory access.
-	canary = createCanary()
-
-	// Create a dedicated sync object for the CatchInterrupt function.
-	catchInterruptOnce sync.Once
-
 	// Array of all active containers, and associated mutex.
 	enclaves      []*container
 	enclavesMutex = &sync.Mutex{}
+
+	// Ascertain and store the system memory page size.
+	pageSize = os.Getpagesize()
+
+	// Global reference to subclaves.
+	subclaves *globalProtVals
+
+	// Create a dedicated sync object for the CatchInterrupt function.
+	catchInterruptOnce sync.Once
 )
 
-func createCanary() *subclave {
-	// Create the canary.
-	c := newSubclave()
+// A global struct of which there is a single instance.
+// Will hold the subclaves that are needed to protect normal containers.
+type globalProtVals struct {
+	canary *subclave
+	enckey *subclave
+}
 
-	// Create a goroutine to rekey it regularly.
-	go func(c *subclave) {
-		for {
-			// Sleep for the specified interval.
-			time.Sleep(time.Duration(interval) * time.Second)
+// Initialise the global subclaves.
+func init() {
+	// Create a new globalProtVals struct.
+	gpvs := new(globalProtVals)
 
-			// Rekey it.
-			c.rekey()
-		}
-	}(c)
+	// Allocate and create them.
+	gpvs.canary = newSubclave()
+	gpvs.enckey = newSubclave()
 
-	// Return the canary we just created.
-	return c
+	// Make global.
+	subclaves = gpvs
 }
 
 // Round a length to a multiple of the system page size.
@@ -49,10 +49,10 @@ func roundToPageSize(length int) int {
 // Get a slice that describes all memory related to an Enclave.
 func getAllMemory(b *container) []byte {
 	// Calculate the size of the entire container's memory.
-	roundedBufLen := roundToPageSize(len(b.buffer) + 32)
+	roundedBufLen := roundToPageSize(len(b.plaintext) + 32)
 
 	// Calculate the address of the start of the memory.
-	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-len(b.buffer))+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&b.plaintext[0])) - uintptr((roundedBufLen-len(b.plaintext))+pageSize)
 
 	// Calculate the size of the entire memory.
 	memLen := (pageSize * 2) + roundedBufLen

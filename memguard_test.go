@@ -19,9 +19,9 @@ func TestNew(t *testing.T) {
 		t.Error("container should be sealed")
 	}
 	b.unseal()
-	for i := range b.buffer {
-		if b.buffer[i] != 0 {
-			t.Error("buffer not zero-filled", b.buffer)
+	for i := range b.plaintext {
+		if b.plaintext[i] != 0 {
+			t.Error("buffer not zero-filled", b.plaintext)
 		}
 	}
 	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
@@ -96,7 +96,7 @@ func TestSealUnseal(t *testing.T) {
 	if !b.sealed {
 		t.Error("container should be sealed")
 	}
-	if bytes.Equal(b.buffer, make([]byte, 32)) {
+	if bytes.Equal(b.plaintext, make([]byte, 32)) {
 		t.Error("contents should be random when sealed")
 	}
 
@@ -105,7 +105,7 @@ func TestSealUnseal(t *testing.T) {
 	if b.sealed {
 		t.Error("container should be unsealed")
 	}
-	if !bytes.Equal(b.buffer, make([]byte, 32)) {
+	if !bytes.Equal(b.plaintext, make([]byte, 32)) {
 		t.Error("contents should not be random when unsealed")
 	}
 
@@ -114,7 +114,7 @@ func TestSealUnseal(t *testing.T) {
 	if !b.sealed {
 		t.Error("container should be sealed")
 	}
-	if bytes.Equal(b.buffer, make([]byte, 32)) {
+	if bytes.Equal(b.plaintext, make([]byte, 32)) {
 		t.Error("contents should be random when sealed")
 	}
 }
@@ -123,7 +123,7 @@ func TestBytes(t *testing.T) {
 	b, _ := NewRandom(8)
 	b.unseal()
 
-	if !bytes.Equal(b.buffer, b.Bytes()) {
+	if !bytes.Equal(b.plaintext, b.Bytes()) {
 		t.Error("buffers inequal")
 	}
 
@@ -142,11 +142,11 @@ func TestUint8(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.buffer, x) {
+	if !bytes.Equal(b.plaintext, x) {
 		t.Error("conversion failed")
 	}
 
-	if &b.buffer[0] != &x[0] {
+	if &b.plaintext[0] != &x[0] {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 8 || cap(x) != 8 {
@@ -175,7 +175,7 @@ func TestUint16(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 4 || cap(x) != 4 {
@@ -205,7 +205,7 @@ func TestUint32(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 2 || cap(x) != 2 {
@@ -235,7 +235,7 @@ func TestUint64(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 1 || cap(x) != 1 {
@@ -261,7 +261,7 @@ func TestInt8(t *testing.T) {
 		t.Error("unexpected error")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 8 || cap(x) != 8 {
@@ -291,7 +291,7 @@ func TestInt16(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 4 || cap(x) != 4 {
@@ -321,7 +321,7 @@ func TestInt32(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 2 || cap(x) != 2 {
@@ -351,7 +351,7 @@ func TestInt64(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 1 || cap(x) != 1 {
@@ -571,10 +571,6 @@ func TestDestroyAll(t *testing.T) {
 
 	if !b.IsDestroyed() || !c.IsDestroyed() {
 		t.Error("expected it to be destroyed")
-	}
-
-	if b.key.x != nil || c.key.x != nil {
-		t.Error("keys not destroyed")
 	}
 }
 
@@ -944,7 +940,7 @@ func TestNewSubclave(t *testing.T) {
 		t.Error("unexpected subclave capacity")
 	}
 
-	if bytes.Equal(sv.buffer, make([]byte, 32)) {
+	if bytes.Equal(sv.plaintext, make([]byte, 32)) {
 		t.Error("subclave is zero")
 	}
 }
@@ -963,7 +959,7 @@ func TestSubclaveIO(t *testing.T) {
 	nsv := s.getView()
 	defer nsv.destroy()
 
-	if bytes.Equal(sv.buffer, nsv.buffer) {
+	if bytes.Equal(sv.plaintext, nsv.plaintext) {
 		t.Error("update subclave val didn't work")
 	}
 }
@@ -972,15 +968,15 @@ func TestSubclaveViewDestroy(t *testing.T) {
 	s := newSubclave()
 	defer s.destroy()
 	sv := s.getView()
-	val := sv.buffer
+	val := sv.plaintext
 	sv.destroy()
 
-	if sv.buffer != nil {
+	if sv.plaintext != nil {
 		t.Error("could not properly destroy subclave")
 	}
 
 	sv = s.getView()
-	if !bytes.Equal(sv.buffer, val) {
+	if !bytes.Equal(sv.plaintext, val) {
 		t.Error("unexpectedly changed subclave value")
 	}
 }
@@ -993,7 +989,7 @@ func TestSubclaveRefresh(t *testing.T) {
 	s.refresh()
 	newValue := s.getView()
 	defer newValue.destroy()
-	if bytes.Equal(oldValue.buffer, newValue.buffer) {
+	if bytes.Equal(oldValue.plaintext, newValue.plaintext) {
 		t.Error("subclave refresh unsuccessful")
 	}
 }
@@ -1006,7 +1002,7 @@ func TestSubclaveRekey(t *testing.T) {
 	s.rekey()
 	newValue := s.getView()
 	defer newValue.destroy()
-	if !bytes.Equal(oldValue.buffer, newValue.buffer) {
+	if !bytes.Equal(oldValue.plaintext, newValue.plaintext) {
 		t.Error("subclave rekey changed value")
 	}
 }

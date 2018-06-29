@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/awnumar/memguard/crypto"
@@ -34,12 +35,12 @@ type subclave struct {
 
 // This is an immutable and ephemeral Enclave-like object that allows you to view and use the value stored inside a subclave. It holds a copy and so will not reflect any changes to the subclave upon which it's based. It should be destroyed as soon as possible after use.
 type subclaveView struct {
-	buffer []byte
+	plaintext []byte
 }
 
-// Creates and returns a new subclave object.
+// Initialises a null *subclave object.
 func newSubclave() *subclave {
-	// Allocate a new subclave object.
+	// Create a new subclave object.
 	s := new(subclave)
 
 	// Allocate memory for the fields.
@@ -67,6 +68,17 @@ func newSubclave() *subclave {
 
 	// Initialise the subclave with a random 32 byte value.
 	s.refresh()
+
+	// Create a goroutine to rekey it regularly.
+	go func(s *subclave) {
+		for {
+			// Sleep for the specified interval.
+			time.Sleep(time.Duration(interval) * time.Second)
+
+			// Rekey it.
+			s.rekey()
+		}
+	}(s)
 
 	// Return the created subclave object.
 	return s
@@ -101,12 +113,12 @@ func (s *subclave) getView() *subclaveView {
 	}
 
 	// Set Buffer to a byte slice that describes the region of memory that is protected.
-	sv.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
+	sv.plaintext = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
 
 	// Create a copy of the subclave data inside the subclaveView.
 	h := crypto.Hash(s.y)
-	for i := range sv.buffer {
-		sv.buffer[i] = h[i] ^ s.x[i]
+	for i := range sv.plaintext {
+		sv.plaintext[i] = h[i] ^ s.x[i]
 	}
 
 	// Make the subclaveView immutable.
@@ -122,7 +134,7 @@ func (sv *subclaveView) destroy() {
 	// Get a slice referencing all the memory associated with this subclaveView object.
 	roundedSize := roundToPageSize(32)
 	memLen := (pageSize * 2) + roundedSize
-	memAddr := uintptr(unsafe.Pointer(&sv.buffer[0])) - uintptr((roundedSize-32)+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&sv.plaintext[0])) - uintptr((roundedSize-32)+pageSize)
 	memory := getBytes(memAddr, memLen)
 
 	// Make all of the memory readable and writable.
@@ -144,7 +156,7 @@ func (sv *subclaveView) destroy() {
 	}
 
 	// Set the buffer to nil.
-	sv.buffer = nil
+	sv.plaintext = nil
 }
 
 // This method is used to update the value stored in a subclave.
