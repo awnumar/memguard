@@ -10,8 +10,39 @@ import (
 	"github.com/awnumar/memguard/crypto"
 )
 
-func TestNew(t *testing.T) {
-	b, err := New(8)
+func TestNewImmutable(t *testing.T) {
+	b, err := NewImmutable(8)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	for i := range b.plaintext {
+		if b.plaintext[i] != 0 {
+			t.Error("buffer not zero-filled", b.plaintext)
+		}
+	}
+	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
+		t.Error("length or capacity != required; len, cap =", len(b.Bytes()), cap(b.Bytes()))
+	}
+	if b.IsMutable() {
+		t.Error("unexpected state")
+	}
+	b.Destroy()
+
+	c, err := NewMutable(0)
+	if err != ErrInvalidLength {
+		t.Error("expected err; got nil")
+	}
+	if c != nil {
+		t.Error("expected nil, got *Enclave")
+	}
+}
+
+func TestNewMutable(t *testing.T) {
+	b, err := NewMutable(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -32,7 +63,7 @@ func TestNew(t *testing.T) {
 	}
 	b.Destroy()
 
-	c, err := New(0)
+	c, err := NewMutable(0)
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
@@ -41,8 +72,34 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewFromBytes(t *testing.T) {
-	b, err := NewFromBytes([]byte("test"))
+func TestNewImmutableFromBytes(t *testing.T) {
+	b, err := NewImmutableFromBytes([]byte("test"))
+	if err != nil {
+		t.Error("unexpected error")
+	}
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	if !bytes.Equal(b.Bytes(), []byte("test")) {
+		t.Error("b.Bytes() != required")
+	}
+	if b.IsMutable() {
+		t.Error("unexpected state")
+	}
+	b.Destroy()
+
+	c, err := NewImmutableFromBytes([]byte(""))
+	if err != ErrInvalidLength {
+		t.Error("expected err; got nil")
+	}
+	if c != nil {
+		t.Error("expected nil, got *Enclave")
+	}
+}
+
+func TestNewMutableFromBytes(t *testing.T) {
+	b, err := NewMutableFromBytes([]byte("test"))
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -58,7 +115,7 @@ func TestNewFromBytes(t *testing.T) {
 	}
 	b.Destroy()
 
-	c, err := NewFromBytes([]byte(""))
+	c, err := NewMutableFromBytes([]byte(""))
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
@@ -67,8 +124,31 @@ func TestNewFromBytes(t *testing.T) {
 	}
 }
 
-func TestNewRandom(t *testing.T) {
-	b, _ := NewRandom(32)
+func TestNewImmutableRandom(t *testing.T) {
+	b, _ := NewImmutableRandom(32)
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
+		t.Error("was not filled with random data")
+	}
+	if b.IsMutable() {
+		t.Error("unexpected state")
+	}
+	b.Destroy()
+
+	c, err := NewImmutableRandom(0)
+	if err != ErrInvalidLength {
+		t.Error("expected ErrInvalidLength")
+	}
+	if c != nil {
+		t.Error("expected nil, got *Enclave")
+	}
+}
+
+func TestNewMutableRandom(t *testing.T) {
+	b, _ := NewMutableRandom(32)
 	if !b.sealed {
 		t.Error("container should be sealed")
 	}
@@ -81,7 +161,7 @@ func TestNewRandom(t *testing.T) {
 	}
 	b.Destroy()
 
-	c, err := NewRandom(0)
+	c, err := NewMutableRandom(0)
 	if err != ErrInvalidLength {
 		t.Error("expected ErrInvalidLength")
 	}
@@ -91,7 +171,7 @@ func TestNewRandom(t *testing.T) {
 }
 
 func TestSealUnseal(t *testing.T) {
-	b, _ := New(32)
+	b, _ := NewMutable(32)
 
 	if !b.sealed {
 		t.Error("container should be sealed")
@@ -120,7 +200,7 @@ func TestSealUnseal(t *testing.T) {
 }
 
 func TestBytes(t *testing.T) {
-	b, _ := NewRandom(8)
+	b, _ := NewMutableRandom(8)
 	b.unseal()
 
 	if !bytes.Equal(b.plaintext, b.Bytes()) {
@@ -135,7 +215,7 @@ func TestBytes(t *testing.T) {
 }
 
 func TestUint8(t *testing.T) {
-	b, _ := NewRandom(8)
+	b, _ := NewMutableRandom(8)
 	b.unseal()
 
 	x, err := b.Uint8()
@@ -161,8 +241,8 @@ func TestUint8(t *testing.T) {
 }
 
 func TestUint16(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -191,8 +271,8 @@ func TestUint16(t *testing.T) {
 }
 
 func TestUint32(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -221,8 +301,8 @@ func TestUint32(t *testing.T) {
 }
 
 func TestUint64(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -251,8 +331,8 @@ func TestUint64(t *testing.T) {
 }
 
 func TestInt8(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -277,8 +357,8 @@ func TestInt8(t *testing.T) {
 }
 
 func TestInt16(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -307,8 +387,8 @@ func TestInt16(t *testing.T) {
 }
 
 func TestInt32(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -337,8 +417,8 @@ func TestInt32(t *testing.T) {
 }
 
 func TestInt64(t *testing.T) {
-	b, _ := New(8)
-	c, _ := New(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
 	b.unseal()
 	c.unseal()
 
@@ -367,7 +447,7 @@ func TestInt64(t *testing.T) {
 }
 
 func TestIsMutable(t *testing.T) {
-	b, _ := New(8)
+	b, _ := NewMutable(8)
 
 	if b.IsMutable() != true {
 		t.Error("incorrect value")
@@ -380,7 +460,7 @@ func TestIsMutable(t *testing.T) {
 }
 
 func TestIsDestroyed(t *testing.T) {
-	b, _ := New(8)
+	b, _ := NewMutable(8)
 
 	if b.IsDestroyed() != false {
 		t.Error("incorrect value")
@@ -393,7 +473,7 @@ func TestIsDestroyed(t *testing.T) {
 }
 
 func TestIsSealed(t *testing.T) {
-	b, _ := New(8)
+	b, _ := NewMutable(8)
 	if !b.IsSealed() {
 		t.Error("should be sealed")
 	}
@@ -408,7 +488,7 @@ func TestIsSealed(t *testing.T) {
 }
 
 func TestEqualBytes(t *testing.T) {
-	a, _ := NewFromBytes([]byte("test"))
+	a, _ := NewMutableFromBytes([]byte("test"))
 
 	equal, err := a.EqualBytes([]byte("test"))
 	if err != nil {
@@ -436,7 +516,7 @@ func TestEqualBytes(t *testing.T) {
 }
 
 func TestImmutable(t *testing.T) {
-	b, _ := New(8)
+	b, _ := NewMutable(8)
 
 	if err := b.MakeImmutable(); err != nil {
 		t.Error("unexpected error")
@@ -464,7 +544,7 @@ func TestImmutable(t *testing.T) {
 
 func TestMove(t *testing.T) {
 	// When buf is larger than Enclave.
-	b, _ := New(16)
+	b, _ := NewMutable(16)
 	buf := []byte("this is a very large buffer")
 	b.Move(buf)
 	b.unseal()
@@ -477,7 +557,7 @@ func TestMove(t *testing.T) {
 	b.Destroy()
 
 	// When buf is smaller than Enclave.
-	b, _ = New(16)
+	b, _ = NewMutable(16)
 	buf = []byte("diz small buf")
 	b.Move(buf)
 	b.unseal()
@@ -493,7 +573,7 @@ func TestMove(t *testing.T) {
 	b.Destroy()
 
 	// When buf is equal in size to Enclave.
-	b, _ = New(16)
+	b, _ = NewMutable(16)
 	buf = []byte("yellow submarine")
 	b.Move(buf)
 	b.unseal()
@@ -519,7 +599,7 @@ func TestMove(t *testing.T) {
 }
 
 func TestFillRandomBytes(t *testing.T) {
-	a, _ := New(32)
+	a, _ := NewMutable(32)
 	a.FillRandomBytes()
 
 	a.unseal()
@@ -553,8 +633,8 @@ func TestFillRandomBytes(t *testing.T) {
 }
 
 func TestDestroyAll(t *testing.T) {
-	b, _ := New(16)
-	c, _ := New(16)
+	b, _ := NewMutable(16)
+	c, _ := NewMutable(16)
 
 	b.Copy([]byte("yellow submarine"))
 	c.Copy([]byte("yellow submarine"))
@@ -575,7 +655,7 @@ func TestDestroyAll(t *testing.T) {
 }
 
 func TestSize(t *testing.T) {
-	b, _ := New(16)
+	b, _ := NewMutable(16)
 
 	if b.Size() != 16 {
 		t.Error("unexpected size")
@@ -589,7 +669,7 @@ func TestSize(t *testing.T) {
 }
 
 func TestWipe(t *testing.T) {
-	b, _ := NewFromBytes([]byte("yellow submarine"))
+	b, _ := NewMutableFromBytes([]byte("yellow submarine"))
 
 	if err := b.Wipe(); err != nil {
 		t.Error("failed to wipe:", err)
@@ -624,8 +704,8 @@ func TestWipe(t *testing.T) {
 }
 
 func TestConcatenate(t *testing.T) {
-	a, _ := NewFromBytes([]byte("xxxx"))
-	b, _ := NewFromBytes([]byte("yyyy"))
+	a, _ := NewMutableFromBytes([]byte("xxxx"))
+	b, _ := NewMutableFromBytes([]byte("yyyy"))
 
 	a.MakeImmutable()
 
@@ -653,8 +733,8 @@ func TestConcatenate(t *testing.T) {
 }
 
 func TestEqual(t *testing.T) {
-	b, _ := New(16)
-	c, _ := New(16)
+	b, _ := NewMutable(16)
+	c, _ := NewMutable(16)
 
 	equal, err := Equal(b, c)
 	if err != nil {
@@ -664,7 +744,7 @@ func TestEqual(t *testing.T) {
 		t.Error("should be equal")
 	}
 
-	a, _ := New(8)
+	a, _ := NewMutable(8)
 	equal, err = Equal(a, b)
 	if err != nil {
 		t.Error("unexpected error")
@@ -682,7 +762,7 @@ func TestEqual(t *testing.T) {
 	}
 }
 func TestDuplicate(t *testing.T) {
-	b, _ := NewFromBytes([]byte("test"))
+	b, _ := NewMutableFromBytes([]byte("test"))
 	b.MakeImmutable()
 
 	c, err := Duplicate(b)
@@ -709,7 +789,7 @@ func TestDuplicate(t *testing.T) {
 }
 
 func TestSplit(t *testing.T) {
-	a, _ := NewFromBytes([]byte("xxxxyyyy"))
+	a, _ := NewMutableFromBytes([]byte("xxxxyyyy"))
 	a.MakeImmutable()
 
 	b, c, err := Split(a, 4)
@@ -752,7 +832,7 @@ func TestSplit(t *testing.T) {
 }
 
 func TestTrim(t *testing.T) {
-	b, _ := NewFromBytes([]byte("xxxxyyyy"))
+	b, _ := NewMutableFromBytes([]byte("xxxxyyyy"))
 	b.MakeImmutable()
 
 	c, err := Trim(b, 2, 4)
@@ -822,7 +902,7 @@ func TestCatchInterrupt(t *testing.T) {
 func TestConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 
-	b, _ := New(16)
+	b, _ := NewMutable(16)
 	for i := 0; i < 1024; i++ {
 		wg.Add(1)
 		go func() {
@@ -879,13 +959,13 @@ func TestGetBytes(t *testing.T) {
 }
 
 func TestFinalizer(t *testing.T) {
-	b, err := New(8)
+	b, err := NewMutable(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
 	ib := b.container
 
-	c, err := New(8)
+	c, err := NewMutable(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}

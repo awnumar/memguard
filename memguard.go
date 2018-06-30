@@ -12,11 +12,33 @@ import (
 )
 
 /*
-New creates a new Enclave of a specified size. The created object will be mutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Unseal, and Reseal methods.
+NewImmutable creates a new Enclave of a specified size. The created object will be immutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Unseal, and Reseal methods.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
-func New(size int) (*Enclave, error) {
+func NewImmutable(size int) (*Enclave, error) {
+	// Create a new Enclave.
+	b, err := newContainer(size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Seal the Enclave.
+	b.reseal()
+
+	// Make the memory immutable.
+	b.MakeImmutable()
+
+	// Return the Enclave object.
+	return b, nil
+}
+
+/*
+NewMutable creates a new Enclave of a specified size. The created object will be mutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Unseal, and Reseal methods.
+
+If the given length is less than one, the call will return an ErrInvalidLength.
+*/
+func NewMutable(size int) (*Enclave, error) {
 	// Create a new Enclave.
 	b, err := newContainer(size)
 	if err != nil {
@@ -31,11 +53,36 @@ func New(size int) (*Enclave, error) {
 }
 
 /*
-NewFromBytes is identical to New but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
+NewImmutableFromBytes is identical to NewImmutable but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
-func NewFromBytes(buf []byte) (*Enclave, error) {
+func NewImmutableFromBytes(buf []byte) (*Enclave, error) {
+	// Create a new Enclave.
+	b, err := newContainer(len(buf))
+	if err != nil {
+		return nil, err
+	}
+
+	// Copy the bytes from buf, wiping afterwards.
+	b.Move(buf)
+
+	// Seal the Enclave.
+	b.reseal()
+
+	// Make the memory immutable.
+	b.MakeImmutable()
+
+	// Return a pointer to the Enclave.
+	return b, nil
+}
+
+/*
+NewMutableFromBytes is identical to NewMutable but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
+
+If the size of the slice is zero, the call will return an ErrInvalidLength.
+*/
+func NewMutableFromBytes(buf []byte) (*Enclave, error) {
 	// Create a new Enclave.
 	b, err := newContainer(len(buf))
 	if err != nil {
@@ -53,11 +100,38 @@ func NewFromBytes(buf []byte) (*Enclave, error) {
 }
 
 /*
-NewRandom is identical to New except the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes.
+NewImmutableRandom is identical to NewImmutable except the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
-func NewRandom(size int) (*Enclave, error) {
+func NewImmutableRandom(size int) (*Enclave, error) {
+	// Create a new Enclave for the key.
+	b, err := newContainer(size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fill it with random data.
+	if err := crypto.MemScr(b.plaintext); err != nil {
+		SafePanic(err)
+	}
+
+	// Seal the Enclave.
+	b.reseal()
+
+	// Make the memory immutable.
+	b.MakeImmutable()
+
+	// Return the Enclave.
+	return b, nil
+}
+
+/*
+NewMutableRandom is identical to NewMutable except the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes.
+
+If the given length is less than one, the call will return an ErrInvalidLength.
+*/
+func NewMutableRandom(size int) (*Enclave, error) {
 	// Create a new Enclave for the key.
 	b, err := newContainer(size)
 	if err != nil {
