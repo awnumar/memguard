@@ -5,18 +5,11 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
-	"golang.org/x/crypto/blake2b"
 )
 
 var (
-	// Array of all active subclaves, and associated mutex.
-	subclaves      []*subclave
-	subclavesMutex = &sync.Mutex{}
-
-	// Sync object to ensure we only start a single rekey routine.
-	rekeyOnce sync.Once
-
 	// Set the interval between rekeys, in seconds.
 	interval uint = 8
 )
@@ -42,12 +35,12 @@ type subclave struct {
 
 // This is an immutable and ephemeral Enclave-like object that allows you to view and use the value stored inside a subclave. It holds a copy and so will not reflect any changes to the subclave upon which it's based. It should be destroyed as soon as possible after use.
 type subclaveView struct {
-	buffer []byte
+	plaintext []byte
 }
 
-// Creates and returns a new subclave object.
+// Initialises a null *subclave object.
 func newSubclave() *subclave {
-	// Allocate a new subclave object.
+	// Create a new subclave object.
 	s := new(subclave)
 
 	// Allocate memory for the fields.
@@ -74,38 +67,18 @@ func newSubclave() *subclave {
 	}
 
 	// Initialise the subclave with a random 32 byte value.
-	fillRandBytes(s.x)
-	fillRandBytes(s.y)
-	hr := h(s.y)
-	for i := range hr {
-		s.x[i] ^= hr[i]
-	}
+	s.refresh()
 
-	// Store a global reference to this subclave.
-	subclavesMutex.Lock()
-	subclaves = append(subclaves, s)
-	subclavesMutex.Unlock()
+	// Create a goroutine to rekey it regularly.
+	go func(s *subclave) {
+		for {
+			// Sleep for the specified interval.
+			time.Sleep(time.Duration(interval) * time.Second)
 
-	// If we haven't already started a rekey routine, do it now.
-	rekeyOnce.Do(func() {
-		go func() {
-			for {
-				// Sleep for the specified interval.
-				time.Sleep(time.Duration(interval) * time.Second)
-
-				// Get a snapshot of the existing subclaves.
-				subclavesMutex.Lock()
-				subs := make([]*subclave, len(subclaves))
-				copy(subs, subclaves)
-				subclavesMutex.Unlock()
-
-				// Rekey them all.
-				for _, s := range subs {
-					s.rekey()
-				}
-			}
-		}()
-	})
+			// Rekey it.
+			s.rekey()
+		}
+	}(s)
 
 	// Return the created subclave object.
 	return s
@@ -140,12 +113,12 @@ func (s *subclave) getView() *subclaveView {
 	}
 
 	// Set Buffer to a byte slice that describes the region of memory that is protected.
-	sv.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
+	sv.plaintext = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
 
 	// Create a copy of the subclave data inside the subclaveView.
-	h := h(s.y)
-	for i := range sv.buffer {
-		sv.buffer[i] = h[i] ^ s.x[i]
+	h := crypto.Hash(s.y)
+	for i := range sv.plaintext {
+		sv.plaintext[i] = h[i] ^ s.x[i]
 	}
 
 	// Make the subclaveView immutable.
@@ -161,7 +134,7 @@ func (sv *subclaveView) destroy() {
 	// Get a slice referencing all the memory associated with this subclaveView object.
 	roundedSize := roundToPageSize(32)
 	memLen := (pageSize * 2) + roundedSize
-	memAddr := uintptr(unsafe.Pointer(&sv.buffer[0])) - uintptr((roundedSize-32)+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&sv.plaintext[0])) - uintptr((roundedSize-32)+pageSize)
 	memory := getBytes(memAddr, memLen)
 
 	// Make all of the memory readable and writable.
@@ -170,7 +143,7 @@ func (sv *subclaveView) destroy() {
 	}
 
 	// Wipe the pages that hold our data.
-	wipeBytes(memory[pageSize : pageSize+roundedSize])
+	crypto.MemClr(memory[pageSize : pageSize+roundedSize])
 
 	// Unlock the pages that hold our data.
 	if err := memcall.Unlock(memory[pageSize : pageSize+roundedSize]); err != nil {
@@ -183,22 +156,22 @@ func (sv *subclaveView) destroy() {
 	}
 
 	// Set the buffer to nil.
-	sv.buffer = nil
+	sv.plaintext = nil
 }
 
 // This method is used to update the value stored in a subclave.
 func (s *subclave) update(b []byte) {
+	// Attain the mutex.
+	s.Lock()
+	defer s.Unlock()
+
 	// Check length is 32.
 	if len(b) != 32 {
 		SafePanic("memguard.subclave.update: input must be 32 bytes")
 	}
 
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
-
 	// Update the subclave with the new value, wiping the old.
-	hy := h(s.y)
+	hy := crypto.Hash(s.y)
 	for i := range hy {
 		s.x[i] = hy[i] ^ b[i]
 	}
@@ -211,9 +184,13 @@ func (s *subclave) refresh() {
 	defer s.Unlock()
 
 	// Refresh the value.
-	fillRandBytes(s.x)
-	fillRandBytes(s.y)
-	hr := h(s.y)
+	if err := crypto.MemScr(s.x); err != nil {
+		SafePanic(err)
+	}
+	if err := crypto.MemScr(s.y); err != nil {
+		SafePanic(err)
+	}
+	hr := crypto.Hash(s.y)
 	for i := range hr {
 		s.x[i] ^= hr[i]
 	}
@@ -226,31 +203,66 @@ func (s *subclave) rekey() {
 	defer s.Unlock()
 
 	// Compute the updated s.y, but don't overwrite the old value.
-	r := r()
+	r, err := crypto.GetRandBytes(32)
+	if err != nil {
+		SafePanic(err)
+	}
 	rr := make([]byte, 32)
 	for i := range s.y {
 		rr[i] = s.y[i] ^ r[i]
 	}
 
 	// Update s.x with the new s.y value.
-	hy := h(s.y)
-	hrr := h(rr)
+	hy := crypto.Hash(s.y)
+	hrr := crypto.Hash(rr)
 	for i := range r {
 		s.x[i] ^= hy[i] ^ hrr[i]
 	}
 
 	// Overwrite the old s.y value with the new one.
-	s.y = rr
+	for i := range s.y {
+		s.y[i] = rr[i]
+	}
 }
 
-// generate a random 32 byte value
-func r() []byte {
-	r := make([]byte, 32)
-	fillRandBytes(r)
-	return r
-}
+func (s *subclave) destroy() {
+	// Attain the mutex.
+	s.Lock()
+	defer s.Unlock()
 
-// Cryptographic hash function.
-func h(b []byte) [32]byte {
-	return blake2b.Sum256(b)
+	// Check if it's already destroyed.
+	if len(s.x) == 0 {
+		return
+	}
+
+	// Wipe and overwrite the fields.
+	if err := crypto.MemScr(s.x); err != nil {
+		SafePanic(err)
+	}
+	if err := crypto.MemScr(s.y); err != nil {
+		SafePanic(err)
+	}
+
+	// Unlock the pages that are mlocked.
+	if err := memcall.Unlock(s.x); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Unlock(s.y); err != nil {
+		SafePanic(err)
+	}
+
+	// Free all related memory.
+	roundedSize := roundToPageSize(32)
+	x := getBytes(uintptr(unsafe.Pointer(&s.x[0])), roundedSize)
+	y := getBytes(uintptr(unsafe.Pointer(&s.y[0])), roundedSize)
+	if err := memcall.Free(x); err != nil {
+		SafePanic(err)
+	}
+	if err := memcall.Free(y); err != nil {
+		SafePanic(err)
+	}
+
+	// Clear the fields.
+	s.x = nil
+	s.y = nil
 }

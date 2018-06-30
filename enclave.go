@@ -1,11 +1,11 @@
 package memguard
 
 import (
-	"crypto/subtle"
 	"runtime"
 	"sync"
 	"unsafe"
 
+	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
 )
 
@@ -16,9 +16,9 @@ The protected memory itself can be accessed with the Bytes() method. The various
 
 The number of Enclaves that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on Enclaves that you no longer need, or simply defer a Destroy call after creating a new Enclave.
 
-The entire memguard API handles and passes around pointers to Enclaves, and so, for both security and convenience, you should refrain from dereferencing a Enclave.
+The entire memguard API handles and passes around pointers to Enclaves, and so, for both security and convenience, you should refrain from dereferencing an Enclave.
 
-If an API function that needs to edit a Enclave is given one that is immutable, the call will return an ErrImmutable. Similarly, if a function is given a Enclave that has been destroyed, the call will return an ErrDestroyed.
+If an API function that needs to edit an Enclave is given one that is immutable, the call will return an ErrImmutable. Similarly, if a function is given an Enclave that has been destroyed, the call will return an ErrDestroyed.
 */
 type Enclave struct {
 	*container  // Import all the container fields.
@@ -29,8 +29,11 @@ type Enclave struct {
 type container struct {
 	sync.Mutex // Local mutex lock.
 
-	buffer  []byte // Slice that references the protected memory.
-	mutable bool   // Is this Enclave mutable?
+	plaintext  []byte // Slice that references the plaintext when unsealed.
+	ciphertext []byte // Slice that references the ciphertext when sealed.
+
+	mutable bool // Is this Enclave mutable?
+	sealed  bool // Is this Enclave encrypted and sealed?
 }
 
 // littleBird is a value that we monitor instead of the Enclave
@@ -38,7 +41,7 @@ type container struct {
 type littleBird [16]byte
 
 // Global internal function used to create new secure containers.
-func newContainer(size int, mutable bool) (*Enclave, error) {
+func newContainer(size int) (*Enclave, error) {
 	// Return an error if length < 1.
 	if size < 1 {
 		return nil, ErrInvalidLength
@@ -74,18 +77,16 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 	}
 
 	// Set the canary.
-	c := canary.getView()
+	c := subclaves.canary.getView()
 	defer c.destroy()
-	subtle.ConstantTimeCopy(1, memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.buffer)
+	crypto.Copy(memory[pageSize+roundedLength-size-32:pageSize+roundedLength-size], c.plaintext)
 
 	// Set Buffer to a byte slice that describes the region of memory that is protected.
-	b.buffer = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
+	b.plaintext = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLength-size])), size)
 
-	// Set appropriate mutability state.
+	// Set the metadata values appropriately.
 	b.mutable = true
-	if !mutable {
-		b.MakeImmutable()
-	}
+	b.sealed = false
 
 	// Use a finalizer to make sure the buffer gets destroyed if forgotten.
 	runtime.SetFinalizer(b.littleBird, func(_ *littleBird) {
@@ -100,4 +101,111 @@ func newContainer(size int, mutable bool) (*Enclave, error) {
 
 	// Return a pointer to the Enclave.
 	return b, nil
+}
+
+// Internal seal method encrypts the data inside an enclave.
+func (b *container) reseal() error {
+	// Verify that the Enclave is not destroyed.
+	if len(b.plaintext) == 0 {
+		return ErrDestroyed
+	}
+
+	// Check if the Enclave is already sealed.
+	if b.sealed {
+		return nil
+	}
+
+	// Get a temporary view of the key.
+	k := subclaves.enckey.getView()
+
+	// Encrypt the plaintext.
+	var err error
+	b.ciphertext, err = crypto.Seal(b.plaintext, k.plaintext)
+	if err != nil {
+		SafePanic(err)
+	}
+
+	// Destroy the temporary view of the key.
+	defer k.destroy()
+
+	// Check if it's immutable.
+	if !b.mutable {
+		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
+			SafePanic(err)
+		}
+	}
+
+	// Overwrite the plaintext with random bytes.
+	if err := crypto.MemScr(b.plaintext); err != nil {
+		SafePanic(err)
+	}
+
+	// If we switched the mutability state, switch it back.
+	if !b.mutable {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
+			SafePanic(err)
+		}
+	}
+
+	// Update the metadata values accordingly.
+	b.sealed = true
+
+	return nil
+}
+
+// Internal unseal method decrypts the data inside an enclave.
+func (b *container) unseal() error {
+	// Verify that the Enclave is not destroyed.
+	if len(b.plaintext) == 0 {
+		return ErrDestroyed
+	}
+
+	// Check if the Enclave is already unsealed.
+	if !b.sealed {
+		return ErrUnsealed
+	}
+
+	// Get a temporary view of the key.
+	k := subclaves.enckey.getView()
+
+	// Decrypt the ciphertext.
+	pt, err := crypto.Open(b.ciphertext, k.plaintext)
+	if err != nil {
+		SafePanic(err)
+	}
+
+	// Wipe the key view.
+	k.destroy()
+
+	// Check if it's immutable.
+	if !b.mutable {
+		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
+			SafePanic(err)
+		}
+	}
+
+	// Copy the plaintext over, wiping the old copy.
+	crypto.Copy(b.plaintext, pt)
+	if err := crypto.MemScr(pt); err != nil {
+		SafePanic(err)
+	}
+
+	// If we switched the mutability state, switch it back.
+	if !b.mutable {
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
+			SafePanic(err)
+		}
+	}
+
+	// Wipe the ciphertext.
+	if err := crypto.MemScr(b.ciphertext); err != nil {
+		SafePanic(err)
+	}
+
+	// Update the metadata values accordingly.
+	b.sealed = false
+
+	return nil
 }

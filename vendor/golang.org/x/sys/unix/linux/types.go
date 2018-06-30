@@ -60,7 +60,6 @@ package unix
 #include <asm/ptrace.h>
 #include <time.h>
 #include <unistd.h>
-#include <ustat.h>
 #include <utime.h>
 #include <linux/can.h>
 #include <linux/if_alg.h>
@@ -140,6 +139,10 @@ struct stat {
 #endif
 #ifndef AT_STATX_DONT_SYNC
 # define AT_STATX_DONT_SYNC	0x4000	// - Don't sync attributes with the server
+#endif
+
+#ifndef AT_EACCESS
+# define AT_EACCESS		0x200	// Test access permitted for effective IDs, not real IDs.
 #endif
 
 #ifdef TCSETS2
@@ -291,6 +294,15 @@ struct perf_event_attr_go {
 	__u64 sample_regs_intr;
 	__u32 aux_watermark;
 	__u32 __reserved_2;
+};
+
+// ustat is deprecated and glibc 2.28 removed ustat.h. Provide the type here for
+// backwards compatibility. Copied from /usr/include/bits/ustat.h
+struct ustat {
+	__daddr_t f_tfree;
+	__ino_t f_tinode;
+	char f_fname[6];
+	char f_fpack[6];
 };
 
 */
@@ -650,6 +662,8 @@ const (
 
 	AT_SYMLINK_FOLLOW   = C.AT_SYMLINK_FOLLOW
 	AT_SYMLINK_NOFOLLOW = C.AT_SYMLINK_NOFOLLOW
+
+	AT_EACCESS = C.AT_EACCESS
 )
 
 type PollFd C.struct_pollfd
