@@ -216,6 +216,15 @@ func TestBytes(t *testing.T) {
 
 func TestUint8(t *testing.T) {
 	b, _ := NewMutableRandom(8)
+
+	conv, err := b.Uint8()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 
 	x, err := b.Uint8()
@@ -243,6 +252,15 @@ func TestUint8(t *testing.T) {
 func TestUint16(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Uint16()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
@@ -273,6 +291,15 @@ func TestUint16(t *testing.T) {
 func TestUint32(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Uint32()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
@@ -303,6 +330,15 @@ func TestUint32(t *testing.T) {
 func TestUint64(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Uint64()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
@@ -333,6 +369,15 @@ func TestUint64(t *testing.T) {
 func TestInt8(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Int8()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
@@ -359,6 +404,15 @@ func TestInt8(t *testing.T) {
 func TestInt16(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Int16()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
@@ -389,6 +443,15 @@ func TestInt16(t *testing.T) {
 func TestInt32(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Int32()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
@@ -419,6 +482,15 @@ func TestInt32(t *testing.T) {
 func TestInt64(t *testing.T) {
 	b, _ := NewMutable(8)
 	c, _ := NewMutable(9)
+
+	conv, err := b.Int64()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
 	b.unseal()
 	c.unseal()
 
