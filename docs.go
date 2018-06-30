@@ -25,8 +25,8 @@ Package memguard facilitates the easy and secure handling of sensitive memory, i
     }
 
     func foo() {
-        // Create a new 16 byte Enclave filled with cryptographically-secure random bytes.
-        key, err := memguard.NewRandom(16)
+        // Create a new and immutable 16 byte Enclave filled with cryptographically-secure random bytes.
+        key, err := memguard.NewImmutableRandom(16)
         if err != nil {
             // Oh no, an error. Safely exit.
             fmt.Println(err)
@@ -45,10 +45,15 @@ Package memguard facilitates the easy and secure handling of sensitive memory, i
         // Remember to Reseal it, or defer the Reseal call.
         key.Reseal()
 
-        // Move something new into the Enclave. No need to unseal
+        // Make the memory mutable before editing it. No need to unseal
         // here since the memguard API handles this automatically.
+        key.MakeMutable()
 
+        // Move a slice's data into the buffer. The slice's memory is wiped.
         key.Move([]byte("yellow submarine"))
+
+        // Make the buffer immutable again if we don't anticipate more editing.
+        key.MakeImmutable()
 
         // ...
     }
@@ -57,7 +62,7 @@ The number of Enclaves that you are able to create is limited by how much memory
 
 If a function that you're using requires an array, you can cast the buffer to an array (without making a copy) and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
 
-    key, err := memguard.NewRandom(16)
+    key, err := memguard.NewImmutableRandom(16)
     if err != nil {
         fmt.Println(err)
         memguard.SafeExit(1)
