@@ -115,14 +115,6 @@ func (b *container) reseal() error {
 		return nil
 	}
 
-	// Check if it's immutable.
-	if !b.mutable {
-		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
-			SafePanic(err)
-		}
-	}
-
 	// Get a temporary view of the key.
 	k := subclaves.enckey.getView()
 
@@ -135,6 +127,14 @@ func (b *container) reseal() error {
 
 	// Destroy the temporary view of the key.
 	defer k.destroy()
+
+	// Check if it's immutable.
+	if !b.mutable {
+		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
+			SafePanic(err)
+		}
+	}
 
 	// Overwrite the plaintext with random bytes.
 	if err := crypto.MemScr(b.plaintext); err != nil {
@@ -166,14 +166,6 @@ func (b *container) unseal() error {
 		return ErrUnsealed
 	}
 
-	// Check if it's immutable.
-	if !b.mutable {
-		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
-		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
-			SafePanic(err)
-		}
-	}
-
 	// Get a temporary view of the key.
 	k := subclaves.enckey.getView()
 
@@ -186,14 +178,17 @@ func (b *container) unseal() error {
 	// Wipe the key view.
 	k.destroy()
 
+	// Check if it's immutable.
+	if !b.mutable {
+		// Mark the memory as mutable. No need to update the metadata as we'll change it back before we release the mutex.
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
+			SafePanic(err)
+		}
+	}
+
 	// Copy the plaintext over, wiping the old copy.
 	crypto.Copy(b.plaintext, pt)
 	if err := crypto.MemScr(pt); err != nil {
-		SafePanic(err)
-	}
-
-	// Wipe the ciphertext.
-	if err := crypto.MemScr(b.ciphertext); err != nil {
 		SafePanic(err)
 	}
 
@@ -202,6 +197,11 @@ func (b *container) unseal() error {
 		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
 			SafePanic(err)
 		}
+	}
+
+	// Wipe the ciphertext.
+	if err := crypto.MemScr(b.ciphertext); err != nil {
+		SafePanic(err)
 	}
 
 	// Update the metadata values accordingly.
