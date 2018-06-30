@@ -171,7 +171,7 @@ func TestNewMutableRandom(t *testing.T) {
 }
 
 func TestSealUnseal(t *testing.T) {
-	b, _ := NewMutable(32)
+	b, _ := NewImmutable(32)
 
 	if !b.sealed {
 		t.Error("container should be sealed")
@@ -188,6 +188,9 @@ func TestSealUnseal(t *testing.T) {
 	if !bytes.Equal(b.plaintext, make([]byte, 32)) {
 		t.Error("contents should not be random when unsealed")
 	}
+	if b.IsMutable() {
+		t.Error("should remain immutable")
+	}
 
 	b.Reseal()
 
@@ -196,6 +199,9 @@ func TestSealUnseal(t *testing.T) {
 	}
 	if bytes.Equal(b.plaintext, make([]byte, 32)) {
 		t.Error("contents should be random when sealed")
+	}
+	if b.IsMutable() {
+		t.Error("should remain immutable")
 	}
 }
 
