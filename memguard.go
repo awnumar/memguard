@@ -205,9 +205,7 @@ func (b *container) Bytes() []byte {
 /*
 Uint8 returns a slice (of type []uint8) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-Uint8 is practically identical to Bytes, but it has been added for completeness' sake. Uint8 also has added error reporting and will complain if called on a destroyed Enclave. Bytes will usually be the faster and easier option.
+Uint8 is practically identical to Bytes except it also returns errors. Bytes will usually be the faster and easier option.
 */
 func (b *container) Uint8() ([]uint8, error) {
 	// Attain the mutex lock.
@@ -219,6 +217,11 @@ func (b *container) Uint8() ([]uint8, error) {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Return the slice.
 	return []uint8(b.plaintext), nil
 }
@@ -226,9 +229,7 @@ func (b *container) Uint8() ([]uint8, error) {
 /*
 Uint16 returns a slice (of type []uint16) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-The Enclave must be a multiple of 2 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
+The Enclave must be a multiple of 2 bytes in length or an error will be returned.
 */
 func (b *container) Uint16() ([]uint16, error) {
 	// Attain the mutex lock.
@@ -238,6 +239,11 @@ func (b *container) Uint16() ([]uint16, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Check to see if it's an appropriate length.
@@ -259,9 +265,7 @@ func (b *container) Uint16() ([]uint16, error) {
 /*
 Uint32 returns a slice (of type []uint32) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-The Enclave must be a multiple of 4 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
+The Enclave must be a multiple of 4 bytes in length or an error will be returned.
 */
 func (b *container) Uint32() ([]uint32, error) {
 	// Attain the mutex lock.
@@ -271,6 +275,11 @@ func (b *container) Uint32() ([]uint32, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Check to see if it's an appropriate length.
@@ -292,9 +301,7 @@ func (b *container) Uint32() ([]uint32, error) {
 /*
 Uint64 returns a slice (of type []uint64) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-The Enclave must be a multiple of 8 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
+The Enclave must be a multiple of 8 bytes in length or an error will be returned.
 */
 func (b *container) Uint64() ([]uint64, error) {
 	// Attain the mutex lock.
@@ -304,6 +311,11 @@ func (b *container) Uint64() ([]uint64, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Check to see if it's an appropriate length.
@@ -324,10 +336,6 @@ func (b *container) Uint64() ([]uint64, error) {
 
 /*
 Int8 returns a slice (of type []int8) that references the secure, protected portion of memory.
-
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-An error will be returned if called on an Enclave that has been destroyed.
 */
 func (b *container) Int8() ([]int8, error) {
 	// Attain the mutex lock.
@@ -337,6 +345,11 @@ func (b *container) Int8() ([]int8, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Perform the conversion.
@@ -353,9 +366,7 @@ func (b *container) Int8() ([]int8, error) {
 /*
 Int16 returns a slice (of type []int16) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-The Enclave must be a multiple of 2 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
+The Enclave must be a multiple of 2 bytes in length or an error will be returned.
 */
 func (b *container) Int16() ([]int16, error) {
 	// Attain the mutex lock.
@@ -365,6 +376,11 @@ func (b *container) Int16() ([]int16, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Check to see if it's an appropriate length.
@@ -386,9 +402,7 @@ func (b *container) Int16() ([]int16, error) {
 /*
 Int32 returns a slice (of type []int32) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-The Enclave must be a multiple of 4 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
+The Enclave must be a multiple of 4 bytes in length or an error will be returned.
 */
 func (b *container) Int32() ([]int32, error) {
 	// Attain the mutex lock.
@@ -398,6 +412,11 @@ func (b *container) Int32() ([]int32, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Check to see if it's an appropriate length.
@@ -419,9 +438,7 @@ func (b *container) Int32() ([]int32, error) {
 /*
 Int64 returns a slice (of type []int64) that references the secure, protected portion of memory.
 
-If you call this on an Enclave that is sealed, the data returned will be random, and so Unseal should be called first (promptly followed by Reseal when done).
-
-The Enclave must be a multiple of 8 bytes in length, or else an error will be returned. An error will also be returned if called on an Enclave that has been destroyed.
+The Enclave must also be a multiple of 8 bytes in length or an error will be returned.
 */
 func (b *container) Int64() ([]int64, error) {
 	// Attain the mutex lock.
@@ -431,6 +448,11 @@ func (b *container) Int64() ([]int64, error) {
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Check to see if it's an appropriate length.
