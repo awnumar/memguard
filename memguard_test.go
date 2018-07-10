@@ -909,9 +909,36 @@ func TestSplit(t *testing.T) {
 	}
 }
 
+func TestGrow(t *testing.T) {
+	b, _ := NewImmutableFromBytes([]byte("xxyy"))
+
+	c, err := Grow(b, 4)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	c.unseal()
+	if !bytes.Equal(c.Bytes()[0:4], []byte("xxyy")) {
+		t.Error("unexpected value:", c.Bytes())
+	}
+	if !bytes.Equal(c.Bytes()[4:8], make([]byte, 4)) {
+		t.Error("unexpected value:", c.Bytes())
+	}
+	c.reseal()
+
+	if c.IsMutable() {
+		t.Error("unexpected state")
+	}
+	c.Destroy()
+	b.Destroy()
+
+	if _, err := Grow(b, 4); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
 func TestTrim(t *testing.T) {
-	b, _ := NewMutableFromBytes([]byte("xxxxyyyy"))
-	b.MakeImmutable()
+	b, _ := NewImmutableFromBytes([]byte("xxxxyyyy"))
 
 	c, err := Trim(b, 2, 4)
 	if err != nil {

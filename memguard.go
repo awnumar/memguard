@@ -966,6 +966,46 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 }
 
 /*
+Grow takes an Enclave and returns a new one that's n bytes larger. The contents of the given Enclave would be preserved in the first b.Size() bytes of the newly created one.
+
+The mutability state of the original is preserved in the new (sealed) Enclave, and the original Enclave is not destroyed. If Trim is called on a sealed Enclave, it will automatically unseal and reseal it for you.
+*/
+func Grow(b *Enclave, n int) (*Enclave, error) {
+	// Get a mutex lock on this Enclave.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if len(b.plaintext) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create new Enclave and copy over the old.
+	newBuf, err := newContainer(len(b.plaintext) + n)
+	if err != nil {
+		return nil, err
+	}
+	newBuf.Copy(b.plaintext)
+
+	// Seal it up.
+	newBuf.reseal()
+
+	// Copy over permissions.
+	if !b.mutable {
+		newBuf.MakeImmutable()
+	}
+
+	// Return the new Enclave.
+	return newBuf, nil
+}
+
+/*
 Trim shortens an Enclave according to the given specifications. It takes an offset and a size as arguments. The resulting Enclave starts at index [offset] and ends at index [offset+size].
 
 The mutability state of the original is preserved in the new (sealed) Enclave, and the original Enclave is not destroyed. If Trim is called on a sealed Enclave, it will automatically unseal and reseal it for you.
