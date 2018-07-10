@@ -696,6 +696,98 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 }
 
 /*
+GrowBy grows an Enclave by n bytes. If GrowBy is called on a sealed enclave, it will automatically unseal and reseal it for you.
+*/
+func (b *container) GrowBy(n int) error {
+	// Get a mutex lock on this Enclave.
+	b.Lock()
+
+	// Check if it's destroyed.
+	if len(b.plaintext) == 0 {
+		return ErrDestroyed
+	}
+
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+	}
+
+	// Create new Enclave and copy over the old.
+	newBuf, err := newContainer(len(b.plaintext) + n)
+	if err != nil {
+		return err
+	}
+	newBuf.Copy(b.plaintext)
+
+	// Seal it up.
+	newBuf.reseal()
+
+	// Copy over permissions.
+	if !b.mutable {
+		newBuf.MakeImmutable()
+	}
+
+	// Destroy the old Enclave.
+	b.Unlock()
+	b.Destroy()
+
+	// Set the values to the new memory.
+	b.plaintext = newBuf.plaintext
+	b.ciphertext = newBuf.ciphertext
+	b.mutable = newBuf.mutable
+	b.sealed = newBuf.sealed
+
+	// No errors.
+	return nil
+}
+
+/*
+TrimTo trims an Enclave to the portion of it starting at an offset and ending at offset+size. If TrimTo is called on a sealed enclave, it will automatically unseal and reseal it for you.
+*/
+func (b *container) TrimTo(offset, size int) error {
+	// Get a mutex lock on this Enclave.
+	b.Lock()
+
+	// Check if it's destroyed.
+	if len(b.plaintext) == 0 {
+		return ErrDestroyed
+	}
+
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+	}
+
+	// Create new Enclave and copy over the old.
+	newBuf, err := newContainer(size)
+	if err != nil {
+		return err
+	}
+	newBuf.Copy(b.plaintext[offset : offset+size])
+
+	// Seal it up.
+	newBuf.reseal()
+
+	// Copy over permissions.
+	if !b.mutable {
+		newBuf.MakeImmutable()
+	}
+
+	// Destroy the old Enclave.
+	b.Unlock()
+	b.Destroy()
+
+	// Set the values to the new memory.
+	b.plaintext = newBuf.plaintext
+	b.ciphertext = newBuf.ciphertext
+	b.mutable = newBuf.mutable
+	b.sealed = newBuf.sealed
+
+	// No errors.
+	return nil
+}
+
+/*
 Destroy performs some security checks, securely wipes the contents of, and then releases an Enclave's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
 
 This function should be called on all Enclaves before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using all of them together.
@@ -963,6 +1055,46 @@ func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
 
 	// Return the new Enclaves.
 	return firstBuf, secondBuf, nil
+}
+
+/*
+Grow takes an Enclave and returns a new one that's n bytes larger. The contents of the given Enclave would be preserved in the first b.Size() bytes of the newly created one.
+
+The mutability state of the original is preserved in the new (sealed) Enclave, and the original Enclave is not destroyed. If Trim is called on a sealed Enclave, it will automatically unseal and reseal it for you.
+*/
+func Grow(b *Enclave, n int) (*Enclave, error) {
+	// Get a mutex lock on this Enclave.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if len(b.plaintext) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create new Enclave and copy over the old.
+	newBuf, err := newContainer(len(b.plaintext) + n)
+	if err != nil {
+		return nil, err
+	}
+	newBuf.Copy(b.plaintext)
+
+	// Seal it up.
+	newBuf.reseal()
+
+	// Copy over permissions.
+	if !b.mutable {
+		newBuf.MakeImmutable()
+	}
+
+	// Return the new Enclave.
+	return newBuf, nil
 }
 
 /*
