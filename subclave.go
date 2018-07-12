@@ -116,10 +116,12 @@ func (s *subclave) getView() *subclaveView {
 	sv.plaintext = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
 
 	// Create a copy of the subclave data inside the subclaveView.
+	s.Lock()
 	h := crypto.Hash(s.y)
 	for i := range sv.plaintext {
 		sv.plaintext[i] = h[i] ^ s.x[i]
 	}
+	s.Unlock()
 
 	// Make the subclaveView immutable.
 	if err := memcall.Protect(memory[pageSize:pageSize+roundedSize], true, false); err != nil {
