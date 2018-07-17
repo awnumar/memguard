@@ -2,64 +2,64 @@ package memguard
 
 import (
 	"bytes"
-	"crypto/subtle"
 	"os"
 	"os/signal"
 	"syscall"
 	"unsafe"
 
+	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
 )
 
 /*
-NewImmutable creates a new, immutable LockedBuffer of a specified size.
-
-The mutability can later be toggled with the MakeImmutable and MakeMutable methods.
+NewImmutable creates a new Enclave of a specified size. The created object will be immutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Unseal, and Reseal methods.
 
 If the given length is less than one, the call will return an ErrInvalidLength.
 */
-func NewImmutable(size int) (*LockedBuffer, error) {
-	return newContainer(size, false)
-}
-
-/*
-NewMutable creates a new, mutable LockedBuffer of a specified length.
-
-The mutability can later be toggled with the MakeImmutable and MakeMutable methods.
-
-If the given length is less than one, the call will return an ErrInvalidLength.
-*/
-func NewMutable(size int) (*LockedBuffer, error) {
-	return newContainer(size, true)
-}
-
-/*
-NewImmutableFromBytes is identical to NewImmutable but for the fact that the created LockedBuffer is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
-
-If the size of the slice is zero, the call will return an ErrInvalidLength.
-*/
-func NewImmutableFromBytes(buf []byte) (*LockedBuffer, error) {
-	// Create a new LockedBuffer.
-	b, err := NewMutableFromBytes(buf)
+func NewImmutable(size int) (*Enclave, error) {
+	// Create a new Enclave.
+	b, err := newContainer(size)
 	if err != nil {
 		return nil, err
 	}
 
-	// Mark as immutable.
+	// Seal the Enclave.
+	b.reseal()
+
+	// Make the memory immutable.
 	b.MakeImmutable()
 
-	// Return a pointer to the LockedBuffer.
+	// Return the Enclave object.
 	return b, nil
 }
 
 /*
-NewMutableFromBytes is identical to NewMutable but for the fact that the created LockedBuffer is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
+NewMutable creates a new Enclave of a specified size. The created object will be mutable and sealed, and these states can be toggled with the MakeImmutable, MakeMutable, Unseal, and Reseal methods.
+
+If the given length is less than one, the call will return an ErrInvalidLength.
+*/
+func NewMutable(size int) (*Enclave, error) {
+	// Create a new Enclave.
+	b, err := newContainer(size)
+	if err != nil {
+		return nil, err
+	}
+
+	// Seal the Enclave.
+	b.reseal()
+
+	// Return the Enclave object.
+	return b, nil
+}
+
+/*
+NewImmutableFromBytes is identical to NewImmutable but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
 
 If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
-func NewMutableFromBytes(buf []byte) (*LockedBuffer, error) {
-	// Create a new LockedBuffer.
-	b, err := newContainer(len(buf), true)
+func NewImmutableFromBytes(buf []byte) (*Enclave, error) {
+	// Create a new Enclave.
+	b, err := newContainer(len(buf))
 	if err != nil {
 		return nil, err
 	}
@@ -67,97 +67,187 @@ func NewMutableFromBytes(buf []byte) (*LockedBuffer, error) {
 	// Copy the bytes from buf, wiping afterwards.
 	b.Move(buf)
 
-	// Return a pointer to the LockedBuffer.
+	// Seal the Enclave.
+	b.reseal()
+
+	// Make the memory immutable.
+	b.MakeImmutable()
+
+	// Return a pointer to the Enclave.
 	return b, nil
 }
 
 /*
-NewImmutableRandom is identical to NewImmutable but for the fact that the created LockedBuffer is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a LockedBuffer created with NewImmutableRandom can safely be used as an encryption key.
+NewMutableFromBytes is identical to NewMutable but for the fact that the created Enclave is of the same length and has the same contents as a given slice. The slice is wiped after the bytes have been copied over.
+
+If the size of the slice is zero, the call will return an ErrInvalidLength.
 */
-func NewImmutableRandom(size int) (*LockedBuffer, error) {
-	// Create a new LockedBuffer for the key.
-	b, err := NewMutableRandom(size)
+func NewMutableFromBytes(buf []byte) (*Enclave, error) {
+	// Create a new Enclave.
+	b, err := newContainer(len(buf))
 	if err != nil {
 		return nil, err
 	}
 
-	// Mark as immutable if specified.
-	b.MakeImmutable()
+	// Copy the bytes from buf, wiping afterwards.
+	b.Move(buf)
 
-	// Return the LockedBuffer.
+	// Seal the Enclave.
+	b.reseal()
+
+	// Return a pointer to the Enclave.
 	return b, nil
 }
 
 /*
-NewMutableRandom is identical to NewMutable but for the fact that the created LockedBuffer is filled with cryptographically-secure pseudo-random bytes instead of zeroes. Therefore a LockedBuffer created with NewMutableRandom can safely be used as an encryption key.
+NewImmutableRandom is identical to NewImmutable except the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes.
+
+If the given length is less than one, the call will return an ErrInvalidLength.
 */
-func NewMutableRandom(size int) (*LockedBuffer, error) {
-	// Create a new LockedBuffer for the key.
-	b, err := newContainer(size, true)
+func NewImmutableRandom(size int) (*Enclave, error) {
+	// Create a new Enclave for the key.
+	b, err := newContainer(size)
 	if err != nil {
 		return nil, err
 	}
 
 	// Fill it with random data.
-	fillRandBytes(b.buffer)
+	if err := crypto.MemScr(b.plaintext); err != nil {
+		SafePanic(err)
+	}
 
-	// Return the LockedBuffer.
+	// Seal the Enclave.
+	b.reseal()
+
+	// Make the memory immutable.
+	b.MakeImmutable()
+
+	// Return the Enclave.
 	return b, nil
 }
 
 /*
-Buffer returns a slice that references the secure, protected portion of memory.
+NewMutableRandom is identical to NewMutable except the created Enclave is filled with cryptographically-secure pseudo-random bytes instead of zeroes.
 
-If the LockedBuffer that you call Buffer on has been destroyed, the returned slice will be nil (it will have a length and capacity of zero).
+If the given length is less than one, the call will return an ErrInvalidLength.
+*/
+func NewMutableRandom(size int) (*Enclave, error) {
+	// Create a new Enclave for the key.
+	b, err := newContainer(size)
+	if err != nil {
+		return nil, err
+	}
 
-If a function that you're using requires an array, you can cast the buffer to an array and then pass around a pointer:
+	// Fill it with random data.
+	if err := crypto.MemScr(b.plaintext); err != nil {
+		SafePanic(err)
+	}
+
+	// Seal the Enclave.
+	b.reseal()
+
+	// Return the Enclave.
+	return b, nil
+}
+
+/*
+Unseal decrypts and unseals a given Enclave.
+
+All new Enclaves are sealed by default and you should use this method to temporarily unseal them, so as to view or modify their contents, and then call Reseal again as soon as possible. There is no need to call Unseal if you are using MemGuard's own API since internal functions know how to handle sealed containers and will unseal and reseal them for you automatically. Instead, call Unseal before passing the contents of a container to another API, and reiterating, call Reseal again soon after.
+
+Calling Unseal on an unsealed Enclave will return ErrUnsealed. This is because the developer has assumed that a container is sealed when it isn't, and that is a dangerous assumption.
+
+If the Enclave is immutable, Unseal will automatically work around it and preserve the immutability state.
+*/
+func (b *container) Unseal() error {
+	// Attain the mutex.
+	b.Lock()
+	defer b.Unlock()
+
+	return b.unseal()
+}
+
+/*
+Reseal re-encrypts and reseals a given Enclave.
+
+All new Enclaves are sealed by default and you should use Unseal to unseal them them, so as to view or modify their contents, and then call this method again as soon as possible.
+
+Calling Reseal on a sealed Enclave does nothing. If the given Enclave is immutable, Reseal will automatically work around it and preserve the immutability state.
+*/
+func (b *container) Reseal() error {
+	// Attain the mutex.
+	b.Lock()
+	defer b.Unlock()
+
+	return b.reseal()
+}
+
+/*
+Bytes returns a slice that references the secure, protected portion of memory.
+
+If the Enclave that you call Bytes on is sealed, the data returned will be random and so Unseal should be called first (promptly followed by Reseal when done). Otherwise, if the Enclave has been destroyed then the returned slice will be nil (it will have a length and capacity of zero).
+
+If a function that you're using requires an array, you can cast the slice to an array and then pass around a pointer:
 
     // Make sure the size of the array matches the size of the buffer.
-    // In this case that size is 16. This is *very* important.
-    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Buffer()[0]))
+    // In this example that size is 16. This is VERY important.
+	keyArrayPtr := (*[16]byte)(unsafe.Pointer(&b.Bytes()[0]))
 
-Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
+	// Pass around the array pointer WITHOUT dereferencing it.
+	Encrypt(plaintext, keyArrayPtr)
+
+Make sure that you do not dereference the pointer and pass around the resulting value as this will leave copies all over the place.
 */
-func (b *container) Buffer() []byte {
-	return b.buffer
+func (b *container) Bytes() []byte {
+	return b.plaintext
 }
 
 /*
 Uint8 returns a slice (of type []uint8) that references the secure, protected portion of memory.
 
-Uint8 is practically identical to Buffer, but it has been added for completeness' sake. Buffer will usually be the faster and easier option.
+Uint8 is practically identical to Bytes except it also returns errors. Bytes will usually be the faster and easier option.
 */
 func (b *container) Uint8() ([]uint8, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Return the slice.
-	return []uint8(b.buffer), nil
+	return []uint8(b.plaintext), nil
 }
 
 /*
 Uint16 returns a slice (of type []uint16) that references the secure, protected portion of memory.
 
-The LockedBuffer must be a multiple of 2 bytes in length, or else an error will be returned.
+The Enclave must be a multiple of 2 bytes in length or an error will be returned.
 */
 func (b *container) Uint16() ([]uint16, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%2 != 0 {
+	if len(b.plaintext)%2 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -166,7 +256,7 @@ func (b *container) Uint16() ([]uint16, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 2, b.Size() / 2}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 2, b.Size() / 2}
 
 	// Return the new slice.
 	return *(*[]uint16)(unsafe.Pointer(&sl)), nil
@@ -175,20 +265,25 @@ func (b *container) Uint16() ([]uint16, error) {
 /*
 Uint32 returns a slice (of type []uint32) that references the secure, protected portion of memory.
 
-The LockedBuffer must be a multiple of 4 bytes in length, or else an error will be returned.
+The Enclave must be a multiple of 4 bytes in length or an error will be returned.
 */
 func (b *container) Uint32() ([]uint32, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%4 != 0 {
+	if len(b.plaintext)%4 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -197,7 +292,7 @@ func (b *container) Uint32() ([]uint32, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 4, b.Size() / 4}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 4, b.Size() / 4}
 
 	// Return the new slice.
 	return *(*[]uint32)(unsafe.Pointer(&sl)), nil
@@ -206,20 +301,25 @@ func (b *container) Uint32() ([]uint32, error) {
 /*
 Uint64 returns a slice (of type []uint64) that references the secure, protected portion of memory.
 
-The LockedBuffer must be a multiple of 8 bytes in length, or else an error will be returned.
+The Enclave must be a multiple of 8 bytes in length or an error will be returned.
 */
 func (b *container) Uint64() ([]uint64, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%8 != 0 {
+	if len(b.plaintext)%8 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -228,7 +328,7 @@ func (b *container) Uint64() ([]uint64, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 8, b.Size() / 8}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 8, b.Size() / 8}
 
 	// Return the new slice.
 	return *(*[]uint64)(unsafe.Pointer(&sl)), nil
@@ -239,12 +339,17 @@ Int8 returns a slice (of type []int8) that references the secure, protected port
 */
 func (b *container) Int8() ([]int8, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
 	}
 
 	// Perform the conversion.
@@ -252,7 +357,7 @@ func (b *container) Int8() ([]int8, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size(), b.Size()}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size(), b.Size()}
 
 	// Return the new slice.
 	return *(*[]int8)(unsafe.Pointer(&sl)), nil
@@ -261,20 +366,25 @@ func (b *container) Int8() ([]int8, error) {
 /*
 Int16 returns a slice (of type []int16) that references the secure, protected portion of memory.
 
-The LockedBuffer must be a multiple of 2 bytes in length, or else an error will be returned.
+The Enclave must be a multiple of 2 bytes in length or an error will be returned.
 */
 func (b *container) Int16() ([]int16, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%2 != 0 {
+	if len(b.plaintext)%2 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -283,7 +393,7 @@ func (b *container) Int16() ([]int16, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 2, b.Size() / 2}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 2, b.Size() / 2}
 
 	// Return the new slice.
 	return *(*[]int16)(unsafe.Pointer(&sl)), nil
@@ -292,20 +402,25 @@ func (b *container) Int16() ([]int16, error) {
 /*
 Int32 returns a slice (of type []int32) that references the secure, protected portion of memory.
 
-The LockedBuffer must be a multiple of 4 bytes in length, or else an error will be returned.
+The Enclave must be a multiple of 4 bytes in length or an error will be returned.
 */
 func (b *container) Int32() ([]int32, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%4 != 0 {
+	if len(b.plaintext)%4 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -314,7 +429,7 @@ func (b *container) Int32() ([]int32, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 4, b.Size() / 4}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 4, b.Size() / 4}
 
 	// Return the new slice.
 	return *(*[]int32)(unsafe.Pointer(&sl)), nil
@@ -323,20 +438,25 @@ func (b *container) Int32() ([]int32, error) {
 /*
 Int64 returns a slice (of type []int64) that references the secure, protected portion of memory.
 
-The LockedBuffer must be a multiple of 8 bytes in length, or else an error will be returned.
+The Enclave must also be a multiple of 8 bytes in length or an error will be returned.
 */
 func (b *container) Int64() ([]int64, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
+	// Check if it's sealed.
+	if b.sealed {
+		return nil, ErrSealed
+	}
+
 	// Check to see if it's an appropriate length.
-	if len(b.buffer)%8 != 0 {
+	if len(b.plaintext)%8 != 0 {
 		return nil, ErrInvalidConversion
 	}
 
@@ -345,76 +465,89 @@ func (b *container) Int64() ([]int64, error) {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.buffer[0])), b.Size() / 8, b.Size() / 8}
+	}{uintptr(unsafe.Pointer(&b.plaintext[0])), b.Size() / 8, b.Size() / 8}
 
 	// Return the new slice.
 	return *(*[]int64)(unsafe.Pointer(&sl)), nil
 }
 
 /*
-IsMutable returns a boolean value indicating if a LockedBuffer is marked read-only.
+IsSealed returns a boolean value indicating if an Enclave is Sealed.
+*/
+func (b *container) IsSealed() bool {
+	// Attain the mutex.
+	b.RLock()
+	defer b.RUnlock()
+
+	return b.sealed
+}
+
+/*
+IsMutable returns a boolean value indicating if an Enclave is mutable.
 */
 func (b *container) IsMutable() bool {
-	// Get a mutex lock on this LockedBuffer.
-	b.Lock()
-	defer b.Unlock()
+	// Get a mutex lock on this Enclave.
+	b.RLock()
+	defer b.RUnlock()
 
 	return b.mutable
 }
 
 /*
-IsDestroyed returns a boolean value indicating if a LockedBuffer has been destroyed.
+IsDestroyed returns a boolean value indicating if an Enclave has been destroyed.
 */
 func (b *container) IsDestroyed() bool {
-	// Get a mutex lock on this LockedBuffer.
-	b.Lock()
-	defer b.Unlock()
+	// Get a mutex lock on this Enclave.
+	b.RLock()
+	defer b.RUnlock()
 
 	// Return the appropriate value.
-	return len(b.buffer) == 0
+	return len(b.plaintext) == 0
 }
 
 /*
-EqualBytes compares a LockedBuffer to a byte slice in constant time.
+EqualBytes compares an Enclave to a byte slice in constant time. If called on a sealed Enclave, EqualBytes will automatically unseal and reseal it for you.
 */
 func (b *container) EqualBytes(buf []byte) (bool, error) {
-	// Get a mutex lock on this LockedBuffer.
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return false, ErrDestroyed
 	}
 
-	// Do a time-constant comparison.
-	if subtle.ConstantTimeCompare(b.buffer, buf) == 1 {
-		// They're equal.
-		return true, nil
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
 	}
 
-	// They're not equal.
-	return false, nil
+	// Do a time-constant comparison and return the result.
+	return crypto.Equal(b.plaintext, buf), nil
 }
 
 /*
-MakeImmutable asks the kernel to mark the LockedBuffer's memory as immutable. Any subsequent attempts to modify this memory will result in the process crashing with a SIGSEGV memory violation.
+MakeImmutable asks the kernel to mark the Enclave's contents immutable. Any subsequent attempts to modify this memory will result in the kernel raising an access violation and terminating the process. To make the buffer mutable again, call MakeMutable.
 
-To make the memory mutable again, MakeMutable is called.
+The API will respect your mutability state and so if a MemGuard function that needs to modify an Enclave is handed one that is immutable, it will return ErrImmutable.
 */
 func (b *container) MakeImmutable() error {
-	// Get a mutex lock on this LockedBuffer.
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
 	if b.mutable {
 		// Mark the memory as mutable.
-		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, false)
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, false); err != nil {
+			SafePanic(err)
+		}
 
 		// Tell everyone about the change we made.
 		b.mutable = false
@@ -425,23 +558,23 @@ func (b *container) MakeImmutable() error {
 }
 
 /*
-MakeMutable asks the kernel to mark the LockedBuffer's memory as mutable.
-
-To make the memory immutable again, MakeImmutable is called.
+MakeMutable asks the kernel to mark the Enclave's contents mutable. To make the buffer immutable again, call MakeImmutable.
 */
 func (b *container) MakeMutable() error {
-	// Get a mutex lock on this LockedBuffer.
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
 	if !b.mutable {
 		// Mark the memory as mutable.
-		memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.buffer)+32)], true, true)
+		if err := memcall.Protect(getAllMemory(b)[pageSize:pageSize+roundToPageSize(len(b.plaintext)+32)], true, true); err != nil {
+			SafePanic(err)
+		}
 
 		// Tell everyone about the change we made.
 		b.mutable = true
@@ -452,13 +585,11 @@ func (b *container) MakeMutable() error {
 }
 
 /*
-Copy copies bytes from a byte slice into a LockedBuffer in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
+Copy copies bytes from a byte slice into an Enclave, in constant-time. Just like Golang's built-in copy function, Copy only copies up to the smallest of the two buffers.
 
-It does not wipe the original slice so using Copy is less secure than using Move. Therefore Move should be favoured unless you have a good reason.
+Copy does not wipe the original slice so using Move should be favoured unless you have a specific reason. You should aim to call WipeBytes on the original slice as soon as possible after copying.
 
-You should aim to call WipeBytes on the original slice as soon as possible.
-
-If the LockedBuffer is marked as read-only, the call will fail and return an ErrReadOnly.
+If the Enclave is marked as immutable, the call will fail and return an ErrImmutable. If the Enclave is sealed, Copy will automatically unseal and reseal it for you.
 */
 func (b *container) Copy(buf []byte) error {
 	// Just call CopyAt with a zero offset.
@@ -466,15 +597,15 @@ func (b *container) Copy(buf []byte) error {
 }
 
 /*
-CopyAt is identical to Copy but it copies into the LockedBuffer at a specified offset.
+CopyAt is identical to Copy but it copies into the Enclave at a specified offset.
 */
 func (b *container) CopyAt(buf []byte, offset int) error {
-	// Get a mutex lock on this LockedBuffer.
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -483,24 +614,24 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 		return ErrImmutable
 	}
 
-	// Do a time-constant copying of the bytes, copying only up to the length of the buffer.
-	if len(b.buffer[offset:]) > len(buf) {
-		subtle.ConstantTimeCopy(1, b.buffer[offset:offset+len(buf)], buf)
-	} else if len(b.buffer[offset:]) < len(buf) {
-		subtle.ConstantTimeCopy(1, b.buffer[offset:], buf[:len(b.buffer[offset:])])
-	} else {
-		subtle.ConstantTimeCopy(1, b.buffer[offset:], buf)
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
 	}
+
+	// Do a time-constant copying of the bytes.
+	crypto.Copy(b.plaintext[offset:], buf)
 
 	return nil
 }
 
 /*
-Move moves bytes from a byte slice into a LockedBuffer in constant-time. Just like Golang's built-in copy function, Move only moves up to the smallest of the two buffers.
+Move moves bytes from a byte slice into an Enclave in constant-time. Just like Golang's built-in copy function, Move only moves up to the smallest of the two buffers.
 
-Unlike Copy, Move wipes the entire original slice after copying the appropriate number of bytes over, and so it should be favoured unless you have a good reason.
+Unlike Copy, Move wipes the entire original slice after copying, and so it should be favoured unless you have a specific reason.
 
-If the LockedBuffer is marked as read-only, the call will fail and return an ErrReadOnly.
+If the Enclave is marked as immutable, the call will fail and return an ErrImmutable. If the Enclave is sealed, Move will automatically unseal and reseal it for you.
 */
 func (b *container) Move(buf []byte) error {
 	// Just call MoveAt with a zero offset.
@@ -508,23 +639,23 @@ func (b *container) Move(buf []byte) error {
 }
 
 /*
-MoveAt is identical to Move but it copies into the LockedBuffer at a specified offset.
+MoveAt is identical to Move but it copies into the Enclave at a specified offset.
 */
 func (b *container) MoveAt(buf []byte, offset int) error {
-	// Copy buf into the LockedBuffer.
+	// Copy buf into the Enclave.
 	if err := b.CopyAt(buf, offset); err != nil {
 		return err
 	}
 
 	// Wipe the old bytes.
-	wipeBytes(buf)
+	crypto.MemClr(buf)
 
 	// Everything went well.
 	return nil
 }
 
 /*
-FillRandomBytes fills a LockedBuffer with cryptographically-secure pseudo-random bytes.
+FillRandomBytes fills an Enclave with cryptographically-secure pseudo-random bytes. If the Enclave is sealed, it will automatically unseal and reseal it for you.
 */
 func (b *container) FillRandomBytes() error {
 	// Just call FillRandomBytesAt.
@@ -532,15 +663,15 @@ func (b *container) FillRandomBytes() error {
 }
 
 /*
-FillRandomBytesAt fills a LockedBuffer with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes.
+FillRandomBytesAt fills an Enclave with cryptographically-secure pseudo-random bytes, starting at an offset and ending after a given number of bytes. If the Enclave is sealed, it will automatically unseal and reseal it for you.
 */
 func (b *container) FillRandomBytesAt(offset, length int) error {
-	// Get a mutex lock on this LockedBuffer.
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -549,89 +680,108 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 		return ErrImmutable
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Fill with random bytes.
-	fillRandBytes(b.buffer[offset : offset+length])
+	if err := crypto.MemScr(b.plaintext[offset : offset+length]); err != nil {
+		SafePanic(err)
+	}
 
 	// Everything went well.
 	return nil
 }
 
 /*
-Destroy verifies that no buffer underflows occurred and then wipes, unlocks, and frees all related memory. If a buffer underflow is detected, the process panics.
+Destroy performs some security checks, securely wipes the contents of, and then releases an Enclave's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
 
-This function must be called on all LockedBuffers before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using all of them together.
+This function should be called on all Enclaves before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using all of them together.
 
-If the LockedBuffer has already been destroyed then the call makes no changes.
+If the Enclave has already been destroyed, subsequent calls are idempotent.
 */
 func (b *container) Destroy() {
-	// Attain a mutex lock on this LockedBuffer.
+	// Attain a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Return if it's already destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return
 	}
 
 	// Remove this one from global slice.
-	allLockedBuffersMutex.Lock()
-	for i, v := range allLockedBuffers {
+	enclavesMutex.Lock()
+	for i, v := range enclaves {
 		if v == b {
-			allLockedBuffers = append(allLockedBuffers[:i], allLockedBuffers[i+1:]...)
+			enclaves = append(enclaves[:i], enclaves[i+1:]...)
 			break
 		}
 	}
-	allLockedBuffersMutex.Unlock()
+	enclavesMutex.Unlock()
 
-	// Get all of the memory related to this LockedBuffer.
+	// Get all of the memory related to this Enclave.
 	memory := getAllMemory(b)
 
 	// Get the total size of all the pages between the guards.
 	roundedLength := len(memory) - (pageSize * 2)
 
 	// Verify the canary.
-	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], canary) {
-		panic("memguard.Destroy(): buffer overflow detected")
+	c := subclaves.canary.getView()
+	defer c.destroy()
+	if !bytes.Equal(memory[pageSize+roundedLength-len(b.plaintext)-32:pageSize+roundedLength-len(b.plaintext)], c.plaintext) {
+		SafePanic("memguard.Destroy(): canary check failed; possible buffer overflow")
 	}
 
 	// Make all of the memory readable and writable.
-	memcall.Protect(memory, true, true)
+	if err := memcall.Protect(memory, true, true); err != nil {
+		SafePanic(err)
+	}
 
 	// Wipe the pages that hold our data.
-	wipeBytes(memory[pageSize : pageSize+roundedLength])
+	crypto.MemClr(memory[pageSize : pageSize+roundedLength])
 
 	// Unlock the pages that hold our data.
-	memcall.Unlock(memory[pageSize : pageSize+roundedLength])
+	if err := memcall.Unlock(memory[pageSize : pageSize+roundedLength]); err != nil {
+		SafePanic(err)
+	}
 
 	// Free all related memory.
-	memcall.Free(memory)
+	if err := memcall.Free(memory); err != nil {
+		SafePanic(err)
+	}
 
-	// Set the metadata appropriately.
+	// Wipe the ciphertext field.
+	crypto.MemClr(b.ciphertext)
+
+	// Clear the fields.
+	b.plaintext = nil
+	b.ciphertext = nil
 	b.mutable = false
-
-	// Set the buffer to nil.
-	b.buffer = nil
+	b.sealed = false
 }
 
 /*
-Size returns an integer representing the total length, in bytes, of a LockedBuffer.
+Size returns an integer representing the total length, in bytes, of an Enclave.
 
-If this size is zero, it is safe to assume that the LockedBuffer has been destroyed.
+If this size is zero, it is safe to assume that the Enclave has been destroyed.
 */
 func (b *container) Size() int {
-	return len(b.buffer)
+	return len(b.plaintext)
 }
 
 /*
-Wipe wipes a LockedBuffer's contents by overwriting the buffer with zeroes.
+Wipe wipes an Enclave's contents by overwriting the buffer with zeroes. If the Enclave is sealed, it will automatically unseal and reseal it for you.
 */
 func (b *container) Wipe() error {
-	// Get a mutex lock on this LockedBuffer.
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return ErrDestroyed
 	}
 
@@ -640,64 +790,94 @@ func (b *container) Wipe() error {
 		return ErrImmutable
 	}
 
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
 	// Wipe the buffer.
-	wipeBytes(b.buffer)
+	crypto.MemClr(b.plaintext)
 
 	// Everything went well.
 	return nil
 }
 
 /*
-Concatenate takes two LockedBuffers and concatenates them.
+Concatenate takes two Enclaves, concatenates them, and returns a sealed container. The original Enclaves are preserved.
 
-If one of the given LockedBuffers is immutable, the resulting LockedBuffer will also be immutable. The original LockedBuffers are not destroyed.
+If one of the given Enclaves is immutable, the resulting Enclave will also be immutable. If an Enclave is sealed, Concatenate will automatically unseal and reseal it for you.
 */
-func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
-	// Get a mutex lock on the LockedBuffers.
+func Concatenate(a, b *Enclave) (*Enclave, error) {
+	// Get a mutex lock on the Enclaves.
 	a.Lock()
 	b.Lock()
 	defer a.Unlock()
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if len(a.buffer) == 0 || len(b.buffer) == 0 {
+	if len(a.plaintext) == 0 || len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
-	// Create a new LockedBuffer to hold the concatenated value.
-	c, _ := NewMutable(len(a.buffer) + len(b.buffer))
+	// Check to see if either are sealed.
+	if a.sealed {
+		a.unseal()
+		defer a.reseal()
+	}
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create a new Enclave to hold the concatenated value.
+	c, _ := newContainer(len(a.plaintext) + len(b.plaintext))
 
 	// Copy the values across.
-	c.Copy(a.buffer)
-	c.CopyAt(b.buffer, len(a.buffer))
+	c.Copy(a.plaintext)
+	c.CopyAt(b.plaintext, len(a.plaintext))
+
+	// Seal the container.
+	c.reseal()
 
 	// Set permissions accordingly.
 	if !a.mutable || !b.mutable {
 		c.MakeImmutable()
 	}
 
-	// Return the resulting LockedBuffer.
+	// Return the resulting Enclave.
 	return c, nil
 }
 
 /*
-Duplicate takes a LockedBuffer and creates a new one with the same contents and mutability state as the original.
+Duplicate takes an Enclave and creates a new one with the same contents and mutability state as the original.
+
+If the Enclave is sealed, it will automatically unseal and reseal it for you. The returned Enclave will be sealed regardless.
 */
-func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
-	// Get a mutex lock on this LockedBuffer.
+func Duplicate(b *Enclave) (*Enclave, error) {
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
-	// Create new LockedBuffer.
-	newBuf, _ := NewMutable(b.Size())
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create new Enclave.
+	newBuf, _ := newContainer(b.Size())
 
 	// Copy bytes into it.
-	newBuf.Copy(b.buffer)
+	newBuf.Copy(b.plaintext)
+
+	// Seal it.
+	newBuf.reseal()
 
 	// Set permissions accordingly.
 	if !b.mutable {
@@ -709,58 +889,71 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 }
 
 /*
-Equal compares the contents of two LockedBuffers in constant time.
+Equal compares the contents of two Enclaves in constant time. If either are sealed, it will automatically unseal and reseal them for you.
 */
-func Equal(a, b *LockedBuffer) (bool, error) {
-	// Get a mutex lock on the LockedBuffers.
+func Equal(a, b *Enclave) (bool, error) {
+	// Get a mutex lock on the Enclaves.
 	a.Lock()
 	b.Lock()
 	defer a.Unlock()
 	defer b.Unlock()
 
 	// Check if either are destroyed.
-	if len(a.buffer) == 0 || len(b.buffer) == 0 {
+	if len(a.plaintext) == 0 || len(b.plaintext) == 0 {
 		return false, ErrDestroyed
 	}
 
-	// Do a time-constant comparison on the two buffers.
-	if subtle.ConstantTimeCompare(a.buffer, b.buffer) == 1 {
-		// They're equal.
-		return true, nil
+	// Check to see if either are sealed.
+	if a.sealed {
+		a.unseal()
+		defer a.reseal()
+	}
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
 	}
 
-	// They're not equal.
-	return false, nil
+	// Do a time-constant comparison on the two buffers; return the result.
+	return crypto.Equal(a.plaintext, b.plaintext), nil
 }
 
 /*
-Split takes a LockedBuffer, splits it at a specified offset, and then returns the two newly created LockedBuffers. The mutability state of the original is preserved in the new LockedBuffers, and the original LockedBuffer is not destroyed.
+Split takes an Enclave, splits it at a specified offset, and then returns the two newly created Enclaves. The mutability state of the original is preserved in the new (sealed) Enclaves, and the original Enclave is not destroyed. If the given Enclave is sealed, Split will automatically unseal and reseal it for you.
 */
-func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
-	// Get a mutex lock on this LockedBuffer.
+func Split(b *Enclave, offset int) (*Enclave, *Enclave, error) {
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, nil, ErrDestroyed
 	}
 
-	// Create two new LockedBuffers.
-	firstBuf, err := NewMutable(len(b.buffer[:offset]))
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create two new Enclaves.
+	firstBuf, err := newContainer(len(b.plaintext[:offset]))
 	if err != nil {
 		return nil, nil, err
 	}
-
-	secondBuf, err := NewMutable(len(b.buffer[offset:]))
+	secondBuf, err := newContainer(len(b.plaintext[offset:]))
 	if err != nil {
 		firstBuf.Destroy()
 		return nil, nil, err
 	}
 
 	// Copy the values into them.
-	firstBuf.Copy(b.buffer[:offset])
-	secondBuf.Copy(b.buffer[offset:])
+	firstBuf.Copy(b.plaintext[:offset])
+	secondBuf.Copy(b.plaintext[offset:])
+
+	// Seal them.
+	firstBuf.reseal()
+	secondBuf.reseal()
 
 	// Copy over permissions.
 	if !b.mutable {
@@ -768,62 +961,112 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 		secondBuf.MakeImmutable()
 	}
 
-	// Return the new LockedBuffers.
+	// Return the new Enclaves.
 	return firstBuf, secondBuf, nil
 }
 
 /*
-Trim shortens a LockedBuffer according to the given specifications. The mutability state of the original is preserved in the new LockedBuffer, and the original LockedBuffer is not destroyed.
+Grow takes an Enclave and returns a new one that's n bytes larger. The contents of the given Enclave would be preserved in the first b.Size() bytes of the newly created one.
 
-Trim takes an offset and a size as arguments. The resulting LockedBuffer starts at index [offset] and ends at index [offset+size].
+The mutability state of the original is preserved in the new (sealed) Enclave, and the original Enclave is not destroyed. If Trim is called on a sealed Enclave, it will automatically unseal and reseal it for you.
 */
-func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
-	// Get a mutex lock on this LockedBuffer.
+func Grow(b *Enclave, n int) (*Enclave, error) {
+	// Get a mutex lock on this Enclave.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if it's destroyed.
-	if len(b.buffer) == 0 {
+	if len(b.plaintext) == 0 {
 		return nil, ErrDestroyed
 	}
 
-	// Create new LockedBuffer and copy over the old.
-	newBuf, err := NewMutable(size)
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create new Enclave and copy over the old.
+	newBuf, err := newContainer(len(b.plaintext) + n)
 	if err != nil {
 		return nil, err
 	}
-	newBuf.Copy(b.buffer[offset : offset+size])
+	newBuf.Copy(b.plaintext)
+
+	// Seal it up.
+	newBuf.reseal()
 
 	// Copy over permissions.
 	if !b.mutable {
 		newBuf.MakeImmutable()
 	}
 
-	// Return the new LockedBuffer.
+	// Return the new Enclave.
 	return newBuf, nil
 }
 
 /*
-WipeBytes zeroes out a given byte slice. It is recommended that you call WipeBytes on slices after utilizing the Copy or CopyAt methods.
+Trim shortens an Enclave according to the given specifications. It takes an offset and a size as arguments. The resulting Enclave starts at index [offset] and ends at index [offset+size].
 
-Due to the nature of memory allocated by the Go runtime, WipeBytes cannot guarantee that the data does not exist elsewhere in memory. Therefore, your program should aim to (when possible) store sensitive data only in LockedBuffers.
+The mutability state of the original is preserved in the new (sealed) Enclave, and the original Enclave is not destroyed. If Trim is called on a sealed Enclave, it will automatically unseal and reseal it for you.
 */
-func WipeBytes(b []byte) {
-	wipeBytes(b)
+func Trim(b *Enclave, offset, size int) (*Enclave, error) {
+	// Get a mutex lock on this Enclave.
+	b.Lock()
+	defer b.Unlock()
+
+	// Check if it's destroyed.
+	if len(b.plaintext) == 0 {
+		return nil, ErrDestroyed
+	}
+
+	// Check to see if it's sealed.
+	if b.sealed {
+		b.unseal()
+		defer b.reseal()
+	}
+
+	// Create new Enclave and copy over the old.
+	newBuf, err := newContainer(size)
+	if err != nil {
+		return nil, err
+	}
+	newBuf.Copy(b.plaintext[offset : offset+size])
+
+	// Seal it up.
+	newBuf.reseal()
+
+	// Copy over permissions.
+	if !b.mutable {
+		newBuf.MakeImmutable()
+	}
+
+	// Return the new Enclave.
+	return newBuf, nil
 }
 
 /*
-DestroyAll calls Destroy on all LockedBuffers that have not already been destroyed.
+WipeBytes zeroes out a given buffer. It is recommended that you call WipeBytes on slices after utilizing the Copy or CopyAt methods.
+
+Due to the nature of memory allocated by the Go runtime, WipeBytes cannot guarantee that the data does not exist elsewhere in memory. Therefore, your program should aim to (as far as possible) store sensitive data only in Enclaves, which expose their own Wipe method.
+*/
+func WipeBytes(b []byte) {
+	crypto.MemClr(b)
+}
+
+/*
+DestroyAll calls Destroy on all Enclaves that have not already been destroyed.
 
 CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
 func DestroyAll() {
-	// Get a Mutex lock on allLockedBuffers, and get a copy.
-	allLockedBuffersMutex.Lock()
-	containers := make([]*container, len(allLockedBuffers))
-	copy(containers, allLockedBuffers)
-	allLockedBuffersMutex.Unlock()
+	// Get a Mutex lock on enclaves, and get a copy.
+	enclavesMutex.RLock()
+	containers := make([]*container, len(enclaves))
+	copy(containers, enclaves)
+	enclavesMutex.RUnlock()
 
+	// Destroy them all.
 	for _, b := range containers {
 		b.Destroy()
 	}
@@ -853,11 +1096,34 @@ func CatchInterrupt(f func()) {
 }
 
 /*
-SafeExit exits the program with a specified exit-code, but calls DestroyAll first.
+SafePanic is identical to Go's panic except it wipes all it can before panicking. It is much preferred to call SafeExit.
+*/
+func SafePanic(v interface{}) {
+	// Grab a copy of the list.
+	containers := make([]*container, len(enclaves))
+	copy(containers, enclaves)
+
+	// Wipe.
+	crypto.MemClr(subclaves.enckey.x)
+	crypto.MemClr(subclaves.enckey.y)
+	for _, b := range containers {
+		crypto.MemClr(b.plaintext)
+	}
+
+	// Panic.
+	panic(v)
+}
+
+/*
+SafeExit exits the program with a specified exit-code, but cleans up first.
 */
 func SafeExit(c int) {
-	// Cleanup protected memory.
+	// Clean-up protected memory.
 	DestroyAll()
+
+	// Destroy the global protection values.
+	subclaves.canary.destroy()
+	subclaves.enckey.destroy()
 
 	// Exit with a specified exit-code.
 	os.Exit(c)
@@ -870,6 +1136,6 @@ Since core-dumps are only relevant on Unix systems, if DisableUnixCoreDumps is c
 
 This function is precautonary as core-dumps are usually disabled by default on most systems.
 */
-func DisableUnixCoreDumps() {
-	memcall.DisableCoreDumps()
+func DisableUnixCoreDumps() error {
+	return memcall.DisableCoreDumps()
 }

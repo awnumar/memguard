@@ -1,56 +1,44 @@
 package memguard
 
 import (
-	"crypto/rand"
 	"os"
 	"sync"
 	"unsafe"
-
-	"github.com/awnumar/memguard/memcall"
 )
 
 var (
+	// Array of all active containers, and associated mutex.
+	enclaves      []*container
+	enclavesMutex = &sync.RWMutex{}
+
 	// Ascertain and store the system memory page size.
 	pageSize = os.Getpagesize()
 
-	// Canary value that acts as an alarm in case of disallowed memory access.
-	canary = createCanary()
+	// Global reference to subclaves.
+	subclaves *globalProtVals
 
 	// Create a dedicated sync object for the CatchInterrupt function.
 	catchInterruptOnce sync.Once
-
-	// Array of all active containers, and associated mutex.
-	allLockedBuffers      []*container
-	allLockedBuffersMutex = &sync.Mutex{}
 )
 
-// Create and allocate a canary value. Return to caller.
-func createCanary() []byte {
-	// Canary length rounded to page size.
-	roundedLen := roundToPageSize(32)
+// A global struct of which there is a single instance.
+// Will hold the subclaves that are needed to protect normal containers.
+type globalProtVals struct {
+	canary *subclave
+	enckey *subclave
+}
 
-	// Therefore the total length is...
-	totalLen := (2 * pageSize) + roundedLen
+// Initialise the global subclaves.
+func init() {
+	// Create a new globalProtVals struct.
+	gpvs := new(globalProtVals)
 
-	// Allocate it.
-	memory := memcall.Alloc(totalLen)
+	// Allocate and create them.
+	gpvs.canary = newSubclave()
+	gpvs.enckey = newSubclave()
 
-	// Make the guard pages inaccessible.
-	memcall.Protect(memory[:pageSize], false, false)
-	memcall.Protect(memory[pageSize+roundedLen:], false, false)
-
-	// Lock the pages that will hold the canary.
-	memcall.Lock(memory[pageSize : pageSize+roundedLen])
-
-	// Fill the memory with cryptographically-secure random bytes (the canary value).
-	c := getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedLen-32])), 32)
-	fillRandBytes(c)
-
-	// Tell the kernel that the canary value should be immutable.
-	memcall.Protect(memory[pageSize:pageSize+roundedLen], true, false)
-
-	// Return a slice that describes the correct portion of memory.
-	return c
+	// Make global.
+	subclaves = gpvs
 }
 
 // Round a length to a multiple of the system page size.
@@ -58,13 +46,13 @@ func roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
 }
 
-// Get a slice that describes all memory related to a LockedBuffer.
+// Get a slice that describes all memory related to an Enclave.
 func getAllMemory(b *container) []byte {
 	// Calculate the size of the entire container's memory.
-	roundedBufLen := roundToPageSize(len(b.buffer) + 32)
+	roundedBufLen := roundToPageSize(len(b.plaintext) + 32)
 
 	// Calculate the address of the start of the memory.
-	memAddr := uintptr(unsafe.Pointer(&b.buffer[0])) - uintptr((roundedBufLen-len(b.buffer))+pageSize)
+	memAddr := uintptr(unsafe.Pointer(&b.plaintext[0])) - uintptr((roundedBufLen-len(b.plaintext))+pageSize)
 
 	// Calculate the size of the entire memory.
 	memLen := (pageSize * 2) + roundedBufLen
@@ -81,23 +69,4 @@ func getBytes(ptr uintptr, len int) []byte {
 		cap  int
 	}{ptr, len, len}
 	return *(*[]byte)(unsafe.Pointer(&sl))
-}
-
-// Takes a byte slice and fills it with random data.
-func fillRandBytes(b []byte) {
-	// Read len(b) bytes into the buffer.
-	if _, err := rand.Read(b); err != nil {
-		panic("memguard.csprng(): could not get random bytes")
-	}
-}
-
-// Wipes a byte slice with zeroes.
-func wipeBytes(buf []byte) {
-	if len(buf) == 0 {
-		return
-	}
-	buf[0] = 0
-	for bp := 1; bp < len(buf); bp *= 2 {
-		copy(buf[bp:], buf[:bp])
-	}
 }

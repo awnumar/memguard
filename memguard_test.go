@@ -6,46 +6,83 @@ import (
 	"sync"
 	"testing"
 	"unsafe"
+
+	"github.com/awnumar/memguard/crypto"
 )
 
-func TestNew(t *testing.T) {
+func TestNewImmutable(t *testing.T) {
 	b, err := NewImmutable(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if len(b.Buffer()) != 8 || cap(b.Buffer()) != 8 {
-		t.Error("length or capacity != required; len, cap =", len(b.Buffer()), cap(b.Buffer()))
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	for i := range b.plaintext {
+		if b.plaintext[i] != 0 {
+			t.Error("buffer not zero-filled", b.plaintext)
+		}
+	}
+	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
+		t.Error("length or capacity != required; len, cap =", len(b.Bytes()), cap(b.Bytes()))
 	}
 	if b.IsMutable() {
 		t.Error("unexpected state")
 	}
 	b.Destroy()
 
-	c, err := NewImmutable(0)
+	c, err := NewMutable(0)
 	if err != ErrInvalidLength {
 		t.Error("expected err; got nil")
 	}
 	if c != nil {
-		t.Error("expected nil, got *LockedBuffer")
+		t.Error("expected nil, got *Enclave")
 	}
+}
 
-	a, err := NewMutable(8)
+func TestNewMutable(t *testing.T) {
+	b, err := NewMutable(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !a.IsMutable() {
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	for i := range b.plaintext {
+		if b.plaintext[i] != 0 {
+			t.Error("buffer not zero-filled", b.plaintext)
+		}
+	}
+	if len(b.Bytes()) != 8 || cap(b.Bytes()) != 8 {
+		t.Error("length or capacity != required; len, cap =", len(b.Bytes()), cap(b.Bytes()))
+	}
+	if !b.IsMutable() {
 		t.Error("unexpected state")
 	}
-	a.Destroy()
+	b.Destroy()
+
+	c, err := NewMutable(0)
+	if err != ErrInvalidLength {
+		t.Error("expected err; got nil")
+	}
+	if c != nil {
+		t.Error("expected nil, got *Enclave")
+	}
 }
 
-func TestNewFromBytes(t *testing.T) {
+func TestNewImmutableFromBytes(t *testing.T) {
 	b, err := NewImmutableFromBytes([]byte("test"))
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("test")) {
-		t.Error("b.Buffer() != required")
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	if !bytes.Equal(b.Bytes(), []byte("test")) {
+		t.Error("b.Bytes() != required")
 	}
 	if b.IsMutable() {
 		t.Error("unexpected state")
@@ -57,28 +94,48 @@ func TestNewFromBytes(t *testing.T) {
 		t.Error("expected err; got nil")
 	}
 	if c != nil {
-		t.Error("expected nil, got *LockedBuffer")
+		t.Error("expected nil, got *Enclave")
 	}
+}
 
-	a, err := NewMutableFromBytes([]byte("test"))
+func TestNewMutableFromBytes(t *testing.T) {
+	b, err := NewMutableFromBytes([]byte("test"))
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !a.IsMutable() {
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	if !bytes.Equal(b.Bytes(), []byte("test")) {
+		t.Error("b.Bytes() != required")
+	}
+	if !b.IsMutable() {
 		t.Error("unexpected state")
 	}
-	a.Destroy()
+	b.Destroy()
+
+	c, err := NewMutableFromBytes([]byte(""))
+	if err != ErrInvalidLength {
+		t.Error("expected err; got nil")
+	}
+	if c != nil {
+		t.Error("expected nil, got *Enclave")
+	}
 }
 
-func TestNewRandom(t *testing.T) {
+func TestNewImmutableRandom(t *testing.T) {
 	b, _ := NewImmutableRandom(32)
-	if bytes.Equal(b.Buffer(), make([]byte, 32)) {
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("was not filled with random data")
 	}
 	if b.IsMutable() {
 		t.Error("unexpected state")
 	}
-
 	b.Destroy()
 
 	c, err := NewImmutableRandom(0)
@@ -86,45 +143,105 @@ func TestNewRandom(t *testing.T) {
 		t.Error("expected ErrInvalidLength")
 	}
 	if c != nil {
-		t.Error("expected nil, got *LockedBuffer")
+		t.Error("expected nil, got *Enclave")
 	}
-
-	a, err := NewMutableRandom(8)
-	if err != nil {
-		t.Error("unexpected error")
-	}
-	if !a.IsMutable() {
-		t.Error("unexpected state")
-	}
-	a.Destroy()
 }
 
-func TestBuffer(t *testing.T) {
-	b, _ := NewImmutableRandom(8)
+func TestNewMutableRandom(t *testing.T) {
+	b, _ := NewMutableRandom(32)
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	b.unseal()
+	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
+		t.Error("was not filled with random data")
+	}
+	if !b.IsMutable() {
+		t.Error("unexpected state")
+	}
+	b.Destroy()
 
-	if !bytes.Equal(b.buffer, b.Buffer()) {
+	c, err := NewMutableRandom(0)
+	if err != ErrInvalidLength {
+		t.Error("expected ErrInvalidLength")
+	}
+	if c != nil {
+		t.Error("expected nil, got *Enclave")
+	}
+}
+
+func TestSealUnseal(t *testing.T) {
+	b, _ := NewImmutable(32)
+
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	if bytes.Equal(b.plaintext, make([]byte, 32)) {
+		t.Error("contents should be random when sealed")
+	}
+
+	b.Unseal()
+
+	if b.sealed {
+		t.Error("container should be unsealed")
+	}
+	if !bytes.Equal(b.plaintext, make([]byte, 32)) {
+		t.Error("contents should not be random when unsealed")
+	}
+	if b.IsMutable() {
+		t.Error("should remain immutable")
+	}
+
+	b.Reseal()
+
+	if !b.sealed {
+		t.Error("container should be sealed")
+	}
+	if bytes.Equal(b.plaintext, make([]byte, 32)) {
+		t.Error("contents should be random when sealed")
+	}
+	if b.IsMutable() {
+		t.Error("should remain immutable")
+	}
+}
+
+func TestBytes(t *testing.T) {
+	b, _ := NewMutableRandom(8)
+	b.unseal()
+
+	if !bytes.Equal(b.plaintext, b.Bytes()) {
 		t.Error("buffers inequal")
 	}
 
 	b.Destroy()
 
-	if len(b.Buffer()) != 0 || cap(b.Buffer()) != 0 {
+	if len(b.Bytes()) != 0 || cap(b.Bytes()) != 0 {
 		t.Error("expected zero length")
 	}
 }
 
 func TestUint8(t *testing.T) {
-	b, _ := NewImmutableRandom(8)
+	b, _ := NewMutableRandom(8)
+
+	conv, err := b.Uint8()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
 
 	x, err := b.Uint8()
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.buffer, x) {
+	if !bytes.Equal(b.plaintext, x) {
 		t.Error("conversion failed")
 	}
 
-	if &b.buffer[0] != &x[0] {
+	if &b.plaintext[0] != &x[0] {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 8 || cap(x) != 8 {
@@ -139,8 +256,19 @@ func TestUint8(t *testing.T) {
 }
 
 func TestUint16(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Uint16()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Uint16()
 	if err != nil {
@@ -151,7 +279,7 @@ func TestUint16(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 4 || cap(x) != 4 {
@@ -167,8 +295,19 @@ func TestUint16(t *testing.T) {
 }
 
 func TestUint32(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Uint32()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Uint32()
 	if err != nil {
@@ -179,7 +318,7 @@ func TestUint32(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 2 || cap(x) != 2 {
@@ -195,8 +334,19 @@ func TestUint32(t *testing.T) {
 }
 
 func TestUint64(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Uint64()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Uint64()
 	if err != nil {
@@ -207,7 +357,7 @@ func TestUint64(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 1 || cap(x) != 1 {
@@ -223,15 +373,26 @@ func TestUint64(t *testing.T) {
 }
 
 func TestInt8(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Int8()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Int8()
 	if err != nil {
 		t.Error("unexpected error")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 8 || cap(x) != 8 {
@@ -247,8 +408,19 @@ func TestInt8(t *testing.T) {
 }
 
 func TestInt16(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Int16()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Int16()
 	if err != nil {
@@ -259,7 +431,7 @@ func TestInt16(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 4 || cap(x) != 4 {
@@ -275,8 +447,19 @@ func TestInt16(t *testing.T) {
 }
 
 func TestInt32(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Int32()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Int32()
 	if err != nil {
@@ -287,7 +470,7 @@ func TestInt32(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 2 || cap(x) != 2 {
@@ -303,8 +486,19 @@ func TestInt32(t *testing.T) {
 }
 
 func TestInt64(t *testing.T) {
-	b, _ := NewImmutable(8)
-	c, _ := NewImmutable(9)
+	b, _ := NewMutable(8)
+	c, _ := NewMutable(9)
+
+	conv, err := b.Int64()
+	if err != ErrSealed {
+		t.Error("expected ErrSealed")
+	}
+	if conv != nil {
+		t.Error("expected nil buffer")
+	}
+
+	b.unseal()
+	c.unseal()
 
 	x, err := b.Int64()
 	if err != nil {
@@ -315,7 +509,7 @@ func TestInt64(t *testing.T) {
 		t.Error("expected ErrInvalidConversion")
 	}
 
-	if unsafe.Pointer(&b.buffer[0]) != unsafe.Pointer(&x[0]) {
+	if unsafe.Pointer(&b.plaintext[0]) != unsafe.Pointer(&x[0]) {
 		t.Error("conversion points incorrectly")
 	}
 	if len(x) != 1 || cap(x) != 1 {
@@ -330,18 +524,23 @@ func TestInt64(t *testing.T) {
 	}
 }
 
-func TestGetMetadata(t *testing.T) {
+func TestIsMutable(t *testing.T) {
 	b, _ := NewMutable(8)
 
 	if b.IsMutable() != true {
 		t.Error("incorrect value")
 	}
-	if b.IsDestroyed() != false {
-		t.Error("incorrect value")
-	}
 
 	b.MakeImmutable()
 	if b.IsMutable() != false {
+		t.Error("incorrect value")
+	}
+}
+
+func TestIsDestroyed(t *testing.T) {
+	b, _ := NewMutable(8)
+
+	if b.IsDestroyed() != false {
 		t.Error("incorrect value")
 	}
 
@@ -351,8 +550,23 @@ func TestGetMetadata(t *testing.T) {
 	}
 }
 
-func TestEqualTo(t *testing.T) {
-	a, _ := NewImmutableFromBytes([]byte("test"))
+func TestIsSealed(t *testing.T) {
+	b, _ := NewMutable(8)
+	if !b.IsSealed() {
+		t.Error("should be sealed")
+	}
+	b.unseal()
+	if b.IsSealed() {
+		t.Error("should be unsealed")
+	}
+	b.reseal()
+	if !b.IsSealed() {
+		t.Error("should be sealed")
+	}
+}
+
+func TestEqualBytes(t *testing.T) {
+	a, _ := NewMutableFromBytes([]byte("test"))
 
 	equal, err := a.EqualBytes([]byte("test"))
 	if err != nil {
@@ -375,11 +589,11 @@ func TestEqualTo(t *testing.T) {
 	a.Destroy()
 
 	if equal, err := a.EqualBytes([]byte("test")); equal || err != ErrDestroyed {
-		t.Error("unexpected return values with destroyed LockedBuffer")
+		t.Error("unexpected return values with destroyed Enclave")
 	}
 }
 
-func TestReadOnly(t *testing.T) {
+func TestImmutable(t *testing.T) {
 	b, _ := NewMutable(8)
 
 	if err := b.MakeImmutable(); err != nil {
@@ -407,42 +621,45 @@ func TestReadOnly(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	// When buf is larger than LockedBuffer.
+	// When buf is larger than Enclave.
 	b, _ := NewMutable(16)
 	buf := []byte("this is a very large buffer")
 	b.Move(buf)
+	b.unseal()
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("this is a very l")) {
-		t.Error("bytes were't copied properly")
+	if !bytes.Equal(b.Bytes(), []byte("this is a very l")) {
+		t.Error("bytes weren't copied properly")
 	}
 	b.Destroy()
 
-	// When buf is smaller than LockedBuffer.
+	// When buf is smaller than Enclave.
 	b, _ = NewMutable(16)
 	buf = []byte("diz small buf")
 	b.Move(buf)
+	b.unseal()
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer()[:len(buf)], []byte("diz small buf")) {
+	if !bytes.Equal(b.Bytes()[:len(buf)], []byte("diz small buf")) {
 		t.Error("bytes weren't copied properly")
 	}
-	if !bytes.Equal(b.Buffer()[len(buf):], make([]byte, 16-len(buf))) {
-		t.Error("bytes were't copied properly;", b.Buffer()[len(buf):])
+	if !bytes.Equal(b.Bytes()[len(buf):], make([]byte, 16-len(buf))) {
+		t.Error("bytes weren't copied properly;", b.Bytes()[len(buf):])
 	}
 	b.Destroy()
 
-	// When buf is equal in size to LockedBuffer.
+	// When buf is equal in size to Enclave.
 	b, _ = NewMutable(16)
 	buf = []byte("yellow submarine")
 	b.Move(buf)
+	b.unseal()
 	if !bytes.Equal(buf, make([]byte, len(buf))) {
 		t.Error("expected buf to be nil")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("yellow submarine")) {
-		t.Error("bytes were't copied properly")
+	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
+		t.Error("bytes weren't copied properly")
 	}
 
 	b.MakeImmutable()
@@ -463,16 +680,24 @@ func TestFillRandomBytes(t *testing.T) {
 	a, _ := NewMutable(32)
 	a.FillRandomBytes()
 
-	if bytes.Equal(a.Buffer(), make([]byte, 32)) {
+	a.unseal()
+
+	if bytes.Equal(a.Bytes(), make([]byte, 32)) {
 		t.Error("not random")
 	}
+
+	a.reseal()
 
 	a.Wipe()
 	a.FillRandomBytesAt(16, 16)
 
-	if !bytes.Equal(a.Buffer()[:16], make([]byte, 16)) || bytes.Equal(a.Buffer()[16:], make([]byte, 16)) {
-		t.Error("incorrect offset/size;", a.Buffer()[:16], a.Buffer()[16:])
+	a.unseal()
+
+	if !bytes.Equal(a.Bytes()[:16], make([]byte, 16)) || bytes.Equal(a.Bytes()[16:], make([]byte, 16)) {
+		t.Error("incorrect offset/size;", a.Bytes()[:16], a.Bytes()[16:])
 	}
+
+	a.reseal()
 
 	a.MakeImmutable()
 	if err := a.FillRandomBytes(); err != ErrImmutable {
@@ -494,7 +719,7 @@ func TestDestroyAll(t *testing.T) {
 
 	DestroyAll()
 
-	if b.Buffer() != nil || c.Buffer() != nil {
+	if b.Bytes() != nil || c.Bytes() != nil {
 		t.Error("expected buffers to be nil")
 	}
 
@@ -528,9 +753,11 @@ func TestWipe(t *testing.T) {
 		t.Error("failed to wipe:", err)
 	}
 
-	if !bytes.Equal(b.Buffer(), make([]byte, 16)) {
-		t.Error("bytes not wiped; b =", b.Buffer())
+	b.unseal()
+	if !bytes.Equal(b.Bytes(), make([]byte, 16)) {
+		t.Error("bytes not wiped; b =", b.Bytes())
 	}
+	b.reseal()
 
 	b.FillRandomBytes()
 	b.MakeImmutable()
@@ -539,9 +766,11 @@ func TestWipe(t *testing.T) {
 		t.Error("expected ErrImmutable")
 	}
 
-	if bytes.Equal(b.Buffer(), make([]byte, 16)) {
+	b.unseal()
+	if bytes.Equal(b.Bytes(), make([]byte, 16)) {
 		t.Error("bytes wiped")
 	}
+	b.reseal()
 
 	b.MakeMutable()
 	b.FillRandomBytes()
@@ -553,17 +782,21 @@ func TestWipe(t *testing.T) {
 }
 
 func TestConcatenate(t *testing.T) {
-	a, _ := NewImmutableFromBytes([]byte("xxxx"))
+	a, _ := NewMutableFromBytes([]byte("xxxx"))
 	b, _ := NewMutableFromBytes([]byte("yyyy"))
+
+	a.MakeImmutable()
 
 	c, err := Concatenate(a, b)
 	if err != nil {
 		t.Error("unexpected error")
 	}
 
-	if !bytes.Equal(c.Buffer(), []byte("xxxxyyyy")) {
-		t.Error("unexpected output;", c.Buffer())
+	c.unseal()
+	if !bytes.Equal(c.Bytes(), []byte("xxxxyyyy")) {
+		t.Error("unexpected output;", c.Bytes())
 	}
+	c.reseal()
 	if c.IsMutable() {
 		t.Error("expected immutability")
 	}
@@ -573,27 +806,6 @@ func TestConcatenate(t *testing.T) {
 	c.Destroy()
 
 	if _, err := Concatenate(a, b); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed")
-	}
-}
-
-func TestDuplicate(t *testing.T) {
-	b, _ := NewImmutableFromBytes([]byte("test"))
-
-	c, err := Duplicate(b)
-	if err != nil {
-		t.Error("unexpected error")
-	}
-	if !bytes.Equal(b.Buffer(), c.Buffer()) {
-		t.Error("duplicated buffer has different contents")
-	}
-	if c.IsMutable() {
-		t.Error("permissions not copied")
-	}
-	b.Destroy()
-	c.Destroy()
-
-	if _, err := Duplicate(b); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed")
 	}
 }
@@ -627,27 +839,59 @@ func TestEqual(t *testing.T) {
 		t.Error("expected ErrDestroyed")
 	}
 }
+func TestDuplicate(t *testing.T) {
+	b, _ := NewMutableFromBytes([]byte("test"))
+	b.MakeImmutable()
+
+	c, err := Duplicate(b)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	b.unseal()
+	c.unseal()
+	if !bytes.Equal(b.Bytes(), c.Bytes()) {
+		t.Error("duplicated buffer has different contents")
+	}
+	b.reseal()
+	c.reseal()
+	if c.IsMutable() {
+		t.Error("permissions not copied")
+	}
+	b.Destroy()
+	c.Destroy()
+
+	if _, err := Duplicate(b); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
 
 func TestSplit(t *testing.T) {
-	a, _ := NewImmutableFromBytes([]byte("xxxxyyyy"))
+	a, _ := NewMutableFromBytes([]byte("xxxxyyyy"))
+	a.MakeImmutable()
 
 	b, c, err := Split(a, 4)
 	if err != nil {
 		t.Error("unexpected error")
 	}
-	if !bytes.Equal(b.Buffer(), []byte("xxxx")) {
+	a.unseal()
+	b.unseal()
+	c.unseal()
+	if !bytes.Equal(b.Bytes(), []byte("xxxx")) {
 		t.Error("first buffer has unexpected value")
 	}
-	if !bytes.Equal(c.Buffer(), []byte("yyyy")) {
+	if !bytes.Equal(c.Bytes(), []byte("yyyy")) {
 		t.Error("second buffer has unexpected value")
 	}
+	if !bytes.Equal(a.Bytes(), []byte("xxxxyyyy")) {
+		t.Error("original is not preserved")
+	}
+	a.reseal()
+	b.reseal()
+	c.reseal()
 	if b.IsMutable() || c.IsMutable() {
 		t.Error("permissions not preserved")
 	}
-	if !bytes.Equal(a.Buffer(), []byte("xxxxyyyy")) {
-		t.Error("original is not preserved")
-	}
-
 	b.Destroy()
 	c.Destroy()
 
@@ -665,6 +909,34 @@ func TestSplit(t *testing.T) {
 	}
 }
 
+func TestGrow(t *testing.T) {
+	b, _ := NewImmutableFromBytes([]byte("xxyy"))
+
+	c, err := Grow(b, 4)
+	if err != nil {
+		t.Error("unexpected error")
+	}
+
+	c.unseal()
+	if !bytes.Equal(c.Bytes()[0:4], []byte("xxyy")) {
+		t.Error("unexpected value:", c.Bytes())
+	}
+	if !bytes.Equal(c.Bytes()[4:8], make([]byte, 4)) {
+		t.Error("unexpected value:", c.Bytes())
+	}
+	c.reseal()
+
+	if c.IsMutable() {
+		t.Error("unexpected state")
+	}
+	c.Destroy()
+	b.Destroy()
+
+	if _, err := Grow(b, 4); err != ErrDestroyed {
+		t.Error("expected ErrDestroyed")
+	}
+}
+
 func TestTrim(t *testing.T) {
 	b, _ := NewImmutableFromBytes([]byte("xxxxyyyy"))
 
@@ -673,9 +945,11 @@ func TestTrim(t *testing.T) {
 		t.Error("unexpected error")
 	}
 
-	if !bytes.Equal(c.Buffer(), []byte("xxyy")) {
-		t.Error("unexpected value:", c.Buffer())
+	c.unseal()
+	if !bytes.Equal(c.Bytes(), []byte("xxyy")) {
+		t.Error("unexpected value:", c.Bytes())
 	}
+	c.reseal()
 
 	if c.IsMutable() {
 		t.Error("unexpected state")
@@ -696,7 +970,9 @@ func TestTrim(t *testing.T) {
 func TestWipeBytes(t *testing.T) {
 	// Create random byte slice.
 	b := make([]byte, 32)
-	fillRandBytes(b)
+	if err := crypto.MemScr(b); err != nil {
+		panic(err)
+	}
 
 	// Wipe it.
 	WipeBytes(b)
@@ -758,7 +1034,9 @@ func TestConcurrent(t *testing.T) {
 }
 
 func TestDisableUnixCoreDumps(t *testing.T) {
-	DisableUnixCoreDumps()
+	if err := DisableUnixCoreDumps(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestRoundPage(t *testing.T) {
@@ -792,7 +1070,7 @@ func TestFinalizer(t *testing.T) {
 	}
 	ib := b.container
 
-	c, err := NewImmutable(8)
+	c, err := NewMutable(8)
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -823,5 +1101,101 @@ func TestFinalizer(t *testing.T) {
 	runtime.GC() // should collect c
 	for ic.IsDestroyed() != true {
 		runtime.Gosched()
+	}
+}
+
+func TestSetRekeyInterval(t *testing.T) {
+	oldValue := interval
+	SetRekeyInterval(oldValue + 1)
+	if interval != oldValue+1 {
+		t.Error("unexpected interval value")
+	}
+}
+
+func TestNewSubclave(t *testing.T) {
+	s := newSubclave()
+	defer s.destroy()
+	sv := s.getView()
+	defer sv.destroy()
+
+	if len(s.x) != 32 || len(s.y) != 32 {
+		t.Error("unexpected subclave length")
+	}
+	if cap(s.x) != 32 || cap(s.y) != 32 {
+		t.Error("unexpected subclave capacity")
+	}
+
+	if bytes.Equal(sv.plaintext, make([]byte, 32)) {
+		t.Error("subclave is zero")
+	}
+}
+
+func TestSubclaveIO(t *testing.T) {
+	s := newSubclave()
+	defer s.destroy()
+	sv := s.getView()
+	defer sv.destroy()
+
+	randVal, err := crypto.GetRandBytes(32)
+	if err != nil {
+		panic(err)
+	}
+	s.update(randVal)
+	nsv := s.getView()
+	defer nsv.destroy()
+
+	if bytes.Equal(sv.plaintext, nsv.plaintext) {
+		t.Error("update subclave val didn't work")
+	}
+}
+
+func TestSubclaveViewDestroy(t *testing.T) {
+	s := newSubclave()
+	defer s.destroy()
+	sv := s.getView()
+	val := sv.plaintext
+	sv.destroy()
+
+	if sv.plaintext != nil {
+		t.Error("could not properly destroy subclave")
+	}
+
+	sv = s.getView()
+	if !bytes.Equal(sv.plaintext, val) {
+		t.Error("unexpectedly changed subclave value")
+	}
+}
+
+func TestSubclaveRefresh(t *testing.T) {
+	s := newSubclave()
+	defer s.destroy()
+	oldValue := s.getView()
+	defer oldValue.destroy()
+	s.refresh()
+	newValue := s.getView()
+	defer newValue.destroy()
+	if bytes.Equal(oldValue.plaintext, newValue.plaintext) {
+		t.Error("subclave refresh unsuccessful")
+	}
+}
+
+func TestSubclaveRekey(t *testing.T) {
+	s := newSubclave()
+	defer s.destroy()
+	oldValue := s.getView()
+	defer oldValue.destroy()
+	s.rekey()
+	newValue := s.getView()
+	defer newValue.destroy()
+	if !bytes.Equal(oldValue.plaintext, newValue.plaintext) {
+		t.Error("subclave rekey changed value")
+	}
+}
+
+func TestSubclaveDestroy(t *testing.T) {
+	s := newSubclave()
+	s.destroy()
+	if len(s.x) != 0 || len(s.y) != 0 {
+		t.Error("could not destroy")
 	}
 }
