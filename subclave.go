@@ -27,7 +27,7 @@ func SetRekeyInterval(t uint) {
 
 // The subclave container is similar to a normal container but it is only used internally to protect 32 byte values that are used in the protection of normal containers.
 type subclave struct {
-	sync.Mutex
+	sync.RWMutex
 
 	x []byte
 	y []byte
@@ -116,12 +116,12 @@ func (s *subclave) getView() *subclaveView {
 	sv.plaintext = getBytes(uintptr(unsafe.Pointer(&memory[pageSize+roundedSize-32])), 32)
 
 	// Create a copy of the subclave data inside the subclaveView.
-	s.Lock()
+	s.RLock()
 	h := crypto.Hash(s.y)
 	for i := range sv.plaintext {
 		sv.plaintext[i] = h[i] ^ s.x[i]
 	}
-	s.Unlock()
+	s.RUnlock()
 
 	// Make the subclaveView immutable.
 	if err := memcall.Protect(memory[pageSize:pageSize+roundedSize], true, false); err != nil {
