@@ -1121,6 +1121,10 @@ func SafeExit(c int) {
 	// Clean-up protected memory.
 	DestroyAll()
 
+	// Destroy the global protection values.
+	subclaves.canary.destroy()
+	subclaves.enckey.destroy()
+
 	// Exit with a specified exit-code.
 	os.Exit(c)
 }
