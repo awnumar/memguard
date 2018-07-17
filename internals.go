@@ -9,7 +9,7 @@ import (
 var (
 	// Array of all active containers, and associated mutex.
 	enclaves      []*container
-	enclavesMutex = &sync.Mutex{}
+	enclavesMutex = &sync.RWMutex{}
 
 	// Ascertain and store the system memory page size.
 	pageSize = os.Getpagesize()

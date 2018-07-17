@@ -209,8 +209,8 @@ Uint8 is practically identical to Bytes except it also returns errors. Bytes wil
 */
 func (b *container) Uint8() ([]uint8, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -233,8 +233,8 @@ The Enclave must be a multiple of 2 bytes in length or an error will be returned
 */
 func (b *container) Uint16() ([]uint16, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -269,8 +269,8 @@ The Enclave must be a multiple of 4 bytes in length or an error will be returned
 */
 func (b *container) Uint32() ([]uint32, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -305,8 +305,8 @@ The Enclave must be a multiple of 8 bytes in length or an error will be returned
 */
 func (b *container) Uint64() ([]uint64, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -339,8 +339,8 @@ Int8 returns a slice (of type []int8) that references the secure, protected port
 */
 func (b *container) Int8() ([]int8, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -370,8 +370,8 @@ The Enclave must be a multiple of 2 bytes in length or an error will be returned
 */
 func (b *container) Int16() ([]int16, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -406,8 +406,8 @@ The Enclave must be a multiple of 4 bytes in length or an error will be returned
 */
 func (b *container) Int32() ([]int32, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -442,8 +442,8 @@ The Enclave must also be a multiple of 8 bytes in length or an error will be ret
 */
 func (b *container) Int64() ([]int64, error) {
 	// Attain the mutex lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check to see if it's destroyed.
 	if len(b.plaintext) == 0 {
@@ -476,8 +476,8 @@ IsSealed returns a boolean value indicating if an Enclave is Sealed.
 */
 func (b *container) IsSealed() bool {
 	// Attain the mutex.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	return b.sealed
 }
@@ -487,8 +487,8 @@ IsMutable returns a boolean value indicating if an Enclave is mutable.
 */
 func (b *container) IsMutable() bool {
 	// Get a mutex lock on this Enclave.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	return b.mutable
 }
@@ -498,8 +498,8 @@ IsDestroyed returns a boolean value indicating if an Enclave has been destroyed.
 */
 func (b *container) IsDestroyed() bool {
 	// Get a mutex lock on this Enclave.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Return the appropriate value.
 	return len(b.plaintext) == 0
@@ -1061,10 +1061,10 @@ CatchInterrupt and SafeExit both call DestroyAll before exiting.
 */
 func DestroyAll() {
 	// Get a Mutex lock on enclaves, and get a copy.
-	enclavesMutex.Lock()
+	enclavesMutex.RLock()
 	containers := make([]*container, len(enclaves))
 	copy(containers, enclaves)
-	enclavesMutex.Unlock()
+	enclavesMutex.RUnlock()
 
 	// Destroy them all.
 	for _, b := range containers {

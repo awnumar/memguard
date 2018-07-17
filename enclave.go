@@ -27,7 +27,7 @@ type Enclave struct {
 
 // container implements the actual data container.
 type container struct {
-	sync.Mutex // Local mutex lock.
+	sync.RWMutex // Local mutex lock.
 
 	plaintext  []byte // Slice that references the plaintext when unsealed.
 	ciphertext []byte // Slice that references the ciphertext when sealed.
