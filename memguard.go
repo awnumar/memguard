@@ -387,6 +387,11 @@ func (b *container) EqualBytes(buf []byte) (bool, error) {
 		return false, ErrDestroyed
 	}
 
+	// Check if we can read the buffer.
+	if !b.readable {
+		return false, ErrUnreadable
+	}
+
 	// Do a time-constant comparison.
 	if subtle.ConstantTimeCompare(b.buffer, buf) == 1 {
 		// They're equal.
@@ -478,6 +483,11 @@ func (b *container) CopyAt(buf []byte, offset int) error {
 		return ErrDestroyed
 	}
 
+	// Check if we can read the buffer.
+	if !b.readable {
+		return ErrUnreadable
+	}
+
 	// Check if it's immutable.
 	if !b.mutable {
 		return ErrImmutable
@@ -544,6 +554,11 @@ func (b *container) FillRandomBytesAt(offset, length int) error {
 		return ErrDestroyed
 	}
 
+	// Check if we can read the buffer.
+	if !b.readable {
+		return ErrUnreadable
+	}
+
 	// Check if it's immutable.
 	if !b.mutable {
 		return ErrImmutable
@@ -588,6 +603,11 @@ func (b *container) Destroy() {
 
 	// Get the total size of all the pages between the guards.
 	roundedLength := len(memory) - (pageSize * 2)
+
+	// Make all of the memory readable in case it was protected.
+	if !b.readable {
+		memcall.Protect(memory, true, b.mutable)
+	}
 
 	// Verify the canary.
 	if !bytes.Equal(memory[pageSize+roundedLength-len(b.buffer)-32:pageSize+roundedLength-len(b.buffer)], canary) {
@@ -635,6 +655,11 @@ func (b *container) Wipe() error {
 		return ErrDestroyed
 	}
 
+	// Check if we can read the buffer.
+	if !b.readable {
+		return ErrUnreadable
+	}
+
 	// Check if it's immutable.
 	if !b.mutable {
 		return ErrImmutable
@@ -664,6 +689,11 @@ func Concatenate(a, b *LockedBuffer) (*LockedBuffer, error) {
 		return nil, ErrDestroyed
 	}
 
+	// Check if we can read the buffers.
+	if !a.readable || !b.readable {
+		return nil, ErrUnreadable
+	}
+
 	// Create a new LockedBuffer to hold the concatenated value.
 	c, _ := NewMutable(len(a.buffer) + len(b.buffer))
 
@@ -691,6 +721,11 @@ func Duplicate(b *LockedBuffer) (*LockedBuffer, error) {
 	// Check if it's destroyed.
 	if len(b.buffer) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if we can read the buffer.
+	if !b.readable {
+		return nil, ErrUnreadable
 	}
 
 	// Create new LockedBuffer.
@@ -723,6 +758,11 @@ func Equal(a, b *LockedBuffer) (bool, error) {
 		return false, ErrDestroyed
 	}
 
+	// Check if we can read the buffer.
+	if !a.readable || !b.readable {
+		return false, ErrUnreadable
+	}
+
 	// Do a time-constant comparison on the two buffers.
 	if subtle.ConstantTimeCompare(a.buffer, b.buffer) == 1 {
 		// They're equal.
@@ -744,6 +784,11 @@ func Split(b *LockedBuffer, offset int) (*LockedBuffer, *LockedBuffer, error) {
 	// Check if it's destroyed.
 	if len(b.buffer) == 0 {
 		return nil, nil, ErrDestroyed
+	}
+
+	// Check if we can read the buffer.
+	if !b.readable {
+		return nil, nil, ErrUnreadable
 	}
 
 	// Create two new LockedBuffers.
@@ -785,6 +830,11 @@ func Trim(b *LockedBuffer, offset, size int) (*LockedBuffer, error) {
 	// Check if it's destroyed.
 	if len(b.buffer) == 0 {
 		return nil, ErrDestroyed
+	}
+
+	// Check if we can read the buffer.
+	if !b.readable {
+		return nil, ErrUnreadable
 	}
 
 	// Create new LockedBuffer and copy over the old.

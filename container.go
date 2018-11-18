@@ -29,8 +29,9 @@ type LockedBuffer struct {
 type container struct {
 	sync.Mutex // Local mutex lock.
 
-	buffer  []byte // Slice that references the protected memory.
-	mutable bool   // Is this LockedBuffer mutable?
+	buffer   []byte // Slice that references the protected memory.
+	mutable  bool   // Is this LockedBuffer mutable?
+	readable bool   // Is this LockedBuffer readable?
 }
 
 // littleBird is a value that we monitor instead of the LockedBuffer
@@ -78,6 +79,9 @@ func newContainer(size int, mutable bool) (*LockedBuffer, error) {
 	if !mutable {
 		b.MakeImmutable()
 	}
+
+	// Set appropriate readability state.
+	b.readable = true
 
 	// Use a finalizer to make sure the buffer gets destroyed if forgotten.
 	runtime.SetFinalizer(b.littleBird, func(_ *littleBird) {
