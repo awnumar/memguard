@@ -6,7 +6,7 @@ Package memguard lets you easily handle sensitive values in memory.
     import (
         "fmt"
 
-        "github.com/JonathanLogan/memguard"
+        "github.com/awnumar/memguard"
     )
 
     func main() {
