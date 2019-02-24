@@ -3,7 +3,7 @@ package crypto
 // MemClr takes a buffer and wipes it with zeroes.
 func MemClr(buf []byte) {
 	for i := range buf {
-		buf[i] = 0
+		buf[i] = byte(0)
 	}
 }
 

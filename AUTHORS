@@ -1,12 +1,10 @@
-# This is the official list of MemGuard authors for copyright purposes.
-
 # Names should be added to this file as
 #   Name or Organization <email address>
 #       - Contribution
 # The email address is not required for organizations.
 
-Awn Umar <awn@cryptolosophy.io>
-    - Main developer.
+Awn Umar <awn@cryptolosophy.org>
+    - Primary developer.
 
 Carlo Alberto Ferraris <cafxx@strayorange.com>
     - Implemented buffer leaking protection via finalizers.

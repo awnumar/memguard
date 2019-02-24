@@ -8,7 +8,9 @@ func TestCycle(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Test if the allocated memory is zeroed.
+	if len(buffer) != 32 || cap(buffer) != 32 {
+		t.Error("allocation has invalid size")
+	}
 	for i := range buffer {
 		if buffer[i] != 0 {
 			t.Error("allocated memory not zeroed:", buffer)
@@ -31,17 +33,17 @@ func TestCycle(t *testing.T) {
 
 func TestProtect(t *testing.T) {
 	buffer, _ := Alloc(32)
-	if err := Protect(buffer, true, true); err != nil {
+	if err := Protect(buffer, ReadWrite); err != nil {
 		t.Error(err)
 	}
-	if err := Protect(buffer, true, false); err != nil {
+	if err := Protect(buffer, ReadOnly); err != nil {
 		t.Error(err)
 	}
-	if err := Protect(buffer, false, true); err != nil {
+	if err := Protect(buffer, NoAccess); err != nil {
 		t.Error(err)
 	}
-	if err := Protect(buffer, false, false); err != nil {
-		t.Error(err)
+	if err := Protect(buffer, MemoryProtectionFlag{4}); err != ErrInvalidFlag {
+		t.Error("expected error")
 	}
 	Free(buffer)
 }

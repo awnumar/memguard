@@ -5,6 +5,7 @@ package memcall
 import (
 	"fmt"
 
+	"github.com/awnumar/memguard/crypto"
 	"golang.org/x/sys/unix"
 )
 
@@ -15,7 +16,7 @@ func Lock(b []byte) error {
 
 	// Call mlock.
 	if err := unix.Mlock(b); err != nil {
-		return fmt.Errorf("memguard.memcall.Lock(): could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Lock> could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err)
 	}
 
 	return nil
@@ -24,7 +25,7 @@ func Lock(b []byte) error {
 // Unlock is a wrapper for unix.Munlock().
 func Unlock(b []byte) error {
 	if err := unix.Munlock(b); err != nil {
-		return fmt.Errorf("memguard.memcall.Unlock(): could not free lock on %p [Err: %s]", &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Unlock> could not free lock on %p [Err: %s]", &b[0], err)
 	}
 
 	return nil
@@ -35,39 +36,50 @@ func Alloc(n int) ([]byte, error) {
 	// Allocate the memory.
 	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS|unix.MAP_NOCORE)
 	if err != nil {
-		return nil, fmt.Errorf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err)
+		return nil, fmt.Errorf("<memguard::memcall::Alloc> could not allocate [Err: %s]", err)
 	}
+
+	// Wipe it just in case there is some remnant data.
+	crypto.MemClr(b)
 
 	// Return the allocated memory.
 	return b, nil
 }
 
-// Free unallocates the byte slice specified.
+// Free deallocates the byte slice specified.
 func Free(b []byte) error {
+	// Make the memory region readable and writable.
+	if err := Protect(b, ReadWrite); err != nil {
+		return err
+	}
+
+	// Wipe the memory region in case of remnant data.
+	crypto.MemClr(b)
+
+	// Free the memory back to the kernel.
 	if err := unix.Munmap(b); err != nil {
-		return fmt.Errorf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Free> could not deallocate %p [Err: %s]", &b[0], err)
 	}
 
 	return nil
 }
 
-// Protect modifies the PROT_ flags for a specified byte slice.
-func Protect(b []byte, read, write bool) error {
-	// Ascertain protection value from arguments.
+// Protect modifies the protection state for a specified byte slice.
+func Protect(b []byte, mpf MemoryProtectionFlag) error {
 	var prot int
-	if read && write {
+	if mpf.flag == ReadWrite.flag {
 		prot = unix.PROT_READ | unix.PROT_WRITE
-	} else if read {
+	} else if mpf.flag == ReadOnly.flag {
 		prot = unix.PROT_READ
-	} else if write {
-		prot = unix.PROT_WRITE
-	} else {
+	} else if mpf.flag == NoAccess.flag {
 		prot = unix.PROT_NONE
+	} else {
+		return ErrInvalidFlag
 	}
 
 	// Change the protection value of the byte slice.
 	if err := unix.Mprotect(b, prot); err != nil {
-		return fmt.Errorf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Protect> could not set %d on %p [Err: %s]", prot, &b[0], err)
 	}
 
 	return nil
@@ -77,7 +89,7 @@ func Protect(b []byte, read, write bool) error {
 func DisableCoreDumps() error {
 	// Disable core dumps.
 	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
-		return fmt.Errorf("memguard.memcall.DisableCoreDumps(): could not set rlimit [Err: %s]", err)
+		return fmt.Errorf("<memguard::memcall::DisableCoreDumps> could not set rlimit [Err: %s]", err)
 	}
 
 	return nil

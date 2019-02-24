@@ -16,11 +16,3 @@ build_script:
 
 test_script:
 - go test -race -v ./...
-
-notifications:
-- provider: Slack
-  incoming_webhook:
-    secure: WjopZ/uuTGqqu1XhbjE05ZHSGcoVa7M07WwKQuGLqkO4AD1xGj+G817tMC1Ke0XxB3dBNQ++Ryr/SlzrjUVSHetvUgEpjE380XaCzXIdXP8=
-  on_build_success: true
-  on_build_failure: true
-  on_build_status_changed: true

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/awnumar/memguard/crypto"
 	"golang.org/x/sys/windows"
 )
 
@@ -15,7 +16,7 @@ var _zero uintptr
 // Lock is a wrapper for windows.VirtualLock()
 func Lock(b []byte) error {
 	if err := windows.VirtualLock(_getPtr(b), uintptr(len(b))); err != nil {
-		return fmt.Errorf("memguard.memcall.Lock(): could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Lock> could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err)
 	}
 
 	return nil
@@ -24,7 +25,7 @@ func Lock(b []byte) error {
 // Unlock is a wrapper for windows.VirtualUnlock()
 func Unlock(b []byte) error {
 	if err := windows.VirtualUnlock(_getPtr(b), uintptr(len(b))); err != nil {
-		return fmt.Errorf("memguard.memcall.Unlock(): could not free lock on %p [Err: %s]", &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Unlock> could not free lock on %p [Err: %s]", &b[0], err)
 	}
 
 	return nil
@@ -35,37 +36,50 @@ func Alloc(n int) ([]byte, error) {
 	// Allocate the memory.
 	ptr, err := windows.VirtualAlloc(_zero, uintptr(n), 0x1000|0x2000, 0x4)
 	if err != nil {
-		return nil, fmt.Errorf("memguard.memcall.Alloc(): could not allocate [Err: %s]", err)
+		return nil, fmt.Errorf("<memguard::memcall::Alloc> could not allocate [Err: %s]", err)
 	}
+
+	// Wipe it just in case there is some remnant data.
+	crypto.MemClr(b)
 
 	// Return the allocated memory.
 	return _getBytes(ptr, n, n), nil
 }
 
-// Free unallocates the byte slice specified.
+// Free deallocates the byte slice specified.
 func Free(b []byte) error {
+	// Make the memory region readable and writable.
+	if err := Protect(b, ReadWrite); err != nil {
+		return err
+	}
+
+	// Wipe the memory region in case of remnant data.
+	crypto.MemClr(b)
+
+	// Free the memory back to the kernel.
 	if err := windows.VirtualFree(_getPtr(b), uintptr(0), 0x8000); err != nil {
-		return fmt.Errorf("memguard.memcall.Free(): could not unallocate %p [Err: %s]", &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Free> could not deallocate %p [Err: %s]", &b[0], err)
 	}
 
 	return nil
 }
 
-// Protect modifies the Memory Protection Constants for a specified byte slice.
-func Protect(b []byte, read, write bool) error {
-	// Ascertain protection value from arguments.
+// Protect modifies the memory protection flags for a specified byte slice.
+func Protect(b []byte, mpf MemoryProtectionFlag) error {
 	var prot int
-	if write {
+	if mpf.flag == ReadWrite.flag {
 		prot = 0x4 // PAGE_READWRITE
-	} else if read {
+	} else if mpf.flag == ReadOnly.flag {
 		prot = 0x2 // PAGE_READ
-	} else {
+	} else if mpf.flag == NoAccess.flag {
 		prot = 0x1 // PAGE_NOACCESS
+	} else {
+		return ErrInvalidFlag
 	}
 
 	var oldProtect uint32
 	if err := windows.VirtualProtect(_getPtr(b), uintptr(len(b)), uint32(prot), &oldProtect); err != nil {
-		return fmt.Errorf("memguard.memcall.Protect(): could not set %d on %p [Err: %s]", prot, &b[0], err)
+		return fmt.Errorf("<memguard::memcall::Protect> could not set %d on %p [Err: %s]", prot, &b[0], err)
 	}
 
 	return nil

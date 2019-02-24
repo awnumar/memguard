@@ -1,54 +1,72 @@
-package crypto
+package crypto_test
 
 import (
 	"bytes"
 	"encoding/base64"
 	"testing"
+
+	"github.com/awnumar/memguard/crypto"
 )
 
 func TestCopy(t *testing.T) {
-	a, err := GetRandBytes(8)
+	a, err := crypto.GetRandBytes(8)
 	if err != nil {
 		t.Error(err)
 	}
-	b, err := GetRandBytes(16)
+	b, err := crypto.GetRandBytes(16)
 	if err != nil {
 		t.Error(err)
 	}
-	c, err := GetRandBytes(32)
+	c, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// dst > src
-	Copy(b, a)
+	crypto.Copy(b, a)
 	if !bytes.Equal(b[:8], a) {
 		t.Error("incorrect copying")
 	}
 
 	// dst < src
-	Copy(b, c)
+	crypto.Copy(b, c)
 	if !bytes.Equal(b, c[:16]) {
 		t.Error("incorrect copying")
 	}
 
 	// dst = src
-	b2, err := GetRandBytes(16)
+	b2, err := crypto.GetRandBytes(16)
 	if err != nil {
 		t.Error(err)
 	}
-	Copy(b, b2)
+	crypto.Copy(b, b2)
 	if !bytes.Equal(b, b2) {
 		t.Error("incorrect copying")
 	}
 }
 
-func TestCompare(t *testing.T) {
-	a, err := GetRandBytes(8)
+func TestMove(t *testing.T) {
+	a, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
-	b, err := GetRandBytes(16)
+	b, err := crypto.GetRandBytes(32)
+	if err != nil {
+		t.Error(err)
+	}
+
+	crypto.Move(a, b)
+	if !bytes.Equal(b, make([]byte, 32)) {
+		t.Error("src buffer was not wiped")
+	}
+}
+
+func TestCompare(t *testing.T) {
+	a, err := crypto.GetRandBytes(8)
+	if err != nil {
+		t.Error(err)
+	}
+	b, err := crypto.GetRandBytes(16)
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,18 +74,18 @@ func TestCompare(t *testing.T) {
 	copy(c, b)
 
 	// not equal
-	if Equal(a, b) {
+	if crypto.Equal(a, b) {
 		t.Error("expected not equal")
 	}
 
 	// equal
-	if !Equal(b, c) {
+	if !crypto.Equal(b, c) {
 		t.Error("expected equal")
 	}
 }
 
 func TestGetRandBytes(t *testing.T) {
-	b, err := GetRandBytes(32)
+	b, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
@@ -84,19 +102,19 @@ func TestHash(t *testing.T) {
 	known["test"] = "kosgNmlD4q/RHrwOri5TqTvxd6T881vMZNUDcE5l4gI="
 
 	for k, v := range known {
-		if base64.StdEncoding.EncodeToString(Hash([]byte(k))) != v {
+		if base64.StdEncoding.EncodeToString(crypto.Hash([]byte(k))) != v {
 			t.Error("digest doesn't match known values")
 		}
 	}
 }
 
 func TestMemClr(t *testing.T) {
-	b, err := GetRandBytes(32)
+	b, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
 
-	MemClr(b)
+	crypto.MemClr(b)
 	for i := range b {
 		if b[i] != 0 {
 			t.Error("memclr unsuccessful")
@@ -105,12 +123,12 @@ func TestMemClr(t *testing.T) {
 }
 
 func TestMemSet(t *testing.T) {
-	b, err := GetRandBytes(32)
+	b, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
 
-	MemSet(b, 0xdb)
+	crypto.MemSet(b, 0xdb)
 	for i := range b {
 		if b[i] != 0xdb {
 			t.Error("memset unsuccessful")
@@ -121,7 +139,7 @@ func TestMemSet(t *testing.T) {
 func TestMemScr(t *testing.T) {
 	b := make([]byte, 32)
 
-	if err := MemScr(b); err != nil {
+	if err := crypto.MemScr(b); err != nil {
 		t.Error(err)
 	}
 	if bytes.Equal(b, make([]byte, 32)) {
@@ -131,84 +149,115 @@ func TestMemScr(t *testing.T) {
 
 func TestSealOpen(t *testing.T) {
 	// Declare the plaintext and the key.
-	m, err := GetRandBytes(64)
+	m, err := crypto.GetRandBytes(64)
 	if err != nil {
 		t.Error(err)
 	}
-	k, err := GetRandBytes(32)
+	k, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Encrypt the message.
-	x, err := Seal(m, k)
+	x, err := crypto.Seal(m, k)
 	if err != nil {
-		t.Error(err)
+		t.Error("expected no errors; got", err)
 	}
 
 	// Decrypt the message.
-	dm, err := Open(x, k)
+	dm := make([]byte, len(x)-crypto.Overhead)
+	length, err := crypto.Open(x, k, dm)
 	if err != nil {
-		t.Error(err)
+		t.Error("expected no errors; got", err)
+	}
+	if length != len(x)-crypto.Overhead {
+		t.Error("unexpected plaintext length; got", length)
 	}
 
 	// Verify that the plaintexts match.
 	if !bytes.Equal(m, dm) {
-		t.Error("incorrect decryption")
+		t.Error("decrypted plaintext does not match original")
+	}
+
+	// Attempt decryption /w buffer that is too small to hold the output.
+	out := make([]byte, len(x)-crypto.Overhead-1)
+	length, err = crypto.Open(x, k, out)
+	if err != crypto.ErrBufferTooSmall {
+		t.Error("expected error; got", err)
+	}
+	if length != 0 {
+		t.Error("expected zero length; got", length)
+	}
+
+	// Construct a buffer that has the correct capacity but a smaller length.
+	out = make([]byte, len(x)-crypto.Overhead)
+	small_out := out[:2]
+	if len(small_out) != 2 || cap(small_out) != len(x)-crypto.Overhead {
+		t.Error("invalid construction for test")
+	}
+	length, err = crypto.Open(x, k, small_out)
+	if err != nil {
+		t.Error("unexpected error:", err)
+	}
+	if length != len(x)-crypto.Overhead {
+		t.Error("unexpected length; got", length)
+	}
+	if !bytes.Equal(m, small_out[:len(x)-crypto.Overhead]) {
+		t.Error("decrypted plaintext does not match original")
 	}
 
 	// Generate an incorrect key.
-	ik, err := GetRandBytes(32)
+	ik, err := crypto.GetRandBytes(32)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Attempt decryption with the incorrect key.
-	dm, err = Open(x, ik)
-	if err == nil {
-		t.Error("expected error with incorrect key")
+	length, err = crypto.Open(x, ik, dm)
+	if length != 0 {
+		t.Error("expected length = 0; got", length)
 	}
-	if dm != nil {
-		t.Error("expected nil plaintext; got", dm)
+	if err != crypto.ErrDecryptionFailed {
+		t.Error("expected error with incorrect key; got", err)
 	}
 
 	// Modify the ciphertext somewhat.
 	for i := range x {
-		if i%2 == 0 {
+		if i%32 == 0 {
 			x[i] = 0xdb
 		}
 	}
 
 	// Attempt decryption of the invalid ciphertext with the correct key.
-	dm, err = Open(x, k)
-	if err == nil {
-		t.Error("expected error with modified ciphertext")
+	length, err = crypto.Open(x, k, dm)
+	if length != 0 {
+		t.Error("expected length = 0; got", length)
 	}
-	if dm != nil {
-		t.Error("expected nil plaintext; got", dm)
+	if err != crypto.ErrDecryptionFailed {
+		t.Error("expected error with modified ciphertext; got", err)
 	}
 
 	// Generate a key of an invalid length.
-	ik, err = GetRandBytes(16)
+	ik, err = crypto.GetRandBytes(16)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Attempt encryption with the invalid key.
-	ix, err := Seal(m, ik)
-	if err == nil {
-		t.Error("expected error with invalid key")
+	ix, err := crypto.Seal(m, ik)
+	if err != crypto.ErrInvalidKeyLength {
+		t.Error("expected error with invalid key; got", err)
 	}
 	if ix != nil {
 		t.Error("expected nil ciphertext; got", dm)
 	}
 
 	// Attempt decryption with the invalid key.
-	im, err := Open(x, ik)
-	if err == nil {
-		t.Error("expected error with invalid key")
+	length, err = crypto.Open(x, ik, dm)
+	if length != 0 {
+		t.Error("expected length = 0; got", length)
 	}
-	if im != nil {
-		t.Error("expected nil plaintext; got", dm)
+	if err != crypto.ErrInvalidKeyLength {
+		t.Error("expected error with invalid key; got", err)
 	}
 }

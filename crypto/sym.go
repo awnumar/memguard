@@ -7,11 +7,14 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
+// Overhead is the size by which the ciphertext exceeds the plaintext.
+const Overhead int = secretbox.Overhead + 24
+
 // Seal takes a plaintext message and a key and returns an authenticated ciphertext.
 func Seal(plaintext, key []byte) ([]byte, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
-		return nil, errors.New("crypto.Seal: key must be exactly 32 bytes")
+		return nil, ErrInvalidKeyLength
 	}
 
 	// Get a reference to the key's underlying array without making a copy.
@@ -27,11 +30,22 @@ func Seal(plaintext, key []byte) ([]byte, error) {
 	return secretbox.Seal(nonce[:], plaintext, &nonce, k), nil
 }
 
-// Open takes an authenticated ciphertext and a key, and returns the plaintext.
-func Open(ciphertext, key []byte) ([]byte, error) {
+/*
+Open decrypts a given ciphertext with a given key and writes the result to the start of a given buffer. The size of the given key MUST be EXACTLY 32 bytes.
+
+The buffer must be large enough to contain the decrypted data. This is in practice Overhead bytes less than the length of the ciphertext returned by the Seal function above. This value is the size of the nonce plus the size of the Poly1305 authenticator.
+
+The size of the decrypted data is returned.
+*/
+func Open(ciphertext, key []byte, output []byte) (int, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
-		return nil, errors.New("crypto.Open: key must be exactly 32 bytes")
+		return 0, ErrInvalidKeyLength
+	}
+
+	// Check the capacity of the given output buffer.
+	if cap(output) < (len(ciphertext) - Overhead) {
+		return 0, ErrBufferTooSmall
 	}
 
 	// Get a reference to the key's underlying array without making a copy.
@@ -39,15 +53,27 @@ func Open(ciphertext, key []byte) ([]byte, error) {
 
 	// Retrieve and store the nonce value.
 	var nonce [24]byte
-	copy(nonce[:], ciphertext[:24])
+	Copy(nonce[:], ciphertext[:24])
 
 	// Decrypt and return the result.
 	m, ok := secretbox.Open(nil, ciphertext[24:], &nonce, k)
-	if ok {
-		// Decryption successful.
-		return m, nil
+	if ok { // Decryption successful.
+		Move(output[:cap(output)], m) // Move plaintext to given output buffer.
+		return len(m), nil            // Return length of decrypted plaintext.
 	}
 
 	// Decryption unsuccessful. Either the key was wrong or the authentication failed.
-	return nil, errors.New("crypto.Open: decryption failed")
+	return 0, ErrDecryptionFailed
 }
+
+/* Define some errors used by these functions...
+ */
+
+// ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
+var ErrInvalidKeyLength = errors.New("<memguard::crypto> key must be exactly 32 bytes")
+
+// ErrBufferTooSmall is returned when the decryption function, Open, is given an output buffer that is too small to hold the plaintext. In practice the plaintext will be Overhead bytes smaller than the ciphertext returned by the encryption function, Seal.
+var ErrBufferTooSmall = errors.New("<memguard::crypto> the given buffer is too small to hold the plaintext")
+
+// ErrDecryptionFailed is returned when the attempted decryption fails. This can occur if the given key is invalid or if the ciphertext was modified such that the authentication fails.
+var ErrDecryptionFailed = errors.New("<memguard::crypto> decryption failed")
