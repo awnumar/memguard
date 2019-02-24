@@ -61,7 +61,7 @@ func Free(b []byte) error {
 }
 
 // Protect modifies the protection state for a specified byte slice.
-func Protect(b []byte, read, write bool) error {
+func Protect(b []byte, mpf MemoryProtectionFlag) error {
 	var prot int
 	if mpf.flag == ReadWrite.flag {
 		prot = unix.PROT_READ | unix.PROT_WRITE

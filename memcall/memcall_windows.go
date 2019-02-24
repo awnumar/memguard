@@ -39,11 +39,14 @@ func Alloc(n int) ([]byte, error) {
 		return nil, fmt.Errorf("<memguard::memcall::Alloc> could not allocate [Err: %s]", err)
 	}
 
+	// Convert this pointer to a slice.
+	b := _getBytes(ptr, n, n)
+
 	// Wipe it just in case there is some remnant data.
 	crypto.MemClr(b)
 
 	// Return the allocated memory.
-	return _getBytes(ptr, n, n), nil
+	return b, nil
 }
 
 // Free deallocates the byte slice specified.
