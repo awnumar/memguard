@@ -168,7 +168,7 @@ func (b *LockedBuffer) Size() int {
 }
 
 /*
-Resize allocates a new buffer of a positive integer size strictly greater than zero, copies the data and mutability attribute over from the old one before destroying it.
+Resize allocates a new buffer of a positive integer size strictly greater than zero, and copies the data and mutability attribute over from the old one before destroying it.
 */
 func (b *LockedBuffer) Resize(size int) (*LockedBuffer, error) {
 	if !b.IsAlive() {
@@ -411,6 +411,26 @@ func (b *LockedBuffer) Int64() []int64 {
 }
 
 /*
+ByteArray8 takes a start byte and returns a pointer to the start of some 16 byte array.
+
+The length of the buffer must be at least 8 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+*/
+func (b *LockedBuffer) ByteArray8(start *byte) *[8]byte {
+	// Check if still alive.
+	if !core.GetBufferState(b.Buffer).IsAlive {
+		return nil
+	}
+
+	// Check if the length is large enough.
+	if len(b.Buffer.Data) < 8 {
+		return nil
+	}
+
+	// Cast the representation to the correct type.
+	return (*[8]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
+}
+
+/*
 ByteArray16 takes a start byte and returns a pointer to the start of some 16 byte array.
 
 The length of the buffer must be at least 16 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
@@ -427,7 +447,7 @@ func (b *LockedBuffer) ByteArray16(start *byte) *[16]byte {
 	}
 
 	// Cast the representation to the correct type.
-	return (*[16]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
+	return (*[16]byte)(unsafe.Pointer(start))
 }
 
 /*
@@ -447,7 +467,7 @@ func (b *LockedBuffer) ByteArray32(start *byte) *[32]byte {
 	}
 
 	// Cast the representation to the correct type.
-	return (*[32]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
+	return (*[32]byte)(unsafe.Pointer(start))
 }
 
 /*
@@ -467,5 +487,5 @@ func (b *LockedBuffer) ByteArray64(start *byte) *[64]byte {
 	}
 
 	// Cast the representation to the correct type.
-	return (*[64]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
+	return (*[64]byte)(unsafe.Pointer(start))
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/awnumar/memguard"
 )
@@ -88,6 +89,9 @@ func main() {
 	}
 
 	fmt.Println("Decrypted key:", buf, buf.Bytes())
+
+	// Sleep for a while for profiling reasons.
+	time.Sleep(time.Second * 8)
 
 	// Purge the session and wipe the keys before exiting.
 	memguard.SafeExit(0)
