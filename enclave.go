@@ -12,6 +12,20 @@ type Enclave struct {
 }
 
 /*
+NewEnclave seals up the data in a given buffer into an encrypted Enclave object.
+
+LockedBuffer objects have a Seal method which also destroy the LockedBuffers.
+*/
+func NewEnclave(buf []byte) (*Enclave, error) {
+	e, err := core.NewEnclave(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Enclave{e}, err
+}
+
+/*
 Open decrypts an Enclave object and places its contents into a LockedBuffer.
 */
 func (e *Enclave) Open() (*LockedBuffer, error) {
