@@ -13,16 +13,22 @@ func socketkey() {
 	if err != nil {
 		memguard.SafePanic(err)
 	}
+	defer buf.Destroy()
 
 	// Create a server to listen on.
 	listener, err := net.Listen("tcp", "127.0.0.1:4128")
 	if err != nil {
 		memguard.SafePanic(err)
 	}
+	defer listener.Close()
+
+	// Catch interrupts to close the listener.
+	memguard.CatchInterrupt(func() {
+		listener.Close()
+	})
 
 	// Create a client to connect to our server.
 	go func() {
-
 		// Connect to our server
 		addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:4128")
 		if err != nil {
@@ -81,7 +87,7 @@ func socketkey() {
 
 	fmt.Println("Encrypted key:", key)
 
-	// Decrypt the key into a buffer.
+	// Decrypt the key into a new buffer.
 	buf, err = key.Open()
 	if err != nil {
 		memguard.SafePanic(err)
