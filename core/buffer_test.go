@@ -105,14 +105,6 @@ func TestBufferState(t *testing.T) {
 	if state.IsAlive != false {
 		t.Error("state mismatch: alive")
 	}
-
-	if err := b.Freeze(); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed; got", err)
-	}
-
-	if err := b.Melt(); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed; got", err)
-	}
 }
 
 func TestDestroy(t *testing.T) {

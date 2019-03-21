@@ -92,8 +92,8 @@ func TestSeal(t *testing.T) {
 
 	// Attempt sealing the destroyed buffer.
 	e, err = Seal(b)
-	if err != ErrDestroyed {
-		t.Error("expected ErrDestroyed; got", err)
+	if err != ErrObjectExpired {
+		t.Error("expected ErrObjectExpired; got", err)
 	}
 	if e != nil {
 		t.Error("expected nil enclave in error case")
@@ -142,7 +142,7 @@ func TestOpen(t *testing.T) {
 
 	// Check for the error.
 	buf, err = Open(e)
-	if err != ErrInvalidLength {
+	if err != crypto.ErrDecryptionFailed {
 		t.Error("expected length error; got", err)
 	}
 	if buf != nil {

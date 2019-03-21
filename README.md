@@ -46,7 +46,7 @@ We **strongly** encourage you to vendor your dependencies for a clean and reliab
 * Implementing kernel-specific and cpu-specific protections.
 * Systems to further harden [`core::Coffer`](core/coffer.go) against attack.
 * Implement the catching of segmentation faults to wipe memory sectors before continuing.
-* Write forks of popular crypto and security APIs using the memguard interface.
+* Write forks of popular crypto and security APIs using memguard.
 * Submit performance improvements or benchmarking code.
 
 Issues are for reporting bugs and for discussion on proposals. Pull requests should be made against master.

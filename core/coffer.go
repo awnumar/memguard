@@ -13,7 +13,7 @@ var (
 )
 
 // Static allocation for fast random bytes reading.
-var buf32 [32]byte
+var buf32, _ = NewBuffer(32)
 
 /*
 Coffer is a specialized container for securing highly-sensitive, 32 byte values.
@@ -65,7 +65,7 @@ func (s *Coffer) Initialise() error {
 
 	// Check if it has been destroyed.
 	if !GetBufferState(s.left).IsAlive {
-		return ErrDestroyed
+		return ErrObjectExpired
 	}
 
 	// Overwrite the old value with fresh random bytes.
@@ -95,11 +95,11 @@ func (s *Coffer) View() (*Buffer, error) {
 
 	// Check if it's destroyed.
 	if !GetBufferState(s.left).IsAlive {
-		return nil, ErrDestroyed
+		return nil, ErrObjectExpired
 	}
 
 	// Create a new Buffer for the data.
-	b, _ := NewBuffer(32) // Will never error as len > 0
+	b, _ := NewBuffer(32)
 
 	// data = hash(right) XOR left
 	h := crypto.Hash(s.right.Data)
@@ -125,20 +125,20 @@ func (s *Coffer) Rekey() {
 	}
 
 	// Get a new random 32 byte R value.
-	if err := crypto.MemScr(buf32[:]); err != nil {
+	if err := crypto.MemScr(buf32.Data); err != nil {
 		Panic(err)
 	}
 
 	// new_right = old_right XOR randbuf32
 	rr := make([]byte, 32)
 	for i := range s.right.Data {
-		rr[i] = s.right.Data[i] ^ buf32[i]
+		rr[i] = s.right.Data[i] ^ buf32.Data[i]
 	}
 
 	// new_left = old_left XOR hash(old_right) XOR hash(new_right)
 	hy := crypto.Hash(s.right.Data)
 	hrr := crypto.Hash(rr)
-	for i := range buf32 {
+	for i := range buf32.Data {
 		s.left.Data[i] ^= hy[i] ^ hrr[i]
 	}
 

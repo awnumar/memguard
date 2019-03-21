@@ -88,13 +88,13 @@ func NewBufferRandom(size int) (*LockedBuffer, error) {
 }
 
 // Freeze makes a LockedBuffer's memory immutable. The call can be reversed with Melt.
-func (b *LockedBuffer) Freeze() error {
-	return b.Buffer.Freeze()
+func (b *LockedBuffer) Freeze() {
+	b.Buffer.Freeze()
 }
 
 // Melt makes a LockedBuffer's memory mutable. The call can be reversed with Freeze.
-func (b *LockedBuffer) Melt() error {
-	return b.Buffer.Melt()
+func (b *LockedBuffer) Melt() {
+	b.Buffer.Melt()
 }
 
 /*
@@ -172,7 +172,7 @@ Resize allocates a new buffer of a positive integer size strictly greater than z
 */
 func (b *LockedBuffer) Resize(size int) (*LockedBuffer, error) {
 	if !b.IsAlive() {
-		return nil, core.ErrDestroyed
+		return nil, core.ErrObjectExpired
 	}
 
 	b.RLock()

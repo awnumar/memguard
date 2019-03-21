@@ -70,8 +70,8 @@ func TestCofferInitialise(t *testing.T) {
 	s.Destroy()
 
 	// Check error condition.
-	if err := s.Initialise(); err != ErrDestroyed {
-		t.Error("expected ErrDestroyed; got", err)
+	if err := s.Initialise(); err != ErrObjectExpired {
+		t.Error("expected ErrObjectExpired; got", err)
 	}
 }
 
@@ -102,8 +102,8 @@ func TestCofferView(t *testing.T) {
 
 	// Check error condition.
 	view, err = s.View()
-	if err != ErrDestroyed {
-		t.Error("expected ErrDestroyed; got", err)
+	if err != ErrObjectExpired {
+		t.Error("expected ErrObjectExpired; got", err)
 	}
 	if view != nil {
 		t.Error("expected nil buffer object")

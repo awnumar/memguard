@@ -23,7 +23,7 @@ func Purge() {
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
 		// Don't destroy the key partitions.
-		if b != key.left && b != key.right {
+		if b != key.left && b != key.right && b != buf32 {
 			b.Destroy()
 		}
 	}

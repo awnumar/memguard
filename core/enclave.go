@@ -39,13 +39,13 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	// Get a view of the key.
 	k, err := key.View()
 	if err != nil {
-		return nil, err
+		return nil, ErrObjectExpired
 	}
 
 	// Encrypt the plaintext.
 	e.ciphertext, err = crypto.Seal(buf, k.Data)
-	if err != nil { // Should never happen.
-		return nil, err
+	if err != nil {
+		return nil, ErrObjectExpired
 	}
 
 	// Destroy our copy of the key.
@@ -61,9 +61,11 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 Seal consumes a given Buffer object and returns its data secured and encrypted inside an Enclave. The given Buffer is destroyed after the Enclave is created.
 */
 func Seal(b *Buffer) (*Enclave, error) {
+	b.RLock()
+
 	// Check if the Buffer has been destroyed.
 	if !b.alive {
-		return nil, ErrDestroyed
+		return nil, ErrObjectExpired
 	}
 
 	// Construct the Enclave from the Buffer's data.
@@ -73,6 +75,7 @@ func Seal(b *Buffer) (*Enclave, error) {
 	}
 
 	// Destroy the Buffer object.
+	b.RUnlock()
 	b.Destroy()
 
 	// Return the newly created Enclave.
@@ -88,13 +91,13 @@ func Open(e *Enclave) (*Buffer, error) {
 	// Allocate a secure Buffer to hold the decrypted data.
 	b, err := NewBuffer(len(e.ciphertext) - crypto.Overhead)
 	if err != nil {
-		return nil, err
+		return nil, crypto.ErrDecryptionFailed
 	}
 
 	// Grab a view of the key.
 	k, err := key.View()
 	if err != nil {
-		return nil, err // TODO: better error here than ErrDestroyed
+		return nil, ErrObjectExpired
 	}
 
 	// Decrypt the enclave into the buffer we created.

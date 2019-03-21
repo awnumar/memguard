@@ -15,8 +15,6 @@ var (
 Buffer is a structure that holds raw sensitive data.
 
 The number of Buffers that can exist at one time is limited by how much memory your system's kernel allows each process to mlock/VirtualLock. Therefore you should call DestroyBuffer on Buffers that you no longer need, ideally defering a Destroy call after creating a new one.
-
-If an API function that needs to edit a Buffer is given one that is immutable, the call will return an ErrImmutable. Similarly, if a function is given an Buffer that has been destroyed, the call will return an ErrDestroyed.
 */
 type Buffer struct {
 	sync.RWMutex // Local mutex lock
@@ -113,15 +111,15 @@ func GetBufferState(b *Buffer) BufferState {
 	return BufferState{IsAlive: b.alive, IsMutable: b.mutable}
 }
 
-// Freeze makes the underlying memory of a given buffer immutable.
-func (b *Buffer) Freeze() error {
+// Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
+func (b *Buffer) Freeze() {
 	// Attain lock.
 	b.RLock()
 	defer b.RUnlock()
 
 	// Check if destroyed.
 	if !b.alive {
-		return ErrDestroyed
+		return
 	}
 
 	// Only do anything if currently mutable.
@@ -132,19 +130,17 @@ func (b *Buffer) Freeze() error {
 		}
 		b.mutable = false
 	}
-
-	return nil
 }
 
-// Melt makes the underlying memory of a given buffer mutable.
-func (b *Buffer) Melt() error {
+// Melt makes the underlying memory of a given buffer mutable. This will do nothing if the Buffer has been destroyed.
+func (b *Buffer) Melt() {
 	// Attain lock.
 	b.RLock()
 	defer b.RUnlock()
 
 	// Check if destroyed.
 	if !b.alive {
-		return ErrDestroyed
+		return
 	}
 
 	// Only do anything if currently immutable.
@@ -155,8 +151,6 @@ func (b *Buffer) Melt() error {
 		}
 		b.mutable = true
 	}
-
-	return nil
 }
 
 /*
