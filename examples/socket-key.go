@@ -1,14 +1,13 @@
-package main
+package examples
 
 import (
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/awnumar/memguard"
 )
 
-func main() {
+func socketkey() {
 	// Create a secure buffer.
 	buf, err := memguard.NewBuffer(32)
 	if err != nil {
@@ -89,9 +88,6 @@ func main() {
 	}
 
 	fmt.Println("Decrypted key:", buf, buf.Bytes())
-
-	// Sleep for a while for profiling reasons.
-	time.Sleep(time.Second * 8)
 
 	// Purge the session and wipe the keys before exiting.
 	memguard.SafeExit(0)

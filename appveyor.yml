@@ -16,8 +16,4 @@ build_script:
 - go build -race -v .
 
 test_script:
-- go test -race -v ./core
-- go test -race -v ./crypto
-- go test -race -v ./memcall
 - go test -race -v ./...
-- go run -race ./examples/socket-key.go
