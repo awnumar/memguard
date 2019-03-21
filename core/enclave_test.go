@@ -25,7 +25,7 @@ func TestEnclaveInit(t *testing.T) {
 		t.Error("key is zero")
 	}
 
-	DestroyBuffer(view)
+	view.Destroy()
 }
 
 func TestNewEnclave(t *testing.T) {
@@ -100,7 +100,7 @@ func TestSeal(t *testing.T) {
 	}
 
 	// Destroy the hanging buffer.
-	DestroyBuffer(buf)
+	buf.Destroy()
 }
 
 func TestOpen(t *testing.T) {
@@ -121,7 +121,7 @@ func TestOpen(t *testing.T) {
 	if !bytes.Equal(buf.Data, []byte("yellow submarine")) {
 		t.Error("decrypted data does not match original")
 	}
-	DestroyBuffer(buf)
+	buf.Destroy()
 
 	// Modify the ciphertext to trigger an error case.
 	for i := range e.ciphertext {

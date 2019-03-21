@@ -24,7 +24,7 @@ func Purge() {
 	for _, b := range snapshot {
 		// Don't destroy the key partitions.
 		if b != key.left && b != key.right {
-			DestroyBuffer(b)
+			b.Destroy()
 		}
 	}
 }
@@ -41,7 +41,7 @@ func Exit(c int) {
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
-		DestroyBuffer(b)
+		b.Destroy()
 	}
 
 	// Exit with the specified exit code.

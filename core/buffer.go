@@ -114,7 +114,7 @@ func GetBufferState(b *Buffer) BufferState {
 }
 
 // Freeze makes the underlying memory of a given buffer immutable.
-func Freeze(b *Buffer) error {
+func (b *Buffer) Freeze() error {
 	// Attain lock.
 	b.RLock()
 	defer b.RUnlock()
@@ -137,7 +137,7 @@ func Freeze(b *Buffer) error {
 }
 
 // Melt makes the underlying memory of a given buffer mutable.
-func Melt(b *Buffer) error {
+func (b *Buffer) Melt() error {
 	// Attain lock.
 	b.RLock()
 	defer b.RUnlock()
@@ -160,11 +160,11 @@ func Melt(b *Buffer) error {
 }
 
 /*
-DestroyBuffer performs some security checks, securely wipes the contents of, and then releases a Buffer's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
+Destroy performs some security checks, securely wipes the contents of, and then releases a Buffer's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
 
 If the Buffer has already been destroyed, subsequent calls are idempotent.
 */
-func DestroyBuffer(b *Buffer) {
+func (b *Buffer) Destroy() {
 	// Attain a mutex lock on this Buffer.
 	b.Lock()
 	defer b.Unlock()

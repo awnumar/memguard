@@ -49,7 +49,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	}
 
 	// Destroy our copy of the key.
-	DestroyBuffer(k)
+	k.Destroy()
 
 	// Wipe the given buffer.
 	crypto.MemClr(buf)
@@ -73,7 +73,7 @@ func Seal(b *Buffer) (*Enclave, error) {
 	}
 
 	// Destroy the Buffer object.
-	DestroyBuffer(b)
+	b.Destroy()
 
 	// Return the newly created Enclave.
 	return e, nil
@@ -104,7 +104,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Destroy our copy of the key.
-	DestroyBuffer(k)
+	k.Destroy()
 
 	// Return the contents of the Enclave inside a Buffer.
 	return b, nil

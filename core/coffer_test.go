@@ -46,7 +46,7 @@ func TestCofferInitialise(t *testing.T) {
 	}
 	value := make([]byte, 32)
 	copy(value, view.Data)
-	DestroyBuffer(view)
+	view.Destroy()
 
 	// Re-initialise the buffer with a new value.
 	if err := s.Initialise(); err != nil {
@@ -60,7 +60,7 @@ func TestCofferInitialise(t *testing.T) {
 	}
 	newValue := make([]byte, 32)
 	copy(newValue, view.Data)
-	DestroyBuffer(view)
+	view.Destroy()
 
 	// Compare them.
 	if bytes.Equal(value, newValue) {
@@ -96,7 +96,7 @@ func TestCofferView(t *testing.T) {
 	}
 
 	// Destroy our temporary view of the coffer's contents.
-	DestroyBuffer(view)
+	view.Destroy()
 
 	s.Destroy()
 
@@ -123,7 +123,7 @@ func TestCofferRekey(t *testing.T) {
 	}
 	orgValue := make([]byte, 32)
 	copy(orgValue, view.Data)
-	DestroyBuffer(view)
+	view.Destroy()
 
 	// Remember the value of the partitions.
 	left := make([]byte, 32)
@@ -143,7 +143,7 @@ func TestCofferRekey(t *testing.T) {
 	}
 	newValue := make([]byte, 32)
 	copy(newValue, view.Data)
-	DestroyBuffer(view)
+	view.Destroy()
 
 	// Compare the values.
 	if !bytes.Equal(orgValue, newValue) {

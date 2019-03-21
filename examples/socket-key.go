@@ -41,6 +41,8 @@ func main() {
 		}
 		defer buf.Destroy()
 
+		fmt.Println("Sending key:", buf, buf.Bytes())
+
 		// Send the data to the server
 		var total, written int
 		for total = 0; total < 32; total += written {
@@ -49,8 +51,6 @@ func main() {
 				memguard.SafePanic(err)
 			}
 		}
-
-		fmt.Println("Sent key:", buf, buf.Bytes())
 	}()
 
 	// Accept connections from clients

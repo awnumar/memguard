@@ -157,8 +157,8 @@ func (s *Coffer) Destroy() {
 	defer s.Unlock()
 
 	// Destroy the partitions.
-	DestroyBuffer(s.left)
-	DestroyBuffer(s.right)
+	s.left.Destroy()
+	s.right.Destroy()
 }
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.

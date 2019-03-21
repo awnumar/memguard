@@ -40,7 +40,7 @@ func NewBuffer(size int) (*LockedBuffer, error) {
 
 	// Use a finalizer to destroy the Buffer if it falls out of scope.
 	runtime.SetFinalizer(b.drop, func(_ *drop) {
-		go core.DestroyBuffer(buf)
+		go buf.Destroy()
 	})
 
 	// Return the created buffer to the caller.
@@ -89,12 +89,12 @@ func NewBufferRandom(size int) (*LockedBuffer, error) {
 
 // Freeze makes a LockedBuffer's memory immutable. The call can be reversed with Melt.
 func (b *LockedBuffer) Freeze() error {
-	return core.Freeze(b.Buffer)
+	return b.Buffer.Freeze()
 }
 
 // Melt makes a LockedBuffer's memory mutable. The call can be reversed with Freeze.
 func (b *LockedBuffer) Melt() error {
-	return core.Melt(b.Buffer)
+	return b.Buffer.Melt()
 }
 
 /*
@@ -198,7 +198,7 @@ func (b *LockedBuffer) Resize(size int) (*LockedBuffer, error) {
 Destroy wipes and frees the underlying memory of a LockedBuffer. The LockedBuffer will not be accessible or usable after this calls is made.
 */
 func (b *LockedBuffer) Destroy() {
-	core.DestroyBuffer(b.Buffer)
+	b.Buffer.Destroy()
 }
 
 /*

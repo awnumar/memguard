@@ -51,7 +51,7 @@ func TestNewBuffer(t *testing.T) {
 	}
 
 	// Destroy the buffer.
-	DestroyBuffer(b)
+	b.Destroy()
 }
 
 func TestBufferState(t *testing.T) {
@@ -70,7 +70,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: alive")
 	}
 
-	Freeze(b)
+	b.Freeze()
 
 	state = GetBufferState(b)
 
@@ -82,7 +82,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: alive")
 	}
 
-	Melt(b)
+	b.Melt()
 
 	state = GetBufferState(b)
 
@@ -94,7 +94,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: alive")
 	}
 
-	DestroyBuffer(b)
+	b.Destroy()
 
 	state = GetBufferState(b)
 
@@ -106,11 +106,11 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: alive")
 	}
 
-	if err := Freeze(b); err != ErrDestroyed {
+	if err := b.Freeze(); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed; got", err)
 	}
 
-	if err := Melt(b); err != ErrDestroyed {
+	if err := b.Melt(); err != ErrDestroyed {
 		t.Error("expected ErrDestroyed; got", err)
 	}
 }
@@ -123,7 +123,7 @@ func TestDestroy(t *testing.T) {
 	}
 
 	// Destroy it.
-	DestroyBuffer(b)
+	b.Destroy()
 
 	// Pick apart the destruction.
 	if b.Data != nil {
@@ -148,7 +148,7 @@ func TestDestroy(t *testing.T) {
 	}
 
 	// Call destroy again to check idempotency.
-	DestroyBuffer(b)
+	b.Destroy()
 
 	// Verify that it didn't come back to life.
 	if b.Data != nil {
