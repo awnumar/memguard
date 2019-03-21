@@ -24,7 +24,7 @@ This is a value that is monitored by a finalizer so that we can clean up LockedB
 type drop [16]byte
 
 /*
-NewBuffer is a generic constructor for the LockedBuffer object.
+NewBuffer is a generic constructor for the LockedBuffer object. Valid values for the size argument are positive integers strictly greater than zero.
 
 The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 */
@@ -48,7 +48,7 @@ func NewBuffer(size int) (*LockedBuffer, error) {
 }
 
 /*
-NewBufferFromBytes constructs a buffer from a byte slice. The given slice is wiped after the data is copied over to the Buffer.
+NewBufferFromBytes constructs a buffer from a byte slice. The given slice must have a length of at least 1 byte and it is wiped after being copied over to the LockedBuffer.
 
 The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 */
@@ -67,7 +67,7 @@ func NewBufferFromBytes(buf []byte) (*LockedBuffer, error) {
 }
 
 /*
-NewBufferRandom constructs a buffer filled with cryptographically-secure random bytes.
+NewBufferRandom constructs a buffer filled with cryptographically-secure random bytes. Valid values for the size argument are positive integers strictly greater than zero.
 
 The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 */
@@ -109,6 +109,92 @@ func (b *LockedBuffer) Seal() (*Enclave, error) {
 }
 
 /*
+Copy performs a time-constant copy into a LockedBuffer. Move is preferred if the source is not a LockedBuffer or if the source is no longer needed.
+*/
+func (b *LockedBuffer) Copy(buf []byte) {
+	if !b.IsAlive() {
+		return
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	crypto.Copy(b.Buffer.Data, buf)
+}
+
+/*
+Move performs a time-constant move into a LockedBuffer. The source is wiped after the bytes are copied.
+*/
+func (b *LockedBuffer) Move(buf []byte) {
+	b.Copy(buf)
+	crypto.MemClr(buf)
+}
+
+/*
+Scramble attempts to overwrite the data with cryptographically-secure random bytes.
+*/
+func (b *LockedBuffer) Scramble() {
+	if !b.IsAlive() {
+		return
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	if err := crypto.MemScr(b.Buffer.Data); err != nil {
+		core.Panic(err)
+	}
+}
+
+/*
+Wipe attempts to overwrite the data with zeros.
+*/
+func (b *LockedBuffer) Wipe() {
+	if !b.IsAlive() {
+		return
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	crypto.MemClr(b.Buffer.Data)
+}
+
+/*
+Size gives you the length of a given LockedBuffer's data segment. A destroyed LockedBuffer will have a size of zero.
+*/
+func (b *LockedBuffer) Size() int {
+	return len(b.Buffer.Data)
+}
+
+/*
+Resize allocates a new buffer of a positive integer size strictly greater than zero, copies the data and mutability attribute over from the old one before destroying it.
+*/
+func (b *LockedBuffer) Resize(size int) (*LockedBuffer, error) {
+	if !b.IsAlive() {
+		return nil, core.ErrDestroyed
+	}
+
+	b.RLock()
+
+	new, err := NewBuffer(size)
+	if err != nil {
+		return nil, err
+	}
+
+	crypto.Move(new.Buffer.Data, b.Buffer.Data)
+
+	if !b.IsMutable() {
+		new.Freeze()
+	}
+
+	b.RUnlock()
+	b.Destroy()
+
+	return new, nil
+}
+
+/*
 Destroy wipes and frees the underlying memory of a LockedBuffer. The LockedBuffer will not be accessible or usable after this calls is made.
 */
 func (b *LockedBuffer) Destroy() {
@@ -128,6 +214,10 @@ IsMutable returns a boolean value indicating if a LockedBuffer is mutable.
 func (b *LockedBuffer) IsMutable() bool {
 	return core.GetBufferState(b.Buffer).IsMutable
 }
+
+/*
+	Functions for representing the memory region as various data types.
+*/
 
 /*
 Bytes returns a byte slice referencing the protected region of memory within which you are able to store and view sensitive data.

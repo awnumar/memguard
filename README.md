@@ -35,4 +35,17 @@ Full documentation and a complete overview of the API can be found [here](https:
 $ go get github.com/awnumar/memguard
 ```
 
-We **strongly** encourage you to vendor your dependencies for a clean and reliable build. Go [modules](https://github.com/golang/go/wiki/Modules) makes this task relatively frictionless.
+We **strongly** encourage you to vendor your dependencies for a clean and reliable build. Go [modules](https://github.com/golang/go/wiki/Modules) make this task relatively frictionless.
+
+## Contributing
+
+* Reading the source code and looking for improvements.
+* Developing Proof-of-Concept attacks and mitigations.
+* Help with formalizing an appropriate threat model.
+* Improving compatibility with more kernels and architectures.
+* Implementing kernel-specific and cpu-specific protections.
+* Systems to further harden [`core::Coffer`](core/coffer.go) against attack.
+* Implement the catching of segmentation faults to wipe memory sectors before continuing.
+* Submit performance improvements or benchmarking code.
+
+Issues are for reporting bugs and for discussion on proposals. Pull requests should be made against master.

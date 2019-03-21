@@ -116,8 +116,8 @@ func GetBufferState(b *Buffer) BufferState {
 // Freeze makes the underlying memory of a given buffer immutable.
 func Freeze(b *Buffer) error {
 	// Attain lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check if destroyed.
 	if !b.alive {
@@ -139,8 +139,8 @@ func Freeze(b *Buffer) error {
 // Melt makes the underlying memory of a given buffer mutable.
 func Melt(b *Buffer) error {
 	// Attain lock.
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check if destroyed.
 	if !b.alive {
