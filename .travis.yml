@@ -5,5 +5,6 @@ os:
   - osx
 
 script:
-    - go build -race -v .
-    - go test -race -v ./...
+  - go build -race -v .
+  - go test -race -v ./...
+  - go run -race ./examples/socket-key.go
