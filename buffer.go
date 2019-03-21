@@ -312,7 +312,7 @@ Int8 returns a slice pointing to the protected region of memory with the data re
 
 The LockedBuffer should not be destroyed or else a nil value is returned.
 */
-func (b *LockedBuffer) Int8(offset, length int) []int8 {
+func (b *LockedBuffer) Int8() []int8 {
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -334,7 +334,7 @@ Int16 returns a slice pointing to the protected region of memory with the data r
 
 The length of the buffer must be a multiple of two bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
-func (b *LockedBuffer) Int16(offset, length int) []int16 {
+func (b *LockedBuffer) Int16() []int16 {
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
