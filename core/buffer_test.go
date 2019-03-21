@@ -66,7 +66,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsDestroyed != false {
+	if state.IsAlive != true {
 		t.Error("state mismatch: alive")
 	}
 
@@ -78,7 +78,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsDestroyed != false {
+	if state.IsAlive != true {
 		t.Error("state mismatch: alive")
 	}
 
@@ -90,7 +90,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsDestroyed != false {
+	if state.IsAlive != true {
 		t.Error("state mismatch: alive")
 	}
 
@@ -102,7 +102,7 @@ func TestBufferState(t *testing.T) {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsDestroyed != true {
+	if state.IsAlive != false {
 		t.Error("state mismatch: alive")
 	}
 
@@ -214,11 +214,18 @@ func TestBufferList(t *testing.T) {
 	// Add the buffers again to test Empty.
 	l.Add(a)
 	l.Add(b)
-	bufs := l.Empty()
+	bufs := l.Flush()
 	if l.list != nil {
 		t.Error("list was not nullified")
 	}
 	if len(bufs) != 2 || bufs[0] != a || bufs[1] != b {
 		t.Error("buffers dump incorrect")
 	}
+
+	// Try appending again.
+	l.Add(a)
+	if !l.Exists(a) || l.Exists(b) {
+		t.Error("list is in invalid state")
+	}
+	l.Remove(a)
 }

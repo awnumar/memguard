@@ -9,16 +9,16 @@ import (
 )
 
 func TestCopy(t *testing.T) {
-	a, err := crypto.GetRandBytes(8)
-	if err != nil {
+	a := make([]byte, 8)
+	if err := crypto.MemScr(a); err != nil {
 		t.Error(err)
 	}
-	b, err := crypto.GetRandBytes(16)
-	if err != nil {
+	b := make([]byte, 16)
+	if err := crypto.MemScr(b); err != nil {
 		t.Error(err)
 	}
-	c, err := crypto.GetRandBytes(32)
-	if err != nil {
+	c := make([]byte, 32)
+	if err := crypto.MemScr(c); err != nil {
 		t.Error(err)
 	}
 
@@ -35,8 +35,8 @@ func TestCopy(t *testing.T) {
 	}
 
 	// dst = src
-	b2, err := crypto.GetRandBytes(16)
-	if err != nil {
+	b2 := make([]byte, 16)
+	if err := crypto.MemScr(b2); err != nil {
 		t.Error(err)
 	}
 	crypto.Copy(b, b2)
@@ -46,12 +46,12 @@ func TestCopy(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	a, err := crypto.GetRandBytes(32)
-	if err != nil {
+	a := make([]byte, 32)
+	if err := crypto.MemScr(a); err != nil {
 		t.Error(err)
 	}
-	b, err := crypto.GetRandBytes(32)
-	if err != nil {
+	b := make([]byte, 32)
+	if err := crypto.MemScr(b); err != nil {
 		t.Error(err)
 	}
 
@@ -62,12 +62,12 @@ func TestMove(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
-	a, err := crypto.GetRandBytes(8)
-	if err != nil {
+	a := make([]byte, 8)
+	if err := crypto.MemScr(a); err != nil {
 		t.Error(err)
 	}
-	b, err := crypto.GetRandBytes(16)
-	if err != nil {
+	b := make([]byte, 16)
+	if err := crypto.MemScr(b); err != nil {
 		t.Error(err)
 	}
 	c := make([]byte, 16)
@@ -81,17 +81,6 @@ func TestCompare(t *testing.T) {
 	// equal
 	if !crypto.Equal(b, c) {
 		t.Error("expected equal")
-	}
-}
-
-func TestGetRandBytes(t *testing.T) {
-	b, err := crypto.GetRandBytes(32)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if bytes.Equal(b, make([]byte, 32)) {
-		t.Error("bytes not random")
 	}
 }
 
@@ -109,8 +98,8 @@ func TestHash(t *testing.T) {
 }
 
 func TestMemClr(t *testing.T) {
-	b, err := crypto.GetRandBytes(32)
-	if err != nil {
+	b := make([]byte, 32)
+	if err := crypto.MemScr(b); err != nil {
 		t.Error(err)
 	}
 
@@ -118,20 +107,6 @@ func TestMemClr(t *testing.T) {
 	for i := range b {
 		if b[i] != 0 {
 			t.Error("memclr unsuccessful")
-		}
-	}
-}
-
-func TestMemSet(t *testing.T) {
-	b, err := crypto.GetRandBytes(32)
-	if err != nil {
-		t.Error(err)
-	}
-
-	crypto.MemSet(b, 0xdb)
-	for i := range b {
-		if b[i] != 0xdb {
-			t.Error("memset unsuccessful")
 		}
 	}
 }
@@ -145,16 +120,25 @@ func TestMemScr(t *testing.T) {
 	if bytes.Equal(b, make([]byte, 32)) {
 		t.Error("memscr unsuccessful")
 	}
+
+	c := make([]byte, 32)
+	copy(c, b)
+	if err := crypto.MemScr(c); err != nil {
+		t.Error(err)
+	}
+	if bytes.Equal(b, c) || bytes.Equal(c, make([]byte, 32)) {
+		t.Error("memscr unsuccessful")
+	}
 }
 
 func TestSealOpen(t *testing.T) {
 	// Declare the plaintext and the key.
-	m, err := crypto.GetRandBytes(64)
-	if err != nil {
+	m := make([]byte, 64)
+	if err := crypto.MemScr(m); err != nil {
 		t.Error(err)
 	}
-	k, err := crypto.GetRandBytes(32)
-	if err != nil {
+	k := make([]byte, 32)
+	if err := crypto.MemScr(k); err != nil {
 		t.Error(err)
 	}
 
@@ -207,8 +191,8 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Generate an incorrect key.
-	ik, err := crypto.GetRandBytes(32)
-	if err != nil {
+	ik := make([]byte, 32)
+	if err := crypto.MemScr(ik); err != nil {
 		t.Error(err)
 	}
 
@@ -238,8 +222,8 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Generate a key of an invalid length.
-	ik, err = crypto.GetRandBytes(16)
-	if err != nil {
+	ik = make([]byte, 16)
+	if err := crypto.MemScr(ik); err != nil {
 		t.Error(err)
 	}
 

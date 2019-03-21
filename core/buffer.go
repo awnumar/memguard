@@ -1,7 +1,6 @@
 package core
 
 import (
-	"crypto/rand"
 	"sync"
 
 	"github.com/awnumar/memguard/crypto"
@@ -38,8 +37,8 @@ type Buffer struct {
 
 // BufferState encodes a buffer's various states.
 type BufferState struct {
-	IsMutable   bool // Is the memory writable?
-	IsDestroyed bool // Has the buffer been destroyed?
+	IsAlive   bool // T = Buffer not destroyed.
+	IsMutable bool // T = Buffer memory is writable.
 }
 
 /*
@@ -81,7 +80,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	}
 
 	// Populate the canary values with fresh random bytes.
-	if _, err := rand.Read(b.canaryref); err != nil {
+	if err := crypto.MemScr(b.canaryref); err != nil {
 		Panic(err)
 	}
 	crypto.Copy(b.canaryval, b.canaryref)
@@ -111,7 +110,7 @@ GetBufferState returns a BufferState struct that encodes state information about
 func GetBufferState(b *Buffer) BufferState {
 	b.RLock()
 	defer b.RUnlock()
-	return BufferState{IsMutable: b.mutable, IsDestroyed: !b.alive}
+	return BufferState{IsAlive: b.alive, IsMutable: b.mutable}
 }
 
 // Freeze makes the underlying memory of a given buffer immutable.
@@ -162,8 +161,6 @@ func Melt(b *Buffer) error {
 
 /*
 DestroyBuffer performs some security checks, securely wipes the contents of, and then releases a Buffer's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
-
-This function should be called on all Buffers before exiting. DestroyAll is designed for this purpose, as is CatchInterrupt and SafeExit. We recommend using a combination of them as suited to your program.
 
 If the Buffer has already been destroyed, subsequent calls are idempotent.
 */
@@ -255,8 +252,8 @@ func (l *BufferList) Exists(b *Buffer) bool {
 	return false
 }
 
-// Empty clears the list and returns its previous contents.
-func (l *BufferList) Empty() []*Buffer {
+// Flush clears the list and returns its previous contents.
+func (l *BufferList) Flush() []*Buffer {
 	l.Lock()
 	defer l.Unlock()
 

@@ -20,6 +20,13 @@ func TestPurge(t *testing.T) {
 	// Purge the session.
 	Purge()
 
+	// Verify that the buffers list is empty.
+	buffers.RLock()
+	if len(buffers.list) != 0 {
+		t.Error("buffers list was not flushed")
+	}
+	buffers.RUnlock()
+
 	// Verify that the buffer was destroyed.
 	if buffer.alive {
 		t.Error("buffer was not destroyed")

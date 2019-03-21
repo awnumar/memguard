@@ -1,7 +1,6 @@
 package core
 
 import (
-	"crypto/rand"
 	"sync"
 	"time"
 
@@ -65,7 +64,7 @@ func (s *Coffer) Initialise() error {
 	defer s.Unlock()
 
 	// Check if it has been destroyed.
-	if !s.left.alive {
+	if !GetBufferState(s.left).IsAlive {
 		return ErrDestroyed
 	}
 
@@ -95,7 +94,7 @@ func (s *Coffer) View() (*Buffer, error) {
 	defer s.RUnlock()
 
 	// Check if it's destroyed.
-	if !s.left.alive {
+	if !GetBufferState(s.left).IsAlive {
 		return nil, ErrDestroyed
 	}
 
@@ -121,12 +120,12 @@ func (s *Coffer) Rekey() {
 	defer s.Unlock()
 
 	// Check if it has been destroyed.
-	if !s.left.alive {
+	if !GetBufferState(s.left).IsAlive {
 		return
 	}
 
 	// Get a new random 32 byte R value.
-	if _, err := rand.Read(buf32[:]); err != nil {
+	if err := crypto.MemScr(buf32[:]); err != nil {
 		Panic(err)
 	}
 
@@ -167,5 +166,5 @@ func (s *Coffer) Destroyed() bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	return !s.left.alive
+	return !GetBufferState(s.left).IsAlive
 }

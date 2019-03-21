@@ -1,9 +1,9 @@
 package memguard
 
-// import "fmt"
+import "fmt"
 
-// func ExampleCatchInterrupt() {
-// 	CatchInterrupt(func() {
-// 		fmt.Println("Exiting...")
-// 	})
-// }
+func ExampleCatchInterrupt() {
+	CatchInterrupt(func() {
+		fmt.Println("Exiting...")
+	})
+}
