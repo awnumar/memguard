@@ -29,9 +29,9 @@ SocketKey is a streaming multi-threaded client->server transfer of secure data o
 */
 func SocketKey(size int) {
 	// Create a secure buffer.
-	buf, err := memguard.NewBuffer(size)
-	if err != nil {
-		memguard.SafePanic(err)
+	buf := memguard.NewBuffer(size)
+	if buf == nil {
+		memguard.SafePanic("invalid size")
 	}
 	defer buf.Destroy()
 
@@ -69,9 +69,9 @@ func SocketKey(size int) {
 		defer conn.Close()
 
 		// Create a buffer filled with random bytes
-		buf, err := memguard.NewBufferRandom(size)
-		if err != nil {
-			memguard.SafePanic(err)
+		buf := memguard.NewBufferRandom(size)
+		if buf == nil {
+			memguard.SafePanic("invalid size")
 		}
 		defer buf.Destroy()
 
@@ -106,10 +106,7 @@ func SocketKey(size int) {
 	fmt.Println("Received key:", buf, buf.Bytes())
 
 	// Seal the key into an encrypted Enclave object.
-	key, err := buf.Seal()
-	if err != nil {
-		memguard.SafePanic(err)
-	}
+	key := buf.Seal()
 	// <-- buf is destroyed by this point
 
 	fmt.Println("Encrypted key:", key)
