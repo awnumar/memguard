@@ -136,16 +136,4 @@ func TestOpen(t *testing.T) {
 	if buf != nil {
 		t.Error("expected nil buffer in error case")
 	}
-
-	// Give the ciphertext an impossible length.
-	e.ciphertext = e.ciphertext[:32]
-
-	// Check for the error.
-	buf, err = Open(e)
-	if err != crypto.ErrDecryptionFailed {
-		t.Error("expected length error; got", err)
-	}
-	if buf != nil {
-		t.Error("expected nil buffer in error case")
-	}
 }
