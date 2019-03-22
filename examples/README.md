@@ -9,10 +9,16 @@ Exploits can also go in this directory. All programs exist in the same `examples
 1. Write the spirit of your program within a single file, say `skit.go`. The package should be set to `examples`.
 2. Add a test function to `skit_test.go`.
 
-    The programs can be run with
+    The programs can be run individually with
 
     ```bash
     go test -v -race ./examples/skit_test.go ./examples/skit.go
+    ```
+
+    or one at at time
+
+    ```bash
+    go test -v -race ./examples
     ```
 
 3. Optionally add benchmarks under your test function.
