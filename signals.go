@@ -41,13 +41,13 @@ func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals 
 }
 
 /*
-CatchSignal assigns a given function to be run in the event of a signal being received by the process.
+CatchSignal assigns a given function to be run in the event of a signal being received by the process. If no signals are provided all signals will be caught.
 
-i.   Signal is received by the process and caught by the handler routine.
-ii.  Interrupt handler f() is called and return value written to stdin.
-iii. If handler is terminating, memory is wiped and process terminates.
+  i.   Signal is received by the process and caught by the handler routine.
+  ii.  Interrupt handler is called and return value written to stdout.
+  iii. If handler is terminating, memory is wiped and process terminates.
 
-This function can be called multiple times with the effect that the last handler to be specified will have any effect. Only a single handler is running at a time.
+This function can be called multiple times with the effect that only the last handler to be specified will have any effect.
 */
 func CatchSignal(handler *Handler) {
 	create.Do(func() {
@@ -62,7 +62,9 @@ func CatchSignal(handler *Handler) {
 				select {
 				case signals := <-listener:
 					f.RLock()
-					fmt.Printf("Signal caught ::%b::\n", f.handler(signals))
+					if out := f.handler(signals); out != nil {
+						fmt.Printf("Signals caught ::%b::\n", out)
+					}
 					if f.terminate {
 						core.Exit(0)
 					}

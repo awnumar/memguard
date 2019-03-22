@@ -43,10 +43,17 @@ func SocketKey(size int) {
 	defer listener.Close()
 
 	// Catch interrupts to close the listener.
-	handler := memguard.NewHandler(func(x ...os.Signal) interface{} {
-		return listener.Close()
-	}, true, os.Interrupt)
-	memguard.CatchSignal(handler)
+	memguard.CatchSignal(memguard.NewHandler(func(signals ...os.Signal) interface{} {
+		// Close the listener.
+		listener.Close()
+
+		// Return the signals we caught.
+		var caught []string
+		for _, signal := range signals {
+			caught = append(caught, signal.String())
+		}
+		return caught
+	}, true))
 
 	// Create a client to connect to our server.
 	go func() {

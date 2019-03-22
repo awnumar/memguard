@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestCatchSignal(t *testing.T) {
@@ -18,14 +17,19 @@ func TestCatchSignal(t *testing.T) {
 	defer listener.Close()
 
 	// Spawn a handler to catch interrupts
-	handler := NewHandler(func(signals ...os.Signal) interface{} {
+	CatchSignal(NewHandler(func(signals ...os.Signal) interface{} {
 		// Close the listener
 		listener.Close()
 
 		// Return the signals we caught.
-		return signals
-	}, true, os.Interrupt)
-	CatchSignal(handler) // Activate the handler.
+		var caught []string
+		for _, signal := range signals {
+			caught = append(caught, signal.String())
+		}
+		return caught
+	}, true))
+
+	//time.Sleep(8 * time.Second)
 
 	// Grab a handle on the running process
 	process, err := os.FindProcess(os.Getpid())
@@ -37,5 +41,4 @@ func TestCatchSignal(t *testing.T) {
 	if err := process.Signal(os.Interrupt); err != nil {
 		t.Error(err)
 	}
-	time.Sleep(8 * time.Second)
 }
