@@ -30,7 +30,7 @@ NewHandler constructs a handler object out of a function and a list of signals t
 
 	var handler func(...os.Signal) []byte // Function that is run on catching a signal. Return value is written to stdout.
 	var signals []os.Signal               // List of signals to listen out for.
-	var terminate bool					  // Whether to purge the session and terminate after running handler(<-signals).
+    var terminate bool					  // Whether to purge the session and terminate after running handler(<-signals).
 */
 func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals ...os.Signal) *Handler {
 	h := new(Handler)
@@ -43,8 +43,8 @@ func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals 
 /*
 CatchSignal assigns a given function to be run in the event of a signal being received by the process.
 
-i.   <- Signal received
-ii.  Interrupt handler f() is called
+i.   Signal is received by the process and caught by the handler routine.
+ii.  Interrupt handler f() is called and return value written to stdin.
 iii. If handler is terminating, memory is wiped and process terminates.
 
 This function can be called multiple times with the effect that the last handler to be specified will have any effect. Only a single handler is running at a time.
