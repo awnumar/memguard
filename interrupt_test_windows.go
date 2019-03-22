@@ -10,20 +10,20 @@ import (
 	"time"
 )
 
-func sendCtrlBreak(pid int) {
+func sendCtrlBreak(pid int) error {
 	d, e := syscall.LoadDLL("kernel32.dll")
 	if e != nil {
-		panic("LoadDLL: %v\n", e)
+		return e
 	}
 
 	p, e := d.FindProc("GenerateConsoleCtrlEvent")
 	if e != nil {
-		panic("FindProc: %v\n", e)
+		return e
 	}
 
 	r, _, e := p.Call(syscall.CTRL_BREAK_EVENT, uintptr(pid))
 	if r == 0 {
-		panic("GenerateConsoleCtrlEvent: %v\n", e)
+		return e
 	}
 }
 
@@ -40,15 +40,10 @@ func TestCatchInterrupt(t *testing.T) {
 		listener.Close()
 	})
 
-	// Grab a handle on the running process
-	process, err := sendCtrlBreak(os.Getpid())
-	if err != nil {
-		t.Error(nil)
-	}
-
-	// Send it an interrupt signal
-	if err := process.Signal(os.Interrupt); err != nil {
+	// Send ourselves an interrupt
+	if err := sendCtrlBreak(os.Getpid()); err != nil {
 		t.Error(err)
 	}
+
 	time.Sleep(8 * time.Second)
 }
