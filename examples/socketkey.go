@@ -114,6 +114,9 @@ func SocketKey(size int) {
 
 	fmt.Println("Decrypted key:", buf, buf.Bytes())
 
+	// Destroy the buffer.
+	buf.Destroy()
+
 	time.Sleep(30 * time.Second)
 
 	// Purge the session and wipe the keys before exiting.
