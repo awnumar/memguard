@@ -25,6 +25,7 @@ func sendCtrlBreak(pid int) error {
 	if r == 0 {
 		return e
 	}
+	return nil
 }
 
 func TestCatchInterrupt(t *testing.T) {
