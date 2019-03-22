@@ -1,15 +1,35 @@
+/*
+	Copyright 2019 Awn Umar
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+*/
+
 package examples
 
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/awnumar/memguard"
 )
 
-func socketkey() {
+/*
+SocketKey is a streaming multi-threaded client->server transfer of secure data over a socket.
+*/
+func SocketKey(size int) {
 	// Create a secure buffer.
-	buf, err := memguard.NewBuffer(32)
+	buf, err := memguard.NewBuffer(size)
 	if err != nil {
 		memguard.SafePanic(err)
 	}
@@ -41,7 +61,7 @@ func socketkey() {
 		defer conn.Close()
 
 		// Create a buffer filled with random bytes
-		buf, err := memguard.NewBufferRandom(32)
+		buf, err := memguard.NewBufferRandom(size)
 		if err != nil {
 			memguard.SafePanic(err)
 		}
@@ -51,7 +71,7 @@ func socketkey() {
 
 		// Send the data to the server
 		var total, written int
-		for total = 0; total < 32; total += written {
+		for total = 0; total < size; total += written {
 			written, err = conn.Write(buf.Bytes()[total:])
 			if err != nil {
 				memguard.SafePanic(err)
@@ -67,7 +87,7 @@ func socketkey() {
 
 	// Read 32 bytes from the client into our buffer.
 	var total, read int
-	for total = 0; total < 32; total += read {
+	for total = 0; total < size; total += read {
 		read, err = conn.Read(buf.Bytes()[total:])
 		if err != nil {
 			memguard.SafePanic(err)
@@ -75,7 +95,6 @@ func socketkey() {
 	}
 	conn.Close()
 
-	// Output the value to standard output.
 	fmt.Println("Received key:", buf, buf.Bytes())
 
 	// Seal the key into an encrypted Enclave object.
@@ -94,6 +113,8 @@ func socketkey() {
 	}
 
 	fmt.Println("Decrypted key:", buf, buf.Bytes())
+
+	time.Sleep(30 * time.Second)
 
 	// Purge the session and wipe the keys before exiting.
 	memguard.SafeExit(0)

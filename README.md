@@ -40,6 +40,7 @@ We **strongly** encourage you to vendor your dependencies for a clean and reliab
 ## Contributing
 
 * Reading the source code and looking for improvements.
+* Adding interesting and useful program samples to [`./examples`](examples).
 * Developing Proof-of-Concept attacks and mitigations.
 * Help with formalizing an appropriate threat model.
 * Improving compatibility with more kernels and architectures.
