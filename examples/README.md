@@ -20,6 +20,8 @@ Exploits can also go in this directory. All programs exist in the same `examples
 
     ```go
     /* [Apache-2.0] Skit :: Jon Snow <jon@beyondthe.wall> */
+    ```
+
 ## Licencing
 
 You own your intellectual property. As such you are free to choose any licence for your program. To do this, add a licence header to the top of your file and include a licence comment above your test function.
