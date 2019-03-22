@@ -12,7 +12,7 @@ type Enclave struct {
 }
 
 /*
-NewEnclave seals up the data in a given buffer into an encrypted Enclave object.
+NewEnclave seals up the data in a given buffer into an encrypted enclave object.
 
 LockedBuffer objects have a Seal method which also destroy the LockedBuffers.
 */
@@ -23,6 +23,21 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	}
 
 	return &Enclave{e}, err
+}
+
+/*
+NewEnclaveRandom generates and seals arbitrary amounts of cryptographically-secure random bytes into an encrypted enclave object.
+*/
+func NewEnclaveRandom(size int) (*Enclave, error) {
+	b, err := NewBufferRandom(size)
+	if err != nil {
+		return nil, err
+	}
+	e, err := b.Seal()
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
 }
 
 /*
