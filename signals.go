@@ -28,9 +28,9 @@ type Handler struct {
 /*
 NewHandler constructs a handler object out of a function and a list of signals that will trigger it. This object can be passed as an updatable "config" to CatchInterrupt. The arguments are
 
-	var handler func(...os.Signal) []byte // Function that is run on catching a signal. Return value is written to stdout.
-	var signals []os.Signal               // List of signals to listen out for.
-    var terminate bool					  // Whether to purge the session and terminate after running handler(<-signals).
+  var handler func(...os.Signal) []byte // Function that is run on catching a signal. Return value is written to stdout.
+  var signals []os.Signal               // List of signals to listen out for.
+  var terminate bool                    // Whether to purge the session and terminate after running handler(<-signals).
 */
 func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals ...os.Signal) *Handler {
 	h := new(Handler)
