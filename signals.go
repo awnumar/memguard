@@ -26,13 +26,28 @@ type Handler struct {
 }
 
 /*
+NewHandler constructs a handler object out of a function and a list of signals that will trigger it. This object can be passed as an updatable "config" to CatchInterrupt. The arguments are
+
+	var handler func(...os.Signal) []byte // Function that is run on catching a signal. Return value is written to stdout.
+	var signals []os.Signal               // List of signals to listen out for.
+	var terminate bool					  // Whether to purge the session and terminate after running handler(<-signals).
+*/
+func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals ...os.Signal) *Handler {
+	h := new(Handler)
+	h.handler = handler
+	h.signals = signals
+	h.terminate = terminate
+	return h
+}
+
+/*
 CatchSignal assigns a given function to be run in the event of a signal being received by the process.
 
 i.   <- Signal received
 ii.  Interrupt handler f() is called
 iii. If handler is terminating, memory is wiped and process terminates.
 
-This function can be called multiple times with the effect that the last handler to be specified will be executed.
+This function can be called multiple times with the effect that the last handler to be specified will have any effect. Only a single handler is running at a time.
 */
 func CatchSignal(handler *Handler) {
 	create.Do(func() {
@@ -68,19 +83,4 @@ func CatchSignal(handler *Handler) {
 	// Notify the channel if we receive a signal.
 	signal.Reset()
 	signal.Notify(listener, handler.signals...)
-}
-
-/*
-NewHandler constructs a handler object out of a function and a list of signals that will trigger it. This object can be passed as an updatable "config" to CatchInterrupt. The arguments are
-
-	var handler func(...os.Signal) []byte // Function that is run on catching a signal. Return value is written to stdout.
-	var signals []os.Signal               // List of signals to listen out for.
-	var terminate bool					  // Whether to purge the session and terminate after running handler(<-signals).
-*/
-func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals ...os.Signal) *Handler {
-	h := new(Handler)
-	h.handler = handler
-	h.signals = signals
-	h.terminate = terminate
-	return h
 }

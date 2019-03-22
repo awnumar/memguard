@@ -411,7 +411,7 @@ func (b *LockedBuffer) Int64() []int64 {
 }
 
 /*
-ByteArray8 takes a start byte and returns a pointer to the start of some 8 byte array.
+ByteArray8 takes a start byte and returns a pointer to the start of some 8 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 8 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
@@ -431,7 +431,7 @@ func (b *LockedBuffer) ByteArray8(start *byte) *[8]byte {
 }
 
 /*
-ByteArray16 takes a start byte and returns a pointer to the start of some 16 byte array.
+ByteArray16 takes a start byte and returns a pointer to the start of some 16 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 16 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
@@ -451,7 +451,7 @@ func (b *LockedBuffer) ByteArray16(start *byte) *[16]byte {
 }
 
 /*
-ByteArray32 takes a start byte and returns a pointer to the start of some 32 byte array.
+ByteArray32 takes a start byte and returns a pointer to the start of some 32 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 32 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
@@ -471,7 +471,7 @@ func (b *LockedBuffer) ByteArray32(start *byte) *[32]byte {
 }
 
 /*
-ByteArray64 takes a start byte and returns a pointer to the start of some 64 byte array.
+ByteArray64 takes a start byte and returns a pointer to the start of some 64 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 64 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
