@@ -63,7 +63,7 @@ func CatchSignal(handler *Handler) {
 				case signals := <-listener:
 					f.RLock()
 					if out := f.handler(signals); out != nil {
-						fmt.Printf("Signals caught ::%b::\n", out)
+						fmt.Printf("Signal caught ::%#v::\n", out)
 					}
 					if f.terminate {
 						core.Exit(0)

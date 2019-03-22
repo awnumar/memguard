@@ -29,8 +29,6 @@ func TestCatchSignal(t *testing.T) {
 		return caught
 	}, false))
 
-	//time.Sleep(8 * time.Second)
-
 	// Grab a handle on the running process
 	process, err := os.FindProcess(os.Getpid())
 	if err != nil {
