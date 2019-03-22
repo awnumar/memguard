@@ -24,15 +24,15 @@ This is a value that is monitored by a finalizer so that we can clean up LockedB
 type drop [16]byte
 
 /*
-NewBuffer is a generic constructor for the LockedBuffer object. Valid values for the size argument are positive integers strictly greater than zero.
+NewBuffer is a generic constructor for the LockedBuffer object. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 
-The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
+Valid values for the size argument are positive integers strictly greater than zero. If this condition is not met a nil value will be returned.
 */
-func NewBuffer(size int) (*LockedBuffer, error) {
+func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
 	buf, err := core.NewBuffer(size)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	// Initialise a LockedBuffer object around it.
@@ -44,38 +44,38 @@ func NewBuffer(size int) (*LockedBuffer, error) {
 	})
 
 	// Return the created buffer to the caller.
-	return b, nil
+	return b
 }
 
 /*
-NewBufferFromBytes constructs a buffer from a byte slice. The given slice must have a length of at least 1 byte and it is wiped after being copied over to the LockedBuffer.
+NewBufferFromBytes constructs a buffer from a byte slice. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 
-The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
+The given slice must have a length of at least 1 byte. If this condition is not met a nil value is returned. The buffer is wiped after the value has been copied over to the LockedBuffer.
 */
-func NewBufferFromBytes(buf []byte) (*LockedBuffer, error) {
+func NewBufferFromBytes(buf []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
-	b, err := NewBuffer(len(buf))
-	if err != nil {
-		return nil, err
+	b := NewBuffer(len(buf))
+	if b == nil {
+		return b
 	}
 
 	// Move the data over.
 	crypto.Move(b.Data, buf)
 
 	// Return the created Buffer object.
-	return b, nil
+	return b
 }
 
 /*
-NewBufferRandom constructs a buffer filled with cryptographically-secure random bytes. Valid values for the size argument are positive integers strictly greater than zero.
+NewBufferRandom constructs a buffer filled with cryptographically-secure random bytes. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 
-The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
+Valid values for the size argument are positive integers strictly greater than zero. If this condition is not met a nil value is returned.
 */
-func NewBufferRandom(size int) (*LockedBuffer, error) {
+func NewBufferRandom(size int) *LockedBuffer {
 	// Construct a buffer of the specified size.
-	b, err := NewBuffer(size)
-	if err != nil {
-		return nil, err
+	b := NewBuffer(size)
+	if b == nil {
+		return b
 	}
 
 	// Fill the buffer with random bytes.
@@ -84,7 +84,7 @@ func NewBufferRandom(size int) (*LockedBuffer, error) {
 	}
 
 	// Return the created Buffer object.
-	return b, nil
+	return b
 }
 
 // Freeze makes a LockedBuffer's memory immutable. The call can be reversed with Melt.
@@ -100,12 +100,12 @@ func (b *LockedBuffer) Melt() {
 /*
 Seal takes a LockedBuffer object and returns its contents encrypted inside a sealed Enclave object. The LockedBuffer is subsequently destroyed and its contents wiped.
 */
-func (b *LockedBuffer) Seal() (*Enclave, error) {
+func (b *LockedBuffer) Seal() *Enclave {
 	e, err := core.Seal(b.Buffer)
 	if err != nil {
-		return nil, err
+		core.Panic(err)
 	}
-	return &Enclave{e}, nil
+	return &Enclave{e}
 }
 
 /*
@@ -168,19 +168,19 @@ func (b *LockedBuffer) Size() int {
 }
 
 /*
-Resize allocates a new buffer of a positive integer size strictly greater than zero, and copies the data and mutability attribute over from the old one before destroying it.
+Resize allocates a buffer to a positive integer size strictly greater than zero, and copies the data and mutability attribute over from the old one before destroying it. If called on a destroyed container or if the size constraints are violated, a nil object is returned.
 */
-func (b *LockedBuffer) Resize(size int) (*LockedBuffer, error) {
+func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 	if !b.IsAlive() {
-		return nil, core.ErrObjectExpired
+		return nil
+	}
+
+	new := NewBuffer(size)
+	if new == nil {
+		return nil
 	}
 
 	b.RLock()
-
-	new, err := NewBuffer(size)
-	if err != nil {
-		return nil, err
-	}
 
 	crypto.Move(new.Buffer.Data, b.Buffer.Data)
 
@@ -191,7 +191,7 @@ func (b *LockedBuffer) Resize(size int) (*LockedBuffer, error) {
 	b.RUnlock()
 	b.Destroy()
 
-	return new, nil
+	return new
 }
 
 /*
