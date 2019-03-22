@@ -53,7 +53,7 @@ func CatchSignal(handler *Handler) {
 	create.Do(func() {
 		// Create the channels the goroutine will listen on.
 		handlers = make(chan *Handler, 1)
-		listener = make(chan os.Signal, 2*len(handler.signals))
+		listener = make(chan os.Signal, 4*len(handler.signals))
 
 		// Start a goroutine to listen on the channels.
 		go func() {
