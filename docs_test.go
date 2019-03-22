@@ -4,7 +4,7 @@ import "os"
 
 func ExampleCatchSignal() {
 	// Catches interrupt signals, outputs them, and exits.
-	handler := NewHandler(func(signals ...os.Signal) []byte {
+	handler := NewHandler(func(signals ...os.Signal) interface{} {
 		var s []byte
 		for _, signal := range signals {
 			s = append(s, []byte(signal.String())...)

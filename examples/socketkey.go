@@ -19,6 +19,7 @@ package examples
 import (
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/awnumar/memguard"
 )
@@ -42,9 +43,10 @@ func SocketKey(size int) {
 	defer listener.Close()
 
 	// Catch interrupts to close the listener.
-	memguard.CatchInterrupt(func() {
-		listener.Close()
-	})
+	handler := memguard.NewHandler(func(x ...os.Signal) interface{} {
+		return listener.Close()
+	}, true, os.Interrupt)
+	memguard.CatchSignal(handler)
 
 	// Create a client to connect to our server.
 	go func() {
@@ -115,8 +117,6 @@ func SocketKey(size int) {
 
 	// Destroy the buffer.
 	buf.Destroy()
-
-	// time.Sleep(30 * time.Second)
 
 	// Purge the session and wipe the keys before exiting.
 	memguard.SafeExit(0)

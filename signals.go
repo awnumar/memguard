@@ -20,7 +20,7 @@ Handler is a mutexed container for a handler function.
 */
 type Handler struct {
 	sync.RWMutex
-	handler   func(...os.Signal) []byte
+	handler   func(...os.Signal) interface{}
 	signals   []os.Signal
 	terminate bool
 }
@@ -77,7 +77,7 @@ NewHandler constructs a handler object out of a function and a list of signals t
 	var signals []os.Signal               // List of signals to listen out for.
 	var terminate bool					  // Whether to purge the session and terminate after running handler(<-signals).
 */
-func NewHandler(handler func(...os.Signal) []byte, terminate bool, signals ...os.Signal) *Handler {
+func NewHandler(handler func(...os.Signal) interface{}, terminate bool, signals ...os.Signal) *Handler {
 	h := new(Handler)
 	h.handler = handler
 	h.signals = signals

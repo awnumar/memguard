@@ -18,7 +18,7 @@ func TestCatchSignal(t *testing.T) {
 	defer listener.Close()
 
 	// Spawn a handler to catch interrupts
-	handler := NewHandler(func(signals ...os.Signal) []byte {
+	handler := NewHandler(func(signals ...os.Signal) interface{} {
 		// Close the listener
 		listener.Close()
 
