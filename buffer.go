@@ -411,7 +411,7 @@ func (b *LockedBuffer) Int64() []int64 {
 }
 
 /*
-ByteArray8 takes a start byte and returns a pointer to the start of some 16 byte array.
+ByteArray8 takes a start byte and returns a pointer to the start of some 8 byte array.
 
 The length of the buffer must be at least 8 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
