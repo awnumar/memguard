@@ -16,7 +16,7 @@ This package attempts to reduce the likelihood of sensitive data being exposed. 
 
 ## Features
 
-* Sensitive data is encrypted and authenticated in memory using xSalsa20 and Poly1305 respectively. This is implemented using Go's native NaCl library.
+* Sensitive data is encrypted and authenticated in memory using xSalsa20 and Poly1305 respectively. The scheme also defends against cold-boot attacks.
 * Memory allocation bypasses the language runtime entirely by using system calls to query the kernel for resources directly. This avoids interference from the garbage-collector.
 * Buffers that store plaintext data are fortified with guard pages and canary values to detect spurious accesses and overflows.
 * Effort is taken to prevent sensitive data from ever touching the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never dump secure memory.

@@ -10,7 +10,7 @@ import (
 // Overhead is the size by which the ciphertext exceeds the plaintext.
 const Overhead int = secretbox.Overhead + 24
 
-// Seal takes a plaintext message and a key and returns an authenticated ciphertext.
+// Seal takes a plaintext message and a 32 byte key and returns an authenticated ciphertext.
 func Seal(plaintext, key []byte) ([]byte, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
@@ -31,7 +31,7 @@ func Seal(plaintext, key []byte) ([]byte, error) {
 }
 
 /*
-Open decrypts a given ciphertext with a given key and writes the result to the start of a given buffer. The size of the given key MUST be EXACTLY 32 bytes.
+Open decrypts a given ciphertext with a given 32 byte key and writes the result to the start of a given buffer.
 
 The buffer must be large enough to contain the decrypted data. This is in practice Overhead bytes less than the length of the ciphertext returned by the Seal function above. This value is the size of the nonce plus the size of the Poly1305 authenticator.
 

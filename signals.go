@@ -26,7 +26,7 @@ type Handler struct {
 }
 
 /*
-NewHandler constructs a handler object out of a function and a list of signals that will trigger it. This object can be passed as an updatable "config" to CatchInterrupt. The arguments are
+NewHandler constructs a handler object out of a function and a list of signals that will trigger it. This object can be passed as an updatable "config" to CatchSignal. The arguments are
 
   var handler func(...os.Signal) interface{} // Function that is run on catching a signal. Return value is written to stdout.
   var signals []os.Signal                    // List of signals to listen out for.
