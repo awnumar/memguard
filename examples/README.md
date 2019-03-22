@@ -7,6 +7,7 @@ Exploits can also go in this directory. All programs exist in the same `examples
 ## Adding a program
 
 1. Write the spirit of your program within a single file, say `skit.go`. The package should be set to `examples`.
+
 2. Add a test function to `skit_test.go`.
 
     The programs can be run individually with
@@ -22,11 +23,14 @@ Exploits can also go in this directory. All programs exist in the same `examples
     ```
 
 3. Optionally add benchmarks under your test function.
+
 4. Add a comment above your test function, substituting your chosen licence code.
 
     ```go
     /* [Apache-2.0] Skit :: Jon Snow <jon@beyondthe.wall> */
     ```
+
+5. Add your program to the end of the [programs](#programs) section of this document.
 
 ## Licencing
 
