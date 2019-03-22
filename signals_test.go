@@ -22,13 +22,10 @@ func TestCatchSignal(t *testing.T) {
 		// Close the listener
 		listener.Close()
 
-		var s []byte
-		for _, signal := range signals {
-			s = append(s, []byte(signal.String())...)
-		}
-		return s
+		// Return the signals we caught.
+		return signals
 	}, true, os.Interrupt)
-	CatchSignal(handler)
+	CatchSignal(handler) // Activate the handler.
 
 	// Grab a handle on the running process
 	process, err := os.FindProcess(os.Getpid())

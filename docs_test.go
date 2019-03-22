@@ -3,13 +3,9 @@ package memguard
 import "os"
 
 func ExampleCatchSignal() {
-	// Catches interrupt signals, outputs them, and exits.
+	// Catches interrupt and kill, cleanly wipe memory and terminate, returning caught signals.
 	handler := NewHandler(func(signals ...os.Signal) interface{} {
-		var s []byte
-		for _, signal := range signals {
-			s = append(s, []byte(signal.String())...)
-		}
-		return s
-	}, true, os.Interrupt)
+		return signals
+	}, true, os.Interrupt, os.Kill)
 	CatchSignal(handler)
 }
