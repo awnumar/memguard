@@ -16,7 +16,7 @@ Exploits can also go in this directory. All programs exist in the same `examples
     go test -v -race ./examples/skit_test.go ./examples/skit.go
     ```
 
-    or one at at time
+    or one after the other
 
     ```bash
     go test -v -race ./examples

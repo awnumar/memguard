@@ -19,7 +19,6 @@ package examples
 import (
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/awnumar/memguard"
 )
@@ -117,7 +116,7 @@ func SocketKey(size int) {
 	// Destroy the buffer.
 	buf.Destroy()
 
-	time.Sleep(30 * time.Second)
+	// time.Sleep(30 * time.Second)
 
 	// Purge the session and wipe the keys before exiting.
 	memguard.SafeExit(0)

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestCatchInterrupt(t *testing.T) {
+func TestCatchSignal(t *testing.T) {
 	// Start a listener object
 	listener, err := net.Listen("tcp", "127.0.0.1:")
 	if err != nil {
@@ -17,10 +17,18 @@ func TestCatchInterrupt(t *testing.T) {
 	}
 	defer listener.Close()
 
-	// Spawn a handler.
-	CatchInterrupt(func() {
+	// Spawn a handler to catch interrupts
+	handler := NewHandler(func(signals ...os.Signal) []byte {
+		// Close the listener
 		listener.Close()
-	})
+
+		var s []byte
+		for _, signal := range signals {
+			s = append(s, []byte(signal.String())...)
+		}
+		return s
+	}, true, os.Interrupt)
+	CatchSignal(handler)
 
 	// Grab a handle on the running process
 	process, err := os.FindProcess(os.Getpid())
