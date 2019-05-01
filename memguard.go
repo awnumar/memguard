@@ -32,14 +32,14 @@ func WipeBytes(buf []byte) {
 }
 
 /*
-Purge resets the session key to a fresh value and destroys all existing LockedBuffers. Any Enclave objects will no longer be decryptable.
+Purge resets the session key to a fresh value and destroys all existing LockedBuffers. Existing Enclave objects will no longer be decryptable.
 */
 func Purge() {
 	core.Purge()
 }
 
 /*
-SafePanic wipes all it can before calling panic(v) for you.
+SafePanic wipes all it can before calling panic(v).
 */
 func SafePanic(v interface{}) {
 	core.Panic(v)

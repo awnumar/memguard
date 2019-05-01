@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -42,13 +43,10 @@ func NewCoffer() *Coffer {
 			// Sleep for the specified interval.
 			time.Sleep(time.Duration(Interval) * time.Millisecond)
 
-			// Check if it's destroyed.
-			if s.Destroyed() {
+			// Re-key the contents, exiting the routine if object destroyed.
+			if err := s.Rekey(); err != nil {
 				break
 			}
-
-			// Re-key the contents.
-			s.Rekey()
 		}
 	}(s)
 
@@ -59,14 +57,14 @@ func NewCoffer() *Coffer {
 Initialise is used to reset the value stored inside a Coffer to a new random 32 byte value, overwriting the old.
 */
 func (s *Coffer) Initialise() error {
+	// Check if it has been destroyed.
+	if s.Destroyed() {
+		return ErrCofferExpired
+	}
+
 	// Attain the mutex.
 	s.Lock()
 	defer s.Unlock()
-
-	// Check if it has been destroyed.
-	if !GetBufferState(s.left).IsAlive {
-		return ErrObjectExpired
-	}
 
 	// Overwrite the old value with fresh random bytes.
 	if err := crypto.MemScr(s.left.Data); err != nil {
@@ -94,8 +92,8 @@ func (s *Coffer) View() (*Buffer, error) {
 	defer s.RUnlock()
 
 	// Check if it's destroyed.
-	if !GetBufferState(s.left).IsAlive {
-		return nil, ErrObjectExpired
+	if s.Destroyed() {
+		return nil, ErrCofferExpired
 	}
 
 	// Create a new Buffer for the data.
@@ -114,15 +112,15 @@ func (s *Coffer) View() (*Buffer, error) {
 /*
 Rekey is used to re-key a Coffer. Ideally this should be done at short, regular intervals.
 */
-func (s *Coffer) Rekey() {
+func (s *Coffer) Rekey() error {
+	// Check if it has been destroyed.
+	if s.Destroyed() {
+		return ErrCofferExpired
+	}
+
 	// Attain the mutex.
 	s.Lock()
 	defer s.Unlock()
-
-	// Check if it has been destroyed.
-	if !GetBufferState(s.left).IsAlive {
-		return
-	}
 
 	// Get a new random 32 byte R value.
 	if err := crypto.MemScr(buf32.Data); err != nil {
@@ -146,6 +144,8 @@ func (s *Coffer) Rekey() {
 	for i := range s.right.Data {
 		s.right.Data[i] = rr[i]
 	}
+
+	return nil
 }
 
 /*
@@ -166,5 +166,10 @@ func (s *Coffer) Destroyed() bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	return !GetBufferState(s.left).IsAlive
+	return (!GetBufferState(s.left).IsAlive) && (!GetBufferState(s.right).IsAlive)
 }
+
+/* Define some errors used by these functions... */
+
+// ErrCofferExpired is returned when a functon attempts to perform an operation using a secure key container that has been wiped and destroyed.
+var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")

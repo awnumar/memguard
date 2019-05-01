@@ -51,8 +51,8 @@ func TestNewEnclave(t *testing.T) {
 	// Attempt with an empty data slice.
 	data = make([]byte, 0)
 	e, err = NewEnclave(data)
-	if err != ErrInvalidLength {
-		t.Error("expected ErrInvalidLength; got", err)
+	if err != ErrNullEnclave {
+		t.Error("expected ErrNullEnclave; got", err)
 	}
 }
 
@@ -92,8 +92,8 @@ func TestSeal(t *testing.T) {
 
 	// Attempt sealing the destroyed buffer.
 	e, err = Seal(b)
-	if err != ErrObjectExpired {
-		t.Error("expected ErrObjectExpired; got", err)
+	if err != ErrBufferExpired {
+		t.Error("expected ErrBufferExpired; got", err)
 	}
 	if e != nil {
 		t.Error("expected nil enclave in error case")

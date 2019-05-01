@@ -1,4 +1,4 @@
 /*
-
- */
+Package memguard ...
+*/
 package memguard

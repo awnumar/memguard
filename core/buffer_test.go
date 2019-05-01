@@ -8,8 +8,8 @@ import (
 func TestNewBuffer(t *testing.T) {
 	// Check the error case with zero length.
 	b, err := NewBuffer(0)
-	if err != ErrInvalidLength {
-		t.Error("expected ErrInvalidLength; got", err)
+	if err != ErrNullBuffer {
+		t.Error("expected ErrNullBuffer; got", err)
 	}
 	if b != nil {
 		t.Error("expected nil buffer; got", b)
@@ -17,8 +17,8 @@ func TestNewBuffer(t *testing.T) {
 
 	// Check the error case with negative length.
 	b, err = NewBuffer(-1)
-	if err != ErrInvalidLength {
-		t.Error("expected ErrInvalidLength; got", err)
+	if err != ErrNullBuffer {
+		t.Error("expected ErrNullBuffer; got", err)
 	}
 	if b != nil {
 		t.Error("expected nil buffer; got", b)

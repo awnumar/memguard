@@ -18,7 +18,7 @@ NewEnclave seals up the data in a given buffer into an encrypted enclave object.
 LockedBuffer objects have a Seal method which also destroy the LockedBuffers.
 */
 func NewEnclave(buf []byte) *Enclave {
-	if len(buf) < 1 {
+	if len(buf) == 0 {
 		return nil
 	}
 	e, err := core.NewEnclave(buf)
@@ -44,10 +44,10 @@ Open decrypts an Enclave object and places its contents into a LockedBuffer. An 
 */
 func (e *Enclave) Open() (*LockedBuffer, error) {
 	b, err := core.Open(e.raw)
-	if err != crypto.ErrDecryptionFailed && err != nil {
-		core.Panic(err)
-	}
 	if err != nil {
+		if err != crypto.ErrDecryptionFailed {
+			core.Panic(err)
+		}
 		return nil, err
 	}
 	return &LockedBuffer{b, new(drop)}, nil

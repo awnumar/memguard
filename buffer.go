@@ -126,7 +126,14 @@ func (b *LockedBuffer) Copy(buf []byte) {
 Move performs a time-constant move into a LockedBuffer. The source is wiped after the bytes are copied.
 */
 func (b *LockedBuffer) Move(buf []byte) {
-	b.Copy(buf)
+	if !b.IsAlive() {
+		return
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	crypto.Copy(b.Buffer.Data, buf)
 	crypto.MemClr(buf)
 }
 
@@ -168,7 +175,7 @@ func (b *LockedBuffer) Size() int {
 }
 
 /*
-Resize allocates a buffer to a positive integer size strictly greater than zero, and copies the data and mutability attribute over from the old one before destroying it. If called on a destroyed container or if the size constraints are violated, a nil object is returned.
+Resize allocates a buffer of a positive integer size strictly greater than zero, and copies the data and mutability attributes over from the old one before destroying it. If called on a destroyed container or if the size constraints are violated, a nil object is returned.
 */
 func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 	if !b.IsAlive() {
@@ -411,81 +418,81 @@ func (b *LockedBuffer) Int64() []int64 {
 }
 
 /*
-ByteArray8 takes a start byte and returns a pointer to the start of some 8 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
+ByteArray8 takes a start index and returns a pointer to the start of some 8 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 8 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
-func (b *LockedBuffer) ByteArray8(start *byte) *[8]byte {
+func (b *LockedBuffer) ByteArray8(start int) *[8]byte {
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data) < 8 {
+	if len(b.Buffer.Data[start:]) < 8 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[8]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
+	return (*[8]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
 }
 
 /*
-ByteArray16 takes a start byte and returns a pointer to the start of some 16 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
+ByteArray16 takes a start index and returns a pointer to the start of some 16 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 16 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
-func (b *LockedBuffer) ByteArray16(start *byte) *[16]byte {
+func (b *LockedBuffer) ByteArray16(start int) *[16]byte {
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data) < 16 {
+	if len(b.Buffer.Data[start:]) < 16 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[16]byte)(unsafe.Pointer(start))
+	return (*[16]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
 }
 
 /*
-ByteArray32 takes a start byte and returns a pointer to the start of some 32 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
+ByteArray32 takes a start index and returns a pointer to the start of some 32 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 32 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
-func (b *LockedBuffer) ByteArray32(start *byte) *[32]byte {
+func (b *LockedBuffer) ByteArray32(start int) *[32]byte {
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data) < 32 {
+	if len(b.Buffer.Data[start:]) < 32 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[32]byte)(unsafe.Pointer(start))
+	return (*[32]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
 }
 
 /*
-ByteArray64 takes a start byte and returns a pointer to the start of some 64 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
+ByteArray64 takes a start index and returns a pointer to the start of some 64 byte array. Care must be taken not to dereference the pointer and pass it around as-is instead.
 
 The length of the buffer must be at least 64 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
-func (b *LockedBuffer) ByteArray64(start *byte) *[64]byte {
+func (b *LockedBuffer) ByteArray64(start int) *[64]byte {
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data) < 64 {
+	if len(b.Buffer.Data[start:]) < 64 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[64]byte)(unsafe.Pointer(start))
+	return (*[64]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
 }

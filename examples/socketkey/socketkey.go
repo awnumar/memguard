@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Awn Umar
+	Copyright 2019 Awn Umar <awn@spacetime.dev>
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -14,9 +14,10 @@
 	limitations under the License.
 */
 
-package examples
+package socketkey
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -24,17 +25,13 @@ import (
 	"github.com/awnumar/memguard"
 )
 
+// Save the data here so we can compare it later. Obviously this leaks the secret.
+var data []byte
+
 /*
 SocketKey is a streaming multi-threaded client->server transfer of secure data over a socket.
 */
 func SocketKey(size int) {
-	// Create a secure buffer.
-	buf := memguard.NewBuffer(size)
-	if buf == nil {
-		memguard.SafePanic("invalid size")
-	}
-	defer buf.Destroy()
-
 	// Create a server to listen on.
 	listener, err := net.Listen("tcp", "127.0.0.1:4128")
 	if err != nil {
@@ -42,18 +39,11 @@ func SocketKey(size int) {
 	}
 	defer listener.Close()
 
-	// Catch interrupts to close the listener.
-	memguard.CatchSignal(memguard.NewHandler(func(signals ...os.Signal) interface{} {
-		// Close the listener.
+	// Catch signals and close the listener before terminating safely.
+	memguard.CatchSignal(func(s os.Signal) {
+		fmt.Println("Received signal:", s.String())
 		listener.Close()
-
-		// Return the signals we caught.
-		var caught []string
-		for _, signal := range signals {
-			caught = append(caught, signal.String())
-		}
-		return caught
-	}, true))
+	})
 
 	// Create a client to connect to our server.
 	go func() {
@@ -75,7 +65,11 @@ func SocketKey(size int) {
 		}
 		defer buf.Destroy()
 
-		fmt.Println("Sending key:", buf, buf.Bytes())
+		// Save a copy of the key for comparison later.
+		data = make([]byte, buf.Size())
+		copy(data, buf.Bytes())
+
+		fmt.Printf("Sending key: %#v\n", buf.Bytes())
 
 		// Send the data to the server
 		var total, written int
@@ -93,7 +87,14 @@ func SocketKey(size int) {
 		memguard.SafePanic(err)
 	}
 
-	// Read 32 bytes from the client into our buffer.
+	// Create a secure buffer.
+	buf := memguard.NewBuffer(size)
+	if buf == nil {
+		memguard.SafePanic("invalid size")
+	}
+	defer buf.Destroy()
+
+	// Read bytes from the client into our buffer.
 	var total, read int
 	for total = 0; total < size; total += read {
 		read, err = conn.Read(buf.Bytes()[total:])
@@ -103,13 +104,18 @@ func SocketKey(size int) {
 	}
 	conn.Close()
 
-	fmt.Println("Received key:", buf, buf.Bytes())
+	fmt.Printf("Received key: %#v\n", buf.Bytes())
+
+	// Compare the key to make sure it wasn't corrupted.
+	if !bytes.Equal(data, buf.Bytes()) {
+		memguard.SafePanic(fmt.Sprint("sent != received ::", data, buf.Bytes()))
+	}
 
 	// Seal the key into an encrypted Enclave object.
 	key := buf.Seal()
 	// <-- buf is destroyed by this point
 
-	fmt.Println("Encrypted key:", key)
+	fmt.Printf("Encrypted key: %#v\n", key)
 
 	// Decrypt the key into a new buffer.
 	buf, err = key.Open()
@@ -117,7 +123,7 @@ func SocketKey(size int) {
 		memguard.SafePanic(err)
 	}
 
-	fmt.Println("Decrypted key:", buf, buf.Bytes())
+	fmt.Printf("Decrypted key: %#v\n", buf.Bytes())
 
 	// Destroy the buffer.
 	buf.Destroy()

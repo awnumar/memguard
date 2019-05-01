@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/awnumar/memguard/crypto"
@@ -33,12 +34,6 @@ type Buffer struct {
 	canaryref []byte // Protected reference value for the canary buffer
 }
 
-// BufferState encodes a buffer's various states.
-type BufferState struct {
-	IsAlive   bool // T = Buffer not destroyed.
-	IsMutable bool // T = Buffer memory is writable.
-}
-
 /*
 NewBuffer is a raw constructor for the Buffer object.
 */
@@ -47,7 +42,7 @@ func NewBuffer(size int) (*Buffer, error) {
 
 	// Return an error if length < 1.
 	if size < 1 {
-		return nil, ErrInvalidLength
+		return nil, ErrNullBuffer
 	}
 
 	// Declare and allocate
@@ -100,15 +95,6 @@ func NewBuffer(size int) (*Buffer, error) {
 
 	// Return the created Buffer to the caller.
 	return b, nil
-}
-
-/*
-GetBufferState returns a BufferState struct that encodes state information about a given Buffer object. It exports two fields, IsMutable and IsDestroyed, which signify whether the Buffer is mutable and whether it has been destroyed, respectively.
-*/
-func GetBufferState(b *Buffer) BufferState {
-	b.RLock()
-	defer b.RUnlock()
-	return BufferState{IsAlive: b.alive, IsMutable: b.mutable}
 }
 
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
@@ -205,6 +191,21 @@ func (b *Buffer) Destroy() {
 	b.canaryval = nil
 }
 
+// BufferState encodes a buffer's various states.
+type BufferState struct {
+	IsAlive   bool // T = Buffer not destroyed.
+	IsMutable bool // T = Buffer memory is writable.
+}
+
+/*
+GetBufferState returns a BufferState struct that encodes state information about a given Buffer object. It exports two fields, IsMutable and IsDestroyed, which signify whether the Buffer is mutable and whether it has been destroyed, respectively.
+*/
+func GetBufferState(b *Buffer) BufferState {
+	b.RLock()
+	defer b.RUnlock()
+	return BufferState{IsAlive: b.alive, IsMutable: b.mutable}
+}
+
 // BufferList stores a list of buffers in a thread-safe manner.
 type BufferList struct {
 	sync.RWMutex
@@ -258,3 +259,11 @@ func (l *BufferList) Flush() []*Buffer {
 
 	return list
 }
+
+/* Define some errors used by these functions... */
+
+// ErrNullBuffer is returned when attempting to construct a buffer of size less than one.
+var ErrNullBuffer = errors.New("<memguard::core::ErrNullBuffer> buffer size must be greater than zero")
+
+// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
+var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")

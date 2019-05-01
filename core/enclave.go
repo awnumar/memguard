@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/awnumar/memguard/crypto"
@@ -30,7 +31,7 @@ NewEnclave is a raw constructor for the Enclave object. The given buffer is wipe
 func NewEnclave(buf []byte) (*Enclave, error) {
 	// Return an error if length < 1.
 	if len(buf) < 1 {
-		return nil, ErrInvalidLength
+		return nil, ErrNullEnclave
 	}
 
 	// Create a new Enclave.
@@ -39,13 +40,13 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	// Get a view of the key.
 	k, err := key.View()
 	if err != nil {
-		return nil, ErrObjectExpired
+		return nil, err
 	}
 
 	// Encrypt the plaintext.
 	e.ciphertext, err = crypto.Seal(buf, k.Data)
 	if err != nil {
-		return nil, ErrObjectExpired
+		return nil, err // key is not 32 bytes long
 	}
 
 	// Destroy our copy of the key.
@@ -65,7 +66,7 @@ func Seal(b *Buffer) (*Enclave, error) {
 
 	// Check if the Buffer has been destroyed.
 	if !b.alive {
-		return nil, ErrObjectExpired
+		return nil, ErrBufferExpired
 	}
 
 	// Construct the Enclave from the Buffer's data.
@@ -97,7 +98,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	// Grab a view of the key.
 	k, err := key.View()
 	if err != nil {
-		return nil, ErrObjectExpired
+		return nil, err
 	}
 
 	// Decrypt the enclave into the buffer we created.
@@ -112,3 +113,8 @@ func Open(e *Enclave) (*Buffer, error) {
 	// Return the contents of the Enclave inside a Buffer.
 	return b, nil
 }
+
+/* Define some errors used by these functions... */
+
+// ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
+var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size must be greater than zero")

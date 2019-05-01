@@ -49,7 +49,7 @@ func Exit(c int) {
 }
 
 /*
-Panic is identical to the builtin panic except it cleans up all it can before calling panic.
+Panic is identical to the builtin panic except it wipes all it can before calling panic.
 */
 func Panic(v interface{}) {
 	// Wipe both halves of the Enclave encryption key.

@@ -70,10 +70,10 @@ func Open(ciphertext, key []byte, output []byte) (int, error) {
  */
 
 // ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
-var ErrInvalidKeyLength = errors.New("<memguard::crypto> key must be exactly 32 bytes")
+var ErrInvalidKeyLength = errors.New("<memguard::crypto::ErrInvalidKeyLength> key must be exactly 32 bytes")
 
 // ErrBufferTooSmall is returned when the decryption function, Open, is given an output buffer that is too small to hold the plaintext. In practice the plaintext will be Overhead bytes smaller than the ciphertext returned by the encryption function, Seal.
-var ErrBufferTooSmall = errors.New("<memguard::crypto> the given buffer is too small to hold the plaintext")
+var ErrBufferTooSmall = errors.New("<memguard::crypto::ErrBufferTooSmall> the given buffer is too small to hold the plaintext")
 
 // ErrDecryptionFailed is returned when the attempted decryption fails. This can occur if the given key is incorrect or if the ciphertext is invalid.
-var ErrDecryptionFailed = errors.New("<memguard::crypto> decryption failed")
+var ErrDecryptionFailed = errors.New("<memguard::crypto::ErrDecryptionFailed> decryption failed")
