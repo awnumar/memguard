@@ -31,7 +31,7 @@ func Unlock(b []byte) error {
 // Alloc allocates a byte slice of length n and returns it.
 func Alloc(n int) ([]byte, error) {
 	// Allocate the memory.
-	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANON)
+	b, err := unix.Mmap(-1, 0, n, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANON|unix.MAP_CONCEAL)
 	if err != nil {
 		return nil, fmt.Errorf("<memguard::memcall::Alloc> could not allocate [Err: %s]", err)
 	}
