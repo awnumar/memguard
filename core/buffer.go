@@ -64,7 +64,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	b.postguard = getBytes(&b.memory[pageSize+innerLen], pageSize)
 
 	// Construct slice references for canary sectors.
-	b.canaryref = getBytes(&b.memory[pageSize-32], 32)
+	b.canaryref = getBytes(&b.memory[pageSize+innerLen], 32)
 	b.canaryval = getBytes(&b.memory[pageSize+innerLen-size-32], 32)
 
 	// Lock the pages that will hold sensitive data.
