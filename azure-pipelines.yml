@@ -1,0 +1,47 @@
+strategy:
+  matrix:
+    linux:
+      imageName: "ubuntu-16.04"
+    mac:
+      imageName: "macOS-10.14"
+    windows:
+      imageName: "vs2017-win2016"
+
+pool:
+  vmImage: $(imageName)
+
+variables:
+  GOPATH: '$(system.defaultWorkingDirectory)/go'
+  GOBIN:  '$(GOPATH)/bin'
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)'
+
+steps:
+- task: GoTool@0
+  inputs:
+    version: '1.12'
+
+- script: |
+    mkdir -p '$(GOBIN)'
+    mkdir -p '$(GOPATH)/pkg'
+    mkdir -p '$(modulePath)'
+    shopt -s extglob
+    shopt -s dotglob
+    mv !(gopath) '$(modulePath)'
+  displayName: 'Set up the Go workspace'
+
+- script: |
+    go version
+    go get -v -t -d ./...
+    if [ -f Gopkg.toml ]; then
+        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+        dep ensure
+    fi
+    go build -race -v .
+  workingDirectory: '$(modulePath)'
+  displayName: 'Get dependencies, then build'
+
+- script: |
+    go test -race -count=1000 ./...
+    go test -v -race ./...
+  workingDirectory: '$(modulePath)'
+  displayName: 'Run test suite'
