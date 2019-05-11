@@ -12,12 +12,7 @@ pool:
 
 steps:
 - script: |
-    mkdir -p '$(GOPATH)/bin'
     go version
-    if [ -f Gopkg.toml ]; then
-        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-        dep ensure
-    fi
     go build -race -v .
   workingDirectory: '$(system.defaultWorkingDirectory)'
   displayName: 'Get dependencies, then build'
