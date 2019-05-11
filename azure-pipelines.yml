@@ -17,7 +17,8 @@ steps:
 
 - script: |
     mkdir -p '$(modulePath)'
-    mv '$(system.defaultWorkingDirectory)' '$(modulePath)'
+    cp -r '$(system.defaultWorkingDirectory)/*' '$(modulePath)'
+    cp -r '$(system.defaultWorkingDirectory)/.git' '$(modulePath)'
     go version
     go build -race -v .
   workingDirectory: '$(system.defaultWorkingDirectory)'
