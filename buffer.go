@@ -99,10 +99,15 @@ func (b *LockedBuffer) Melt() {
 
 /*
 Seal takes a LockedBuffer object and returns its contents encrypted inside a sealed Enclave object. The LockedBuffer is subsequently destroyed and its contents wiped.
+
+If Seal is called on a destroyed buffer, a nil enclave will be returned.
 */
 func (b *LockedBuffer) Seal() *Enclave {
 	e, err := core.Seal(b.Buffer)
 	if err != nil {
+		if err == core.ErrBufferExpired {
+			return nil
+		}
 		core.Panic(err)
 	}
 	return &Enclave{e}
@@ -189,7 +194,7 @@ func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 
 	b.RLock()
 
-	crypto.Move(new.Buffer.Data, b.Buffer.Data)
+	crypto.Copy(new.Buffer.Data, b.Buffer.Data)
 
 	if !b.IsMutable() {
 		new.Freeze()

@@ -1,0 +1,74 @@
+package memguard
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/awnumar/memguard/crypto"
+)
+
+func TestNewEnclave(t *testing.T) {
+	e := NewEnclave([]byte(""))
+	if e != nil {
+		t.Error("expected nil enclave")
+	}
+	e = NewEnclave([]byte("yellow submarine"))
+	if e == nil {
+		t.Error("got nil enclave")
+	}
+	data, err := e.Open()
+	if err != nil {
+		t.Error("unexpected error:", err)
+	}
+	if !bytes.Equal(data.Buffer.Data, []byte("yellow submarine")) {
+		t.Error("data doesn't match input")
+	}
+	data.Destroy()
+}
+
+func TestNewEnclaveRandom(t *testing.T) {
+	e := NewEnclaveRandom(0)
+	if e != nil {
+		t.Error("expected nil enclave")
+	}
+	e = NewEnclaveRandom(32)
+	if e == nil {
+		t.Error("got nil enclave")
+	}
+	data, err := e.Open()
+	if err != nil {
+		t.Error("unexpected error:", err)
+	}
+	if len(data.Buffer.Data) != 32 || cap(data.Buffer.Data) != 32 {
+		t.Error("buffer sizes incorrect")
+	}
+	if bytes.Equal(data.Buffer.Data, make([]byte, 32)) {
+		t.Error("buffer not randomised")
+	}
+	data.Destroy()
+}
+
+func TestOpen(t *testing.T) {
+	e := NewEnclave([]byte("yellow submarine"))
+	if e == nil {
+		t.Error("got nil enclave")
+	}
+	b, err := e.Open()
+	if err != nil {
+		t.Error("unexpected error;", err)
+	}
+	if b == nil {
+		t.Error("buffer is nil")
+	}
+	if !bytes.Equal(b.Buffer.Data, []byte("yellow submarine")) {
+		t.Error("data does not match")
+	}
+	Purge() // reset the session
+	b, err = e.Open()
+	if err != crypto.ErrDecryptionFailed {
+		t.Error("expected decryption error; got", err)
+	}
+	if b != nil {
+		t.Error("buffer should be nil")
+	}
+}

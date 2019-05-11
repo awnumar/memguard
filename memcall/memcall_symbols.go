@@ -7,8 +7,8 @@ import "errors"
 // MemoryProtectionFlag specifies some particular memory protection flag.
 type MemoryProtectionFlag struct {
 	// NOACCESS  := 1 (00000001)
-	// READ 	 := 2 (00000010)
-	// WRITE	 := 4 (00000100) // unused
+	// READ      := 2 (00000010)
+	// WRITE     := 4 (00000100) // unused
 	// READWRITE := 6 (00000110)
 
 	flag byte

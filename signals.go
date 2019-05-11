@@ -21,6 +21,7 @@ var (
 
 // Internal flag to disable terminating behaviour while testing
 var testingMode = false
+var testingModeLock = &sync.Mutex{}
 
 /*
 CatchSignal assigns a given function to be run in the event of a signal being received by the process. If no signals are provided all signals will be caught.
@@ -43,9 +44,11 @@ func CatchSignal(f func(os.Signal), signals ...os.Signal) {
 				select {
 				case signal := <-listener:
 					handler(signal)
+					testingModeLock.Lock()
 					if !testingMode {
 						core.Exit(0)
 					}
+					testingModeLock.Unlock()
 				case handler = <-sigfunc:
 				}
 			}
@@ -61,7 +64,9 @@ func CatchSignal(f func(os.Signal), signals ...os.Signal) {
 }
 
 /*
-CatchInterrupt is a wrapper around CatchSignal that makes it easy to safely handle receiving interrupt signals. A subsequent call to CatchSignal will overwrite this call.
+CatchInterrupt is a wrapper around CatchSignal that makes it easy to safely handle receiving interrupt signals. If an interrupt is received, the process will wipe sensitive data in memory before terminating.
+
+A subsequent call to CatchSignal will override this call.
 */
 func CatchInterrupt() {
 	CatchSignal(func(_ os.Signal) {}, os.Interrupt)

@@ -9,8 +9,15 @@ import (
 	"testing"
 )
 
+// TODO: run these tests in a subroutine
+// https://medium.com/@povilasve/go-advanced-tips-tricks-a872503ac859
+// trick 5: subprocessing
+// this will allow removing the dirty testing flag and just checking for exit code
+
 func TestCatchSignal(t *testing.T) {
+	testingModeLock.Lock()
 	testingMode = true
+	testingModeLock.Unlock()
 
 	// Start a listener object
 	listener, err := net.Listen("tcp", "127.0.0.1:")
@@ -36,6 +43,10 @@ func TestCatchSignal(t *testing.T) {
 		t.Error(err)
 	}
 
+	testingModeLock.Lock()
+	testingMode = false
+	testingModeLock.Unlock()
+
 	// Todo: catch this violation
 	//
 	// b, err := NewBuffer(32)
@@ -47,6 +58,10 @@ func TestCatchSignal(t *testing.T) {
 }
 
 func TestCatchInterrupt(t *testing.T) {
+	testingModeLock.Lock()
+	testingMode = true
+	testingModeLock.Unlock()
+
 	CatchInterrupt()
 	process, err := os.FindProcess(os.Getpid())
 	if err != nil {
@@ -55,4 +70,8 @@ func TestCatchInterrupt(t *testing.T) {
 	if err := process.Signal(os.Interrupt); err != nil {
 		t.Error(err)
 	}
+
+	testingModeLock.Lock()
+	testingMode = false
+	testingModeLock.Unlock()
 }

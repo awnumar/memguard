@@ -66,8 +66,7 @@ func Open(ciphertext, key []byte, output []byte) (int, error) {
 	return 0, ErrDecryptionFailed
 }
 
-/* Define some errors used by these functions...
- */
+/* Define some errors used by these functions */
 
 // ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
 var ErrInvalidKeyLength = errors.New("<memguard::crypto::ErrInvalidKeyLength> key must be exactly 32 bytes")

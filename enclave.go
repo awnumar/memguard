@@ -15,7 +15,7 @@ type Enclave struct {
 /*
 NewEnclave seals up the data in a given buffer into an encrypted enclave object.
 
-LockedBuffer objects have a Seal method which also destroy the LockedBuffers.
+Alternatively, LockedBuffer objects have a Seal method which also destroy the LockedBuffers.
 */
 func NewEnclave(buf []byte) *Enclave {
 	if len(buf) == 0 {
@@ -32,6 +32,7 @@ func NewEnclave(buf []byte) *Enclave {
 NewEnclaveRandom generates and seals arbitrary amounts of cryptographically-secure random bytes into an encrypted enclave object.
 */
 func NewEnclaveRandom(size int) *Enclave {
+	// todo: stream data into enclave
 	b := NewBufferRandom(size)
 	if b == nil {
 		return nil
