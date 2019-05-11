@@ -26,7 +26,6 @@ steps:
     mkdir -p '$(modulePath)'
     shopt -s extglob
     shopt -s dotglob
-    mv !(gopath) '$(modulePath)'
   displayName: 'Set up the Go workspace'
 
 - script: |
