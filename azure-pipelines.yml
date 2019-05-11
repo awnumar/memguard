@@ -16,6 +16,8 @@ variables:
   GOROOT: '$(system.defaultWorkingDirectory)/goroot'
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)'
 
+steps:
+
 - script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
@@ -26,7 +28,6 @@ variables:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
 
-steps:
 - task: GoTool@0
   inputs:
     version: '1.12'
