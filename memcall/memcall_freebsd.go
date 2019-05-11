@@ -10,9 +10,6 @@ import (
 
 // Lock is a wrapper for unix.Mlock(), with extra precautions.
 func Lock(b []byte) {
-	// Advise the kernel not to dump. Ignore failure.
-	unix.Madvise(b, unix.MADV_DONTDUMP)
-
 	// Call mlock.
 	if err := unix.Mlock(b); err != nil {
 		panic(fmt.Sprintf("memguard.memcall.Lock(): could not acquire lock on %p, limit reached? [Err: %s]", &b[0], err))
