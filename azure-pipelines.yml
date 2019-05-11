@@ -22,15 +22,9 @@ steps:
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
     mkdir -p '$(modulePath)'
-    shopt -s extglob
-    cp -avr !(gopath) '$(modulePath)'
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
-
-- task: GoTool@0
-  inputs:
-    version: '1.12'
 
 - script: |
     go version
