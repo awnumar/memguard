@@ -16,7 +16,8 @@ variables:
 steps:
 
 - script: |
-    cp -avr '$(system.defaultWorkingDirectory)' '$(modulePath)'
+    mkdir -p '$(modulePath)'
+    mv '$(system.defaultWorkingDirectory)' '$(modulePath)'
     go version
     go build -race -v .
   workingDirectory: '$(system.defaultWorkingDirectory)'
