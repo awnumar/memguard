@@ -10,8 +10,13 @@ strategy:
 pool:
   vmImage: $(imageName)
 
+variables:
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)'
+
 steps:
+
 - script: |
+    cp -avr '$(system.defaultWorkingDirectory)' '$(modulePath)'
     go version
     go build -race -v .
   workingDirectory: '$(system.defaultWorkingDirectory)'
