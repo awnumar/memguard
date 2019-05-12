@@ -19,10 +19,6 @@ var (
 	listener = make(chan os.Signal, 4)
 )
 
-// Internal flag to disable terminating behaviour while testing
-var testingMode = false
-var testingModeLock = &sync.Mutex{}
-
 /*
 CatchSignal assigns a given function to be run in the event of a signal being received by the process. If no signals are provided all signals will be caught.
 
@@ -44,11 +40,7 @@ func CatchSignal(f func(os.Signal), signals ...os.Signal) {
 				select {
 				case signal := <-listener:
 					handler(signal)
-					testingModeLock.Lock()
-					if !testingMode {
-						core.Exit(0)
-					}
-					testingModeLock.Unlock()
+					core.Exit(1)
 				case handler = <-sigfunc:
 				}
 			}

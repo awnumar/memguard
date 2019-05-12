@@ -401,13 +401,96 @@ func TestDestroy(t *testing.T) {
 }
 
 func TestIsAlive(t *testing.T) {
-
+	b := NewBuffer(8)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if !b.IsAlive() {
+		t.Error("invalid state")
+	}
+	if b.IsAlive() != core.GetBufferState(b.Buffer).IsAlive {
+		t.Error("states don't match")
+	}
+	b.Destroy()
+	if b.IsAlive() {
+		t.Error("invalid state")
+	}
+	if b.IsAlive() != core.GetBufferState(b.Buffer).IsAlive {
+		t.Error("states don't match")
+	}
 }
 
 func TestIsMutable(t *testing.T) {
-
+	b := NewBuffer(8)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if !b.IsMutable() {
+		t.Error("invalid state")
+	}
+	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
+		t.Error("states don't match")
+	}
+	b.Freeze()
+	if b.IsMutable() {
+		t.Error("invalid state")
+	}
+	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
+		t.Error("states don't match")
+	}
+	b.Destroy()
+	if b.IsMutable() {
+		t.Error("invalid state")
+	}
+	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
+		t.Error("states don't match")
+	}
 }
 
 func TestBytes(t *testing.T) {
+
+}
+
+func TestUint16(t *testing.T) {
+
+}
+
+func TestUint32(t *testing.T) {
+
+}
+
+func TestUint64(t *testing.T) {
+
+}
+
+func TestInt8(t *testing.T) {
+
+}
+
+func TestInt16(t *testing.T) {
+
+}
+
+func TestInt32(t *testing.T) {
+
+}
+
+func TestInt64(t *testing.T) {
+
+}
+
+func TestByteArray8(t *testing.T) {
+
+}
+
+func TestByteArray16(t *testing.T) {
+
+}
+
+func TestByteArray32(t *testing.T) {
+
+}
+
+func TestByteArray64(t *testing.T) {
 
 }

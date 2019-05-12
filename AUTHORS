@@ -1,17 +1,8 @@
-# Names should be added to this file as
+# Entries should be added alphabetically in the form:
 #   Name or Organization <email address>
-#       - Contribution
 # The email address is not required for organizations.
 
 Awn Umar <awn@spacetime.dev>
-    - Primary developer.
-
 Carlo Alberto Ferraris <cafxx@strayorange.com>
-    - Implemented buffer leaking protection via finalizers.
-
 dotcppfile <dotcppfile@gmail.com>
-    - Implemented guard pages.
-    - Various bug fixes and optimisations.
-
 Joseph Richey <joerichey@google.com>
-    - Suggested using system calls for memory allocation.

@@ -3,75 +3,85 @@
 package memguard
 
 import (
-	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"testing"
 )
 
-// TODO: run these tests in a subroutine
-// https://medium.com/@povilasve/go-advanced-tips-tricks-a872503ac859
-// trick 5: subprocessing
-// this will allow removing the dirty testing flag and just checking for exit code
-
 func TestCatchSignal(t *testing.T) {
-	testingModeLock.Lock()
-	testingMode = true
-	testingModeLock.Unlock()
+	// If we're within the testing subprocess, run test.
+	if os.Getenv("WITHIN_SUBPROCESS") == "1" {
+		// Start a listener object
+		listener, err := net.Listen("tcp", "127.0.0.1:")
+		if err != nil {
+			SafePanic(err)
+		}
+		defer listener.Close()
 
-	// Start a listener object
-	listener, err := net.Listen("tcp", "127.0.0.1:")
-	if err != nil {
-		SafePanic(err)
-	}
-	defer listener.Close()
+		// Spawn a handler to catch interrupts
+		CatchSignal(func(s os.Signal) {
+			listener.Close()
+		})
 
-	// Spawn a handler to catch interrupts
-	CatchSignal(func(s os.Signal) {
-		fmt.Println("Received signal:", s.String())
-		listener.Close()
-	}, os.Interrupt)
+		// Grab a handle on the running process
+		process, err := os.FindProcess(os.Getpid())
+		if err != nil {
+			t.Error(err)
+		}
 
-	// Grab a handle on the running process
-	process, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		t.Error(nil)
-	}
-
-	// Send it an interrupt signal
-	if err := process.Signal(os.Interrupt); err != nil {
-		t.Error(err)
+		// Send it an interrupt signal
+		if err := process.Signal(os.Interrupt); err != nil {
+			t.Error(err)
+		}
 	}
 
-	testingModeLock.Lock()
-	testingMode = false
-	testingModeLock.Unlock()
+	// Construct the subprocess with its initial state
+	cmd := exec.Command(os.Args[0], "-test.run=TestCatchSignal")
+	cmd.Env = append(os.Environ(), "WITHIN_SUBPROCESS=1")
 
-	// Todo: catch this violation
+	// Execute the subprocess and inspect its exit code
+	err := cmd.Run().(*exec.ExitError)
+	if err.ExitCode() != 1 {
+		// if exit code is -1 it was likely killed by the signal
+		t.Error("Wanted exit code 1, got", err.ExitCode(), "err:", err)
+	}
+
+	// Todo: catch this violation (segfault)
 	//
-	// b, err := NewBuffer(32)
-	// if err != nil {
-	// 	t.Error(err)
+	// b := NewBuffer(32)
+	// if b == nil {
+	// 	t.Error("got nil buffer")
 	// }
 	// bA := (*[64]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
 	// bA[42] = 0x69
 }
 
 func TestCatchInterrupt(t *testing.T) {
-	testingModeLock.Lock()
-	testingMode = true
-	testingModeLock.Unlock()
+	if os.Getenv("WITHIN_SUBPROCESS") == "1" {
+		// Start the interrupt handler
+		CatchInterrupt()
 
-	CatchInterrupt()
-	process, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		t.Error(nil)
-	}
-	if err := process.Signal(os.Interrupt); err != nil {
-		t.Error(err)
+		// Grab a handle on the running process
+		process, err := os.FindProcess(os.Getpid())
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Send it an interrupt signal
+		if err := process.Signal(os.Interrupt); err != nil {
+			t.Error(err)
+		}
 	}
 
-	testingModeLock.Lock()
-	testingMode = false
-	testingModeLock.Unlock()
+	// Construct the subprocess with its initial state
+	cmd := exec.Command(os.Args[0], "-test.run=TestCatchInterrupt")
+	cmd.Env = append(os.Environ(), "WITHIN_SUBPROCESS=1")
+
+	// Execute the subprocess and inspect its exit code
+	err := cmd.Run().(*exec.ExitError)
+	if err.ExitCode() != 1 {
+		// if exit code is -1 it was likely killed by the signal
+		t.Error("Wanted exit code 1, got", err.ExitCode(), "err:", err)
+	}
 }
