@@ -17,11 +17,11 @@ func TestEnclaveInit(t *testing.T) {
 		t.Error("unexpected error;", err)
 	}
 
-	if view.Data == nil || len(view.Data) != 32 {
+	if view.Data() == nil || len(view.Data()) != 32 {
 		t.Error("key is invalid")
 	}
 
-	if bytes.Equal(view.Data, make([]byte, 32)) {
+	if bytes.Equal(view.Data(), make([]byte, 32)) {
 		t.Error("key is zero")
 	}
 
@@ -86,7 +86,7 @@ func TestSeal(t *testing.T) {
 	}
 
 	// Check that the decrypted data is correct.
-	if !bytes.Equal(buf.Data, make([]byte, 32)) {
+	if !bytes.Equal(buf.Data(), make([]byte, 32)) {
 		t.Error("decrypted data does not match original")
 	}
 
@@ -118,7 +118,7 @@ func TestOpen(t *testing.T) {
 	}
 
 	// Sanity check the output.
-	if !bytes.Equal(buf.Data, []byte("yellow submarine")) {
+	if !bytes.Equal(buf.Data(), []byte("yellow submarine")) {
 		t.Error("decrypted data does not match original")
 	}
 	buf.Destroy()

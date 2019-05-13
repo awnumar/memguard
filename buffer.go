@@ -60,7 +60,7 @@ func NewBufferFromBytes(buf []byte) *LockedBuffer {
 	}
 
 	// Move the data over.
-	crypto.Move(b.Data, buf)
+	crypto.Move(b.Bytes(), buf)
 
 	// Return the created Buffer object.
 	return b
@@ -79,7 +79,7 @@ func NewBufferRandom(size int) *LockedBuffer {
 	}
 
 	// Fill the buffer with random bytes.
-	if err := crypto.MemScr(b.Data); err != nil {
+	if err := crypto.MemScr(b.Bytes()); err != nil {
 		core.Panic(err)
 	}
 
@@ -124,7 +124,7 @@ func (b *LockedBuffer) Copy(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	crypto.Copy(b.Buffer.Data, buf)
+	crypto.Copy(b.Bytes(), buf)
 }
 
 /*
@@ -138,7 +138,7 @@ func (b *LockedBuffer) Move(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	crypto.Copy(b.Buffer.Data, buf)
+	crypto.Copy(b.Bytes(), buf)
 	crypto.MemClr(buf)
 }
 
@@ -153,7 +153,7 @@ func (b *LockedBuffer) Scramble() {
 	b.Lock()
 	defer b.Unlock()
 
-	if err := crypto.MemScr(b.Buffer.Data); err != nil {
+	if err := crypto.MemScr(b.Bytes()); err != nil {
 		core.Panic(err)
 	}
 }
@@ -169,14 +169,14 @@ func (b *LockedBuffer) Wipe() {
 	b.Lock()
 	defer b.Unlock()
 
-	crypto.MemClr(b.Buffer.Data)
+	crypto.MemClr(b.Bytes())
 }
 
 /*
 Size gives you the length of a given LockedBuffer's data segment. A destroyed LockedBuffer will have a size of zero.
 */
 func (b *LockedBuffer) Size() int {
-	return len(b.Buffer.Data)
+	return len(b.Bytes())
 }
 
 /*
@@ -194,7 +194,7 @@ func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 
 	b.RLock()
 
-	crypto.Copy(new.Buffer.Data, b.Buffer.Data)
+	crypto.Copy(new.Bytes(), b.Bytes())
 
 	if !b.IsMutable() {
 		new.Freeze()
@@ -235,7 +235,7 @@ func (b *LockedBuffer) IsMutable() bool {
 Bytes returns a byte slice referencing the protected region of memory within which you are able to store and view sensitive data.
 */
 func (b *LockedBuffer) Bytes() []byte {
-	return b.Buffer.Data
+	return b.Buffer.Data()
 }
 
 /*
@@ -250,7 +250,7 @@ func (b *LockedBuffer) Uint16() []uint16 {
 	}
 
 	// Check if data size a multiple of two.
-	if len(b.Buffer.Data)%2 != 0 {
+	if len(b.Bytes())%2 != 0 {
 		return nil
 	}
 
@@ -259,7 +259,7 @@ func (b *LockedBuffer) Uint16() []uint16 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data) / 2, len(b.Buffer.Data) / 2}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 2, len(b.Bytes()) / 2}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]uint16)(unsafe.Pointer(&sl))
@@ -277,7 +277,7 @@ func (b *LockedBuffer) Uint32() []uint32 {
 	}
 
 	// Check if data size a multiple of two.
-	if len(b.Buffer.Data)%4 != 0 {
+	if len(b.Bytes())%4 != 0 {
 		return nil
 	}
 
@@ -286,7 +286,7 @@ func (b *LockedBuffer) Uint32() []uint32 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data) / 4, len(b.Buffer.Data) / 4}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 4, len(b.Bytes()) / 4}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]uint32)(unsafe.Pointer(&sl))
@@ -304,7 +304,7 @@ func (b *LockedBuffer) Uint64() []uint64 {
 	}
 
 	// Check if data size a multiple of two.
-	if len(b.Buffer.Data)%8 != 0 {
+	if len(b.Bytes())%8 != 0 {
 		return nil
 	}
 
@@ -313,7 +313,7 @@ func (b *LockedBuffer) Uint64() []uint64 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data) / 8, len(b.Buffer.Data) / 8}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 8, len(b.Bytes()) / 8}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]uint64)(unsafe.Pointer(&sl))
@@ -335,7 +335,7 @@ func (b *LockedBuffer) Int8() []int8 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data), len(b.Buffer.Data)}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()), len(b.Bytes())}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int8)(unsafe.Pointer(&sl))
@@ -353,7 +353,7 @@ func (b *LockedBuffer) Int16() []int16 {
 	}
 
 	// Check if data size a multiple of two.
-	if len(b.Buffer.Data)%2 != 0 {
+	if len(b.Bytes())%2 != 0 {
 		return nil
 	}
 
@@ -362,7 +362,7 @@ func (b *LockedBuffer) Int16() []int16 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data) / 2, len(b.Buffer.Data) / 2}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 2, len(b.Bytes()) / 2}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int16)(unsafe.Pointer(&sl))
@@ -380,7 +380,7 @@ func (b *LockedBuffer) Int32() []int32 {
 	}
 
 	// Check if data size a multiple of two.
-	if len(b.Buffer.Data)%4 != 0 {
+	if len(b.Bytes())%4 != 0 {
 		return nil
 	}
 
@@ -389,7 +389,7 @@ func (b *LockedBuffer) Int32() []int32 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data) / 4, len(b.Buffer.Data) / 4}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 4, len(b.Bytes()) / 4}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int32)(unsafe.Pointer(&sl))
@@ -407,7 +407,7 @@ func (b *LockedBuffer) Int64() []int64 {
 	}
 
 	// Check if data size a multiple of two.
-	if len(b.Buffer.Data)%8 != 0 {
+	if len(b.Bytes())%8 != 0 {
 		return nil
 	}
 
@@ -416,7 +416,7 @@ func (b *LockedBuffer) Int64() []int64 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Data[0])), len(b.Buffer.Data) / 8, len(b.Buffer.Data) / 8}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 8, len(b.Bytes()) / 8}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int64)(unsafe.Pointer(&sl))
@@ -434,12 +434,12 @@ func (b *LockedBuffer) ByteArray8(start int) *[8]byte {
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data[start:]) < 8 {
+	if len(b.Bytes()[start:]) < 8 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[8]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
+	return (*[8]byte)(unsafe.Pointer(&b.Bytes()[start]))
 }
 
 /*
@@ -454,12 +454,12 @@ func (b *LockedBuffer) ByteArray16(start int) *[16]byte {
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data[start:]) < 16 {
+	if len(b.Bytes()[start:]) < 16 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[16]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
+	return (*[16]byte)(unsafe.Pointer(&b.Bytes()[start]))
 }
 
 /*
@@ -474,12 +474,12 @@ func (b *LockedBuffer) ByteArray32(start int) *[32]byte {
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data[start:]) < 32 {
+	if len(b.Bytes()[start:]) < 32 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[32]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
+	return (*[32]byte)(unsafe.Pointer(&b.Bytes()[start]))
 }
 
 /*
@@ -494,10 +494,10 @@ func (b *LockedBuffer) ByteArray64(start int) *[64]byte {
 	}
 
 	// Check if the length is large enough.
-	if len(b.Buffer.Data[start:]) < 64 {
+	if len(b.Bytes()[start:]) < 64 {
 		return nil
 	}
 
 	// Cast the representation to the correct type.
-	return (*[64]byte)(unsafe.Pointer(&b.Buffer.Data[start]))
+	return (*[64]byte)(unsafe.Pointer(&b.Bytes()[start]))
 }

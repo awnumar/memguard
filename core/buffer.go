@@ -23,7 +23,7 @@ type Buffer struct {
 	alive   bool // Signals that destruction has not come
 	mutable bool // Mutability state of underlying memory
 
-	Data   []byte // Portion of memory holding the data
+	data   []byte // Portion of memory holding the data
 	memory []byte // Entire allocated memory region
 
 	preguard  []byte // Guard page addressed before the data
@@ -56,7 +56,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	}
 
 	// Construct slice reference for data buffer.
-	b.Data = getBytes(&b.memory[pageSize+innerLen-size], size)
+	b.data = getBytes(&b.memory[pageSize+innerLen-size], size)
 
 	// Construct slice references for page sectors.
 	b.preguard = getBytes(&b.memory[0], pageSize)
@@ -95,6 +95,11 @@ func NewBuffer(size int) (*Buffer, error) {
 
 	// Return the created Buffer to the caller.
 	return b, nil
+}
+
+// Data returns a byte slice representing the memory region containing the data.
+func (b *Buffer) Data() []byte {
+	return b.data
 }
 
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
@@ -183,7 +188,7 @@ func (b *Buffer) Destroy() {
 	// Reset the fields.
 	b.alive = false
 	b.mutable = false
-	b.Data = nil
+	b.data = nil
 	b.memory = nil
 	b.preguard = nil
 	b.postguard = nil

@@ -67,17 +67,17 @@ func (s *Coffer) Initialise() error {
 	defer s.Unlock()
 
 	// Overwrite the old value with fresh random bytes.
-	if err := crypto.MemScr(s.left.Data); err != nil {
+	if err := crypto.MemScr(s.left.Data()); err != nil {
 		Panic(err)
 	}
-	if err := crypto.MemScr(s.right.Data); err != nil {
+	if err := crypto.MemScr(s.right.Data()); err != nil {
 		Panic(err)
 	}
 
 	// left = left XOR hash(right)
-	hr := crypto.Hash(s.right.Data)
+	hr := crypto.Hash(s.right.Data())
 	for i := range hr {
-		s.left.Data[i] ^= hr[i]
+		s.left.Data()[i] ^= hr[i]
 	}
 
 	return nil
@@ -100,9 +100,9 @@ func (s *Coffer) View() (*Buffer, error) {
 	b, _ := NewBuffer(32)
 
 	// data = hash(right) XOR left
-	h := crypto.Hash(s.right.Data)
-	for i := range b.Data {
-		b.Data[i] = h[i] ^ s.left.Data[i]
+	h := crypto.Hash(s.right.Data())
+	for i := range b.Data() {
+		b.Data()[i] = h[i] ^ s.left.Data()[i]
 	}
 
 	// Return the view.
@@ -123,26 +123,26 @@ func (s *Coffer) Rekey() error {
 	defer s.Unlock()
 
 	// Get a new random 32 byte R value.
-	if err := crypto.MemScr(buf32.Data); err != nil {
+	if err := crypto.MemScr(buf32.Data()); err != nil {
 		Panic(err)
 	}
 
 	// new_right = old_right XOR randbuf32
 	rr := make([]byte, 32)
-	for i := range s.right.Data {
-		rr[i] = s.right.Data[i] ^ buf32.Data[i]
+	for i := range s.right.Data() {
+		rr[i] = s.right.Data()[i] ^ buf32.Data()[i]
 	}
 
 	// new_left = old_left XOR hash(old_right) XOR hash(new_right)
-	hy := crypto.Hash(s.right.Data)
+	hy := crypto.Hash(s.right.Data())
 	hrr := crypto.Hash(rr)
-	for i := range buf32.Data {
-		s.left.Data[i] ^= hy[i] ^ hrr[i]
+	for i := range buf32.Data() {
+		s.left.Data()[i] ^= hy[i] ^ hrr[i]
 	}
 
 	// Copy the new right to the right memory location.
-	for i := range s.right.Data {
-		s.right.Data[i] = rr[i]
+	for i := range s.right.Data() {
+		s.right.Data()[i] = rr[i]
 	}
 
 	return nil
@@ -171,5 +171,5 @@ func (s *Coffer) Destroyed() bool {
 
 /* Define some errors used by these functions... */
 
-// ErrCofferExpired is returned when a functon attempts to perform an operation using a secure key container that has been wiped and destroyed.
+// ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
 var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")

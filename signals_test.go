@@ -53,7 +53,7 @@ func TestCatchSignal(t *testing.T) {
 	// if b == nil {
 	// 	t.Error("got nil buffer")
 	// }
-	// bA := (*[64]byte)(unsafe.Pointer(&b.Buffer.Data[0]))
+	// bA := (*[64]byte)(unsafe.Pointer(&b.Bytes()[0]))
 	// bA[42] = 0x69
 }
 

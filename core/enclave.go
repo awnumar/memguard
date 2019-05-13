@@ -44,7 +44,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	}
 
 	// Encrypt the plaintext.
-	e.ciphertext, err = crypto.Seal(buf, k.Data)
+	e.ciphertext, err = crypto.Seal(buf, k.Data())
 	if err != nil {
 		return nil, err // key is not 32 bytes long
 	}
@@ -70,7 +70,7 @@ func Seal(b *Buffer) (*Enclave, error) {
 	}
 
 	// Construct the Enclave from the Buffer's data.
-	e, err := NewEnclave(b.Data)
+	e, err := NewEnclave(b.Data())
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Decrypt the enclave into the buffer we created.
-	_, err = crypto.Open(e.ciphertext, k.Data, b.Data)
+	_, err = crypto.Open(e.ciphertext, k.Data(), b.Data())
 	if err != nil {
 		return nil, err
 	}

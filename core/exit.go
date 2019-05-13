@@ -53,12 +53,12 @@ Panic is identical to the builtin panic except it wipes all it can before callin
 */
 func Panic(v interface{}) {
 	// Wipe both halves of the Enclave encryption key.
-	crypto.MemClr(key.left.Data)
-	crypto.MemClr(key.right.Data)
+	crypto.MemClr(key.left.Data())
+	crypto.MemClr(key.right.Data())
 
 	// Wipe all of the currently active LockedBuffers.
 	for _, b := range buffers.list {
-		crypto.MemClr(b.Data)
+		crypto.MemClr(b.Data())
 	}
 
 	// Panic.

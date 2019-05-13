@@ -17,18 +17,18 @@ func TestNewCoffer(t *testing.T) {
 	}
 
 	// Verify that fields are the expected sizes.
-	if len(s.left.Data) != 32 {
+	if len(s.left.Data()) != 32 {
 		t.Error("left side has unexpected lengths")
 	}
-	if len(s.right.Data) != 32 {
+	if len(s.right.Data()) != 32 {
 		t.Error("right size has unexpected lengths")
 	}
 
 	// Verify that the data fields are not zeroed.
-	if bytes.Equal(s.left.Data, make([]byte, 32)) {
+	if bytes.Equal(s.left.Data(), make([]byte, 32)) {
 		t.Error("left side is zeroed")
 	}
-	if bytes.Equal(s.right.Data, make([]byte, 32)) {
+	if bytes.Equal(s.right.Data(), make([]byte, 32)) {
 		t.Error("right side is zeroed")
 	}
 
@@ -45,7 +45,7 @@ func TestCofferInitialise(t *testing.T) {
 		t.Error("unexpected error")
 	}
 	value := make([]byte, 32)
-	copy(value, view.Data)
+	copy(value, view.Data())
 	view.Destroy()
 
 	// Re-initialise the buffer with a new value.
@@ -59,7 +59,7 @@ func TestCofferInitialise(t *testing.T) {
 		t.Error("unexpected error")
 	}
 	newValue := make([]byte, 32)
-	copy(newValue, view.Data)
+	copy(newValue, view.Data())
 	view.Destroy()
 
 	// Compare them.
@@ -88,10 +88,10 @@ func TestCofferView(t *testing.T) {
 	}
 
 	// Some sanity checks on the inner value.
-	if view.Data == nil || len(view.Data) != 32 {
-		t.Error("unexpected data; got", view.Data)
+	if view.Data() == nil || len(view.Data()) != 32 {
+		t.Error("unexpected data; got", view.Data())
 	}
-	if bytes.Equal(view.Data, make([]byte, 32)) {
+	if bytes.Equal(view.Data(), make([]byte, 32)) {
 		t.Error("value inside coffer is zero")
 	}
 
@@ -122,14 +122,14 @@ func TestCofferRekey(t *testing.T) {
 		t.Error("unexpected error;", err)
 	}
 	orgValue := make([]byte, 32)
-	copy(orgValue, view.Data)
+	copy(orgValue, view.Data())
 	view.Destroy()
 
 	// Remember the value of the partitions.
 	left := make([]byte, 32)
 	right := make([]byte, 32)
-	copy(left, s.left.Data)
-	copy(right, s.right.Data)
+	copy(left, s.left.Data())
+	copy(right, s.right.Data())
 
 	// Manually re-key before we continue.
 	s.RUnlock()
@@ -142,7 +142,7 @@ func TestCofferRekey(t *testing.T) {
 		t.Error("unexpected error;", err)
 	}
 	newValue := make([]byte, 32)
-	copy(newValue, view.Data)
+	copy(newValue, view.Data())
 	view.Destroy()
 
 	// Compare the values.
@@ -151,7 +151,7 @@ func TestCofferRekey(t *testing.T) {
 	}
 
 	// Compare the partition values.
-	if bytes.Equal(left, s.left.Data) || bytes.Equal(right, s.right.Data) {
+	if bytes.Equal(left, s.left.Data()) || bytes.Equal(right, s.right.Data()) {
 		t.Error("partition values did not change")
 	}
 

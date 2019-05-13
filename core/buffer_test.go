@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"testing"
+	"unsafe"
 )
 
 func TestNewBuffer(t *testing.T) {
@@ -32,8 +33,8 @@ func TestNewBuffer(t *testing.T) {
 	if !b.alive {
 		t.Error("did not expect destroyed buffer")
 	}
-	if len(b.Data) != 32 || cap(b.Data) != 32 {
-		t.Errorf("buffer has invalid length (%d) or capacity (%d)", len(b.Data), cap(b.Data))
+	if len(b.Data()) != 32 || cap(b.Data()) != 32 {
+		t.Errorf("buffer has invalid length (%d) or capacity (%d)", len(b.Data()), cap(b.Data()))
 	}
 	if !b.mutable {
 		t.Error("buffer is not marked mutable")
@@ -41,7 +42,7 @@ func TestNewBuffer(t *testing.T) {
 	if len(b.memory) != roundToPageSize(32)+(2*pageSize) {
 		t.Error("allocated incorrect length of memory")
 	}
-	if !bytes.Equal(b.Data, make([]byte, 32)) {
+	if !bytes.Equal(b.Data(), make([]byte, 32)) {
 		t.Error("container is not zero-filled")
 	}
 
@@ -52,6 +53,40 @@ func TestNewBuffer(t *testing.T) {
 
 	// Destroy the buffer.
 	b.Destroy()
+}
+
+func TestData(t *testing.T) {
+	b, err := NewBuffer(32)
+	if err != nil {
+		t.Error(err)
+	}
+	datasegm := b.data
+	datameth := b.Data()
+
+	// Check for naive equality.
+	if !bytes.Equal(datasegm, datameth) {
+		t.Error("naive equality check failed")
+	}
+
+	// Modify and check if the change was reflected in both.
+	datameth[0] = 1
+	datameth[31] = 1
+	if !bytes.Equal(datasegm, datameth) {
+		t.Error("modified equality check failed")
+	}
+
+	// Do a deep comparison.
+	if uintptr(unsafe.Pointer(&datameth[0])) != uintptr(unsafe.Pointer(&datasegm[0])) {
+		t.Error("pointer values differ")
+	}
+	if len(datameth) != len(datasegm) || cap(datameth) != cap(datasegm) {
+		t.Error("length or capacity values differ")
+	}
+
+	b.Destroy()
+	if b.Data() != nil {
+		t.Error("expected nil data slice for destroyed buffer")
+	}
 }
 
 func TestBufferState(t *testing.T) {
@@ -118,8 +153,8 @@ func TestDestroy(t *testing.T) {
 	b.Destroy()
 
 	// Pick apart the destruction.
-	if b.Data != nil {
-		t.Error("expected bytes buffer to be nil; got", b.Data)
+	if b.Data() != nil {
+		t.Error("expected bytes buffer to be nil; got", b.Data())
 	}
 	if b.memory != nil {
 		t.Error("expected memory to be nil; got", b.memory)
@@ -143,8 +178,8 @@ func TestDestroy(t *testing.T) {
 	b.Destroy()
 
 	// Verify that it didn't come back to life.
-	if b.Data != nil {
-		t.Error("expected bytes buffer to be nil; got", b.Data)
+	if b.Data() != nil {
+		t.Error("expected bytes buffer to be nil; got", b.Data())
 	}
 	if b.memory != nil {
 		t.Error("expected memory to be nil; got", b.memory)
