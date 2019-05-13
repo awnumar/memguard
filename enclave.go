@@ -2,7 +2,6 @@ package memguard
 
 import (
 	"github.com/awnumar/memguard/core"
-	"github.com/awnumar/memguard/crypto"
 )
 
 /*
@@ -13,9 +12,9 @@ type Enclave struct {
 }
 
 /*
-NewEnclave seals up the data in a given buffer into an encrypted enclave object.
+NewEnclave seals up some given data into an encrypted enclave object. The buffer is wiped after the data is copied.
 
-Alternatively, LockedBuffer objects have a Seal method which also destroy the LockedBuffers.
+Alternatively, a LockedBuffer may be converted into an Enclave object using the Seal method provided. This will also have the effect of destroying the LockedBuffer.
 */
 func NewEnclave(buf []byte) *Enclave {
 	if len(buf) == 0 {
@@ -46,7 +45,7 @@ Open decrypts an Enclave object and places its contents into a LockedBuffer. An 
 func (e *Enclave) Open() (*LockedBuffer, error) {
 	b, err := core.Open(e.raw)
 	if err != nil {
-		if err != crypto.ErrDecryptionFailed {
+		if err != core.ErrDecryptionFailed {
 			core.Panic(err)
 		}
 		return nil, err

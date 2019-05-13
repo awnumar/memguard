@@ -5,7 +5,6 @@ package memcall
 import (
 	"fmt"
 
-	"github.com/awnumar/memguard/crypto"
 	"golang.org/x/sys/unix"
 )
 
@@ -36,7 +35,9 @@ func Alloc(n int) ([]byte, error) {
 	}
 
 	// Wipe it just in case there is some remnant data.
-	crypto.MemClr(b)
+	for i := range b {
+		b[i] = 0
+	}
 
 	// Return the allocated memory.
 	return b, nil
@@ -50,7 +51,9 @@ func Free(b []byte) error {
 	}
 
 	// Wipe the memory region in case of remnant data.
-	crypto.MemClr(b)
+	for i := range b {
+		b[i] = 0
+	}
 
 	// Free the memory back to the kernel.
 	if err := unix.Munmap(b); err != nil {

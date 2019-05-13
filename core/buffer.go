@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
 )
 
@@ -73,10 +72,8 @@ func NewBuffer(size int) (*Buffer, error) {
 	}
 
 	// Populate the canary values with fresh random bytes.
-	if err := crypto.MemScr(b.canaryref); err != nil {
-		Panic(err)
-	}
-	crypto.Copy(b.canaryval, b.canaryref)
+	Scramble(b.canaryref)
+	Copy(b.canaryval, b.canaryref)
 
 	// Make the guard pages inaccessible.
 	if err := memcall.Protect(b.preguard, memcall.NoAccess); err != nil {
@@ -165,7 +162,7 @@ func (b *Buffer) Destroy() {
 	}
 
 	// Verify the canary
-	if !crypto.Equal(b.canaryval, b.canaryref) {
+	if !Equal(b.canaryval, b.canaryref) {
 		Panic("<memguard::core::buffer> canary verification failed; buffer overflow detected")
 	}
 
@@ -173,7 +170,7 @@ func (b *Buffer) Destroy() {
 	buffers.Remove(b)
 
 	// Wipe the memory.
-	crypto.MemClr(b.memory)
+	Wipe(b.memory)
 
 	// Unlock the pages that hold our data.
 	if err := memcall.Unlock(b.inner); err != nil {

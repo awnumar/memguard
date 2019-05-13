@@ -1,45 +1,35 @@
-package crypto_test
+package core
 
 import (
 	"bytes"
 	"encoding/base64"
 	"testing"
-
-	"github.com/awnumar/memguard/crypto"
 )
 
 func TestCopy(t *testing.T) {
 	a := make([]byte, 8)
-	if err := crypto.MemScr(a); err != nil {
-		t.Error(err)
-	}
+	Scramble(a)
 	b := make([]byte, 16)
-	if err := crypto.MemScr(b); err != nil {
-		t.Error(err)
-	}
+	Scramble(b)
 	c := make([]byte, 32)
-	if err := crypto.MemScr(c); err != nil {
-		t.Error(err)
-	}
+	Scramble(c)
 
 	// dst > src
-	crypto.Copy(b, a)
+	Copy(b, a)
 	if !bytes.Equal(b[:8], a) {
 		t.Error("incorrect copying")
 	}
 
 	// dst < src
-	crypto.Copy(b, c)
+	Copy(b, c)
 	if !bytes.Equal(b, c[:16]) {
 		t.Error("incorrect copying")
 	}
 
 	// dst = src
 	b2 := make([]byte, 16)
-	if err := crypto.MemScr(b2); err != nil {
-		t.Error(err)
-	}
-	crypto.Copy(b, b2)
+	Scramble(b2)
+	Copy(b, b2)
 	if !bytes.Equal(b, b2) {
 		t.Error("incorrect copying")
 	}
@@ -47,15 +37,11 @@ func TestCopy(t *testing.T) {
 
 func TestMove(t *testing.T) {
 	a := make([]byte, 32)
-	if err := crypto.MemScr(a); err != nil {
-		t.Error(err)
-	}
+	Scramble(a)
 	b := make([]byte, 32)
-	if err := crypto.MemScr(b); err != nil {
-		t.Error(err)
-	}
+	Scramble(b)
 
-	crypto.Move(a, b)
+	Move(a, b)
 	if !bytes.Equal(b, make([]byte, 32)) {
 		t.Error("src buffer was not wiped")
 	}
@@ -63,24 +49,27 @@ func TestMove(t *testing.T) {
 
 func TestCompare(t *testing.T) {
 	a := make([]byte, 8)
-	if err := crypto.MemScr(a); err != nil {
-		t.Error(err)
-	}
+	Scramble(a)
 	b := make([]byte, 16)
-	if err := crypto.MemScr(b); err != nil {
-		t.Error(err)
-	}
+	Scramble(b)
 	c := make([]byte, 16)
 	copy(c, b)
 
 	// not equal
-	if crypto.Equal(a, b) {
+	if Equal(a, b) {
 		t.Error("expected not equal")
 	}
 
 	// equal
-	if !crypto.Equal(b, c) {
+	if !Equal(b, c) {
 		t.Error("expected equal")
+	}
+
+	c[8] = ^c[8]
+
+	// not equal
+	if Equal(b, c) {
+		t.Error("expected not equal")
 	}
 }
 
@@ -91,70 +80,43 @@ func TestHash(t *testing.T) {
 	known["test"] = "kosgNmlD4q/RHrwOri5TqTvxd6T881vMZNUDcE5l4gI="
 
 	for k, v := range known {
-		if base64.StdEncoding.EncodeToString(crypto.Hash([]byte(k))) != v {
+		if base64.StdEncoding.EncodeToString(Hash([]byte(k))) != v {
 			t.Error("digest doesn't match known values")
 		}
 	}
 }
 
-func TestMemClr(t *testing.T) {
+func TestWipe(t *testing.T) {
 	b := make([]byte, 32)
-	if err := crypto.MemScr(b); err != nil {
-		t.Error(err)
-	}
-
-	crypto.MemClr(b)
+	Scramble(b)
+	Wipe(b)
 	for i := range b {
 		if b[i] != 0 {
-			t.Error("memclr unsuccessful")
+			t.Error("wipe unsuccessful")
 		}
 	}
 }
 
-func TestMemScr(t *testing.T) {
-	b := make([]byte, 32)
-
-	if err := crypto.MemScr(b); err != nil {
-		t.Error(err)
-	}
-	if bytes.Equal(b, make([]byte, 32)) {
-		t.Error("memscr unsuccessful")
-	}
-
-	c := make([]byte, 32)
-	copy(c, b)
-	if err := crypto.MemScr(c); err != nil {
-		t.Error(err)
-	}
-	if bytes.Equal(b, c) || bytes.Equal(c, make([]byte, 32)) {
-		t.Error("memscr unsuccessful")
-	}
-}
-
-func TestSealOpen(t *testing.T) {
+func TestEncryptDecrypt(t *testing.T) {
 	// Declare the plaintext and the key.
 	m := make([]byte, 64)
-	if err := crypto.MemScr(m); err != nil {
-		t.Error(err)
-	}
+	Scramble(m)
 	k := make([]byte, 32)
-	if err := crypto.MemScr(k); err != nil {
-		t.Error(err)
-	}
+	Scramble(k)
 
 	// Encrypt the message.
-	x, err := crypto.Seal(m, k)
+	x, err := Encrypt(m, k)
 	if err != nil {
 		t.Error("expected no errors; got", err)
 	}
 
 	// Decrypt the message.
-	dm := make([]byte, len(x)-crypto.Overhead)
-	length, err := crypto.Open(x, k, dm)
+	dm := make([]byte, len(x)-Overhead)
+	length, err := Decrypt(x, k, dm)
 	if err != nil {
 		t.Error("expected no errors; got", err)
 	}
-	if length != len(x)-crypto.Overhead {
+	if length != len(x)-Overhead {
 		t.Error("unexpected plaintext length; got", length)
 	}
 
@@ -164,9 +126,9 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Attempt decryption /w buffer that is too small to hold the output.
-	out := make([]byte, len(x)-crypto.Overhead-1)
-	length, err = crypto.Open(x, k, out)
-	if err != crypto.ErrBufferTooSmall {
+	out := make([]byte, len(x)-Overhead-1)
+	length, err = Decrypt(x, k, out)
+	if err != ErrBufferTooSmall {
 		t.Error("expected error; got", err)
 	}
 	if length != 0 {
@@ -174,34 +136,32 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Construct a buffer that has the correct capacity but a smaller length.
-	out = make([]byte, len(x)-crypto.Overhead)
-	small_out := out[:2]
-	if len(small_out) != 2 || cap(small_out) != len(x)-crypto.Overhead {
+	out = make([]byte, len(x)-Overhead)
+	smallOut := out[:2]
+	if len(smallOut) != 2 || cap(smallOut) != len(x)-Overhead {
 		t.Error("invalid construction for test")
 	}
-	length, err = crypto.Open(x, k, small_out)
+	length, err = Decrypt(x, k, smallOut)
 	if err != nil {
 		t.Error("unexpected error:", err)
 	}
-	if length != len(x)-crypto.Overhead {
+	if length != len(x)-Overhead {
 		t.Error("unexpected length; got", length)
 	}
-	if !bytes.Equal(m, small_out[:len(x)-crypto.Overhead]) {
+	if !bytes.Equal(m, smallOut[:len(x)-Overhead]) {
 		t.Error("decrypted plaintext does not match original")
 	}
 
 	// Generate an incorrect key.
 	ik := make([]byte, 32)
-	if err := crypto.MemScr(ik); err != nil {
-		t.Error(err)
-	}
+	Scramble(ik)
 
 	// Attempt decryption with the incorrect key.
-	length, err = crypto.Open(x, ik, dm)
+	length, err = Decrypt(x, ik, dm)
 	if length != 0 {
 		t.Error("expected length = 0; got", length)
 	}
-	if err != crypto.ErrDecryptionFailed {
+	if err != ErrDecryptionFailed {
 		t.Error("expected error with incorrect key; got", err)
 	}
 
@@ -213,23 +173,21 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Attempt decryption of the invalid ciphertext with the correct key.
-	length, err = crypto.Open(x, k, dm)
+	length, err = Decrypt(x, k, dm)
 	if length != 0 {
 		t.Error("expected length = 0; got", length)
 	}
-	if err != crypto.ErrDecryptionFailed {
+	if err != ErrDecryptionFailed {
 		t.Error("expected error with modified ciphertext; got", err)
 	}
 
 	// Generate a key of an invalid length.
 	ik = make([]byte, 16)
-	if err := crypto.MemScr(ik); err != nil {
-		t.Error(err)
-	}
+	Scramble(ik)
 
 	// Attempt encryption with the invalid key.
-	ix, err := crypto.Seal(m, ik)
-	if err != crypto.ErrInvalidKeyLength {
+	ix, err := Encrypt(m, ik)
+	if err != ErrInvalidKeyLength {
 		t.Error("expected error with invalid key; got", err)
 	}
 	if ix != nil {
@@ -237,11 +195,11 @@ func TestSealOpen(t *testing.T) {
 	}
 
 	// Attempt decryption with the invalid key.
-	length, err = crypto.Open(x, ik, dm)
+	length, err = Decrypt(x, ik, dm)
 	if length != 0 {
 		t.Error("expected length = 0; got", length)
 	}
-	if err != crypto.ErrInvalidKeyLength {
+	if err != ErrInvalidKeyLength {
 		t.Error("expected error with invalid key; got", err)
 	}
 }

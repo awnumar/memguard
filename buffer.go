@@ -5,7 +5,6 @@ import (
 	"unsafe"
 
 	"github.com/awnumar/memguard/core"
-	"github.com/awnumar/memguard/crypto"
 )
 
 /*
@@ -60,7 +59,7 @@ func NewBufferFromBytes(buf []byte) *LockedBuffer {
 	}
 
 	// Move the data over.
-	crypto.Move(b.Bytes(), buf)
+	core.Move(b.Bytes(), buf)
 
 	// Return the created Buffer object.
 	return b
@@ -79,9 +78,7 @@ func NewBufferRandom(size int) *LockedBuffer {
 	}
 
 	// Fill the buffer with random bytes.
-	if err := crypto.MemScr(b.Bytes()); err != nil {
-		core.Panic(err)
-	}
+	ScrambleBytes(b.Bytes())
 
 	// Return the created Buffer object.
 	return b
@@ -124,7 +121,7 @@ func (b *LockedBuffer) Copy(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	crypto.Copy(b.Bytes(), buf)
+	core.Copy(b.Bytes(), buf)
 }
 
 /*
@@ -138,8 +135,8 @@ func (b *LockedBuffer) Move(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	crypto.Copy(b.Bytes(), buf)
-	crypto.MemClr(buf)
+	core.Copy(b.Bytes(), buf)
+	core.Wipe(buf)
 }
 
 /*
@@ -153,9 +150,7 @@ func (b *LockedBuffer) Scramble() {
 	b.Lock()
 	defer b.Unlock()
 
-	if err := crypto.MemScr(b.Bytes()); err != nil {
-		core.Panic(err)
-	}
+	core.Scramble(b.Bytes())
 }
 
 /*
@@ -169,7 +164,7 @@ func (b *LockedBuffer) Wipe() {
 	b.Lock()
 	defer b.Unlock()
 
-	crypto.MemClr(b.Bytes())
+	core.Wipe(b.Bytes())
 }
 
 /*
@@ -194,7 +189,7 @@ func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 
 	b.RLock()
 
-	crypto.Copy(new.Bytes(), b.Bytes())
+	core.Copy(new.Bytes(), b.Bytes())
 
 	if !b.IsMutable() {
 		new.Freeze()

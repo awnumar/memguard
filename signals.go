@@ -22,11 +22,12 @@ var (
 /*
 CatchSignal assigns a given function to be run in the event of a signal being received by the process. If no signals are provided all signals will be caught.
 
-  i.   Signal is received by the process and caught by the handler routine.
-  ii.  Interrupt handler is called and return value written to stdout.
-  iii. Secure session state is wiped and process terminates.
+  1. Signal is caught by the process
+  2. Interrupt handler is executed
+  3. Secure session state is wiped
+  4. Process terminates with exit code 1
 
-This function can be called multiple times with the effect that only the call will have any effect. The arguments are
+This function can be called multiple times with the effect that only the last call will have any effect. The arguments are
 
   var handler func(os.Signal) // Function that is run on catching a signal. Signal is passed to function.
   var signals os.Signal...    // List of signals to listen out for. If none provided it will default to all.

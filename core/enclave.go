@@ -3,8 +3,6 @@ package core
 import (
 	"errors"
 	"sync"
-
-	"github.com/awnumar/memguard/crypto"
 )
 
 var (
@@ -44,7 +42,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	}
 
 	// Encrypt the plaintext.
-	e.ciphertext, err = crypto.Seal(buf, k.Data())
+	e.ciphertext, err = Encrypt(buf, k.Data())
 	if err != nil {
 		return nil, err // key is not 32 bytes long
 	}
@@ -53,7 +51,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	k.Destroy()
 
 	// Wipe the given buffer.
-	crypto.MemClr(buf)
+	Wipe(buf)
 
 	return e, nil
 }
@@ -90,7 +88,7 @@ The Buffer object should be destroyed after the contents are no longer needed.
 */
 func Open(e *Enclave) (*Buffer, error) {
 	// Allocate a secure Buffer to hold the decrypted data.
-	b, err := NewBuffer(len(e.ciphertext) - crypto.Overhead)
+	b, err := NewBuffer(len(e.ciphertext) - Overhead)
 	if err != nil {
 		Panic(err) // ciphertext has invalid length
 	}
@@ -102,7 +100,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Decrypt the enclave into the buffer we created.
-	_, err = crypto.Open(e.ciphertext, k.Data(), b.Data())
+	_, err = Decrypt(e.ciphertext, k.Data(), b.Data())
 	if err != nil {
 		return nil, err
 	}

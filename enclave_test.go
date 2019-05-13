@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/awnumar/memguard/crypto"
+	"github.com/awnumar/memguard/core"
 )
 
 func TestNewEnclave(t *testing.T) {
@@ -65,7 +65,7 @@ func TestOpen(t *testing.T) {
 	}
 	Purge() // reset the session
 	b, err = e.Open()
-	if err != crypto.ErrDecryptionFailed {
+	if err != core.ErrDecryptionFailed {
 		t.Error("expected decryption error; got", err)
 	}
 	if b != nil {

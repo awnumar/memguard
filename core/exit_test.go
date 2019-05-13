@@ -2,8 +2,6 @@ package core
 
 import (
 	"testing"
-
-	"github.com/awnumar/memguard/crypto"
 )
 
 func TestPurge(t *testing.T) {
@@ -38,7 +36,7 @@ func TestPurge(t *testing.T) {
 	}
 
 	// Verify that the key changed by decrypting the Enclave.
-	if _, err := Open(enclave); err != crypto.ErrDecryptionFailed {
+	if _, err := Open(enclave); err != ErrDecryptionFailed {
 		t.Error("expected decryption failed; got", err)
 	}
 }

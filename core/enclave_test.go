@@ -3,8 +3,6 @@ package core
 import (
 	"bytes"
 	"testing"
-
-	"github.com/awnumar/memguard/crypto"
 )
 
 func TestEnclaveInit(t *testing.T) {
@@ -44,7 +42,7 @@ func TestNewEnclave(t *testing.T) {
 	}
 
 	// Verify the length of the ciphertext is correct.
-	if len(e.ciphertext) != len(data)+crypto.Overhead {
+	if len(e.ciphertext) != len(data)+Overhead {
 		t.Error("ciphertext has unexpected length;", len(e.ciphertext))
 	}
 
@@ -70,7 +68,7 @@ func TestSeal(t *testing.T) {
 	}
 
 	// Do a sanity check on the length of the ciphertext.
-	if len(e.ciphertext) != 32+crypto.Overhead {
+	if len(e.ciphertext) != 32+Overhead {
 		t.Error("ciphertext has unexpected length:", len(e.ciphertext))
 	}
 
@@ -130,7 +128,7 @@ func TestOpen(t *testing.T) {
 
 	// Check for the error.
 	buf, err = Open(e)
-	if err != crypto.ErrDecryptionFailed {
+	if err != ErrDecryptionFailed {
 		t.Error("expected decryption error; got", err)
 	}
 	if buf != nil {

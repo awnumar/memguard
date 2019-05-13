@@ -2,16 +2,11 @@ package memguard
 
 import (
 	"github.com/awnumar/memguard/core"
-	"github.com/awnumar/memguard/crypto"
 	"github.com/awnumar/memguard/memcall"
 )
 
-/*
-DisableUnixCoreDumps disables core dumps in he event of a fault. Since core-dumps are only relevant on Unix systems on windows it will do nothing and return immediately.
-
-This function is precautionary as core-dumps are usually disabled by default on most systems.
-*/
-func DisableUnixCoreDumps() {
+func init() {
+	// Disable core dumps on unixesque systems.
 	memcall.DisableCoreDumps()
 }
 
@@ -19,16 +14,14 @@ func DisableUnixCoreDumps() {
 ScrambleBytes overwrites an arbitrary buffer with cryptographically-secure random bytes.
 */
 func ScrambleBytes(buf []byte) {
-	if err := crypto.MemScr(buf); err != nil {
-		core.Panic(err)
-	}
+	core.Scramble(buf)
 }
 
 /*
 WipeBytes overwrites an arbitrary buffer with zeroes.
 */
 func WipeBytes(buf []byte) {
-	crypto.MemClr(buf)
+	core.Wipe(buf)
 }
 
 /*

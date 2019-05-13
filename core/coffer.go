@@ -4,14 +4,10 @@ import (
 	"errors"
 	"sync"
 	"time"
-
-	"github.com/awnumar/memguard/crypto"
 )
 
-var (
-	// Interval of time between each verify & rekey cycle.
-	Interval uint = 8 // milliseconds
-)
+// Interval of time between each verify & rekey cycle.
+const Interval uint = 8 // milliseconds
 
 // Static allocation for fast random bytes reading.
 var buf32, _ = NewBuffer(32)
@@ -67,15 +63,11 @@ func (s *Coffer) Initialise() error {
 	defer s.Unlock()
 
 	// Overwrite the old value with fresh random bytes.
-	if err := crypto.MemScr(s.left.Data()); err != nil {
-		Panic(err)
-	}
-	if err := crypto.MemScr(s.right.Data()); err != nil {
-		Panic(err)
-	}
+	Scramble(s.left.Data())
+	Scramble(s.right.Data())
 
 	// left = left XOR hash(right)
-	hr := crypto.Hash(s.right.Data())
+	hr := Hash(s.right.Data())
 	for i := range hr {
 		s.left.Data()[i] ^= hr[i]
 	}
@@ -100,7 +92,7 @@ func (s *Coffer) View() (*Buffer, error) {
 	b, _ := NewBuffer(32)
 
 	// data = hash(right) XOR left
-	h := crypto.Hash(s.right.Data())
+	h := Hash(s.right.Data())
 	for i := range b.Data() {
 		b.Data()[i] = h[i] ^ s.left.Data()[i]
 	}
@@ -122,27 +114,21 @@ func (s *Coffer) Rekey() error {
 	s.Lock()
 	defer s.Unlock()
 
-	// Get a new random 32 byte R value.
-	if err := crypto.MemScr(buf32.Data()); err != nil {
-		Panic(err)
-	}
+	// Attain 32 bytes of fresh cryptographic buf32.
+	Scramble(buf32.Data())
 
-	// new_right = old_right XOR randbuf32
-	rr := make([]byte, 32)
+	// Hash the current right partition for later.
+	hashRightCurrent := Hash(s.right.Data())
+
+	// new_right = current_right XOR buf32
 	for i := range s.right.Data() {
-		rr[i] = s.right.Data()[i] ^ buf32.Data()[i]
+		s.right.Data()[i] ^= buf32.Data()[i]
 	}
 
-	// new_left = old_left XOR hash(old_right) XOR hash(new_right)
-	hy := crypto.Hash(s.right.Data())
-	hrr := crypto.Hash(rr)
-	for i := range buf32.Data() {
-		s.left.Data()[i] ^= hy[i] ^ hrr[i]
-	}
-
-	// Copy the new right to the right memory location.
-	for i := range s.right.Data() {
-		s.right.Data()[i] = rr[i]
+	// new_left = current_left XOR hash(current_right) XOR hash(new_right)
+	hashRightNew := Hash(s.right.Data())
+	for i := range s.left.Data() {
+		s.left.Data()[i] ^= hashRightCurrent[i] ^ hashRightNew[i]
 	}
 
 	return nil

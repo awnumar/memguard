@@ -2,8 +2,6 @@ package core
 
 import (
 	"os"
-
-	"github.com/awnumar/memguard/crypto"
 )
 
 /*
@@ -15,7 +13,11 @@ This function should be called before the program terminates, or else the provid
 */
 func Purge() {
 	// Generate a new encryption key, wiping the old.
-	key.Initialise()
+	err := key.Initialise()
+	if err != nil {
+		key.Destroy()
+		key = NewCoffer()
+	}
 
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.Flush()
@@ -53,12 +55,12 @@ Panic is identical to the builtin panic except it wipes all it can before callin
 */
 func Panic(v interface{}) {
 	// Wipe both halves of the Enclave encryption key.
-	crypto.MemClr(key.left.Data())
-	crypto.MemClr(key.right.Data())
+	Wipe(key.left.Data())
+	Wipe(key.right.Data())
 
 	// Wipe all of the currently active LockedBuffers.
 	for _, b := range buffers.list {
-		crypto.MemClr(b.Data())
+		Wipe(b.Data())
 	}
 
 	// Panic.

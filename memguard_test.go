@@ -4,12 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/awnumar/memguard/crypto"
+	"github.com/awnumar/memguard/core"
 )
-
-func TestDisableUnixCoreDumps(t *testing.T) {
-	DisableUnixCoreDumps()
-}
 
 func TestScrambleBytes(t *testing.T) {
 	buf := make([]byte, 32)
@@ -39,7 +35,7 @@ func TestPurge(t *testing.T) {
 		t.Error("buffer not destroyed")
 	}
 	buf, err = key.Open()
-	if err != crypto.ErrDecryptionFailed {
+	if err != core.ErrDecryptionFailed {
 		t.Error(buf.Bytes(), err)
 	}
 	if buf != nil {
