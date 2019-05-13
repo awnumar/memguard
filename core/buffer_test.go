@@ -165,8 +165,8 @@ func TestDestroy(t *testing.T) {
 	if b.preguard != nil || b.postguard != nil {
 		t.Error("guard page slice references are not nil")
 	}
-	if b.canaryref != nil || b.canaryval != nil {
-		t.Error("canary slice references are not nil")
+	if b.canary != nil {
+		t.Error("canary slice reference not nil")
 	}
 
 	// Check if the buffer was removed from the buffers list.
@@ -190,8 +190,8 @@ func TestDestroy(t *testing.T) {
 	if b.preguard != nil || b.postguard != nil {
 		t.Error("guard page slice references are not nil")
 	}
-	if b.canaryref != nil || b.canaryval != nil {
-		t.Error("canary slice references are not nil")
+	if b.canary != nil {
+		t.Error("canary slice reference not nil")
 	}
 }
 

@@ -29,8 +29,7 @@ type Buffer struct {
 	inner     []byte // Inner region between the guard pages
 	postguard []byte // Guard page addressed after the data
 
-	canaryval []byte // Value written behind data to detect spillage
-	canaryref []byte // Protected reference value for the canary buffer
+	canary []byte // Value written behind data to detect spillage
 }
 
 /*
@@ -62,9 +61,8 @@ func NewBuffer(size int) (*Buffer, error) {
 	b.inner = getBytes(&b.memory[pageSize], innerLen)
 	b.postguard = getBytes(&b.memory[pageSize+innerLen], pageSize)
 
-	// Construct slice references for canary sectors.
-	b.canaryref = getBytes(&b.memory[pageSize+innerLen], 32)
-	b.canaryval = getBytes(&b.memory[pageSize+innerLen-size-32], 32)
+	// Construct slice reference for canary portion of inner page.
+	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data))
 
 	// Lock the pages that will hold sensitive data.
 	if err := memcall.Lock(b.inner); err != nil {
@@ -72,8 +70,9 @@ func NewBuffer(size int) (*Buffer, error) {
 	}
 
 	// Populate the canary values with fresh random bytes.
-	Scramble(b.canaryref)
-	Copy(b.canaryval, b.canaryref)
+	Scramble(b.canary)
+	Copy(b.preguard, b.canary)
+	Copy(b.postguard, b.canary)
 
 	// Make the guard pages inaccessible.
 	if err := memcall.Protect(b.preguard, memcall.NoAccess); err != nil {
@@ -162,7 +161,7 @@ func (b *Buffer) Destroy() {
 	}
 
 	// Verify the canary
-	if !Equal(b.canaryval, b.canaryref) {
+	if !Equal(b.preguard, b.postguard) || !Equal(b.preguard[:len(b.canary)], b.canary) {
 		Panic("<memguard::core::buffer> canary verification failed; buffer overflow detected")
 	}
 
@@ -189,8 +188,7 @@ func (b *Buffer) Destroy() {
 	b.memory = nil
 	b.preguard = nil
 	b.postguard = nil
-	b.canaryref = nil
-	b.canaryval = nil
+	b.canary = nil
 }
 
 // BufferState encodes a buffer's various states.
