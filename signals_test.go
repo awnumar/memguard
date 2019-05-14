@@ -54,7 +54,7 @@ func TestCatchSignal(t *testing.T) {
 	// 	t.Error("got nil buffer")
 	// }
 	// bA := (*[64]byte)(unsafe.Pointer(&b.Bytes()[0]))
-	// bA[42] = 0x69
+	// bA[42] = 0x69 // write to guard page region
 }
 
 func TestCatchInterrupt(t *testing.T) {

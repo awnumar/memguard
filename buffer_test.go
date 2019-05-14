@@ -28,11 +28,7 @@ func TestFinalizer(t *testing.T) {
 }
 
 func TestNewBuffer(t *testing.T) {
-	b := NewBuffer(0)
-	if b != nil {
-		t.Error("expected nil buffer; got", b)
-	}
-	b = NewBuffer(32)
+	b := NewBuffer(32)
 	if b == nil {
 		t.Error("buffer should not be nil")
 	}
@@ -52,12 +48,8 @@ func TestNewBuffer(t *testing.T) {
 }
 
 func TestNewBufferFromBytes(t *testing.T) {
-	b := NewBufferFromBytes([]byte(""))
-	if b != nil {
-		t.Error("buffer should be nil; got", b)
-	}
 	data := []byte("yellow submarine")
-	b = NewBufferFromBytes(data)
+	b := NewBufferFromBytes(data)
 	if b == nil {
 		t.Error("buffer should not be nil")
 	}
@@ -80,11 +72,7 @@ func TestNewBufferFromBytes(t *testing.T) {
 }
 
 func TestNewBufferRandom(t *testing.T) {
-	b := NewBufferRandom(0)
-	if b != nil {
-		t.Error("buffer not nil")
-	}
-	b = NewBufferRandom(32)
+	b := NewBufferRandom(32)
 	if b == nil {
 		t.Error("buffer is nil")
 	}
@@ -307,14 +295,6 @@ func TestResize(t *testing.T) {
 	}
 	data := make([]byte, 64)
 	copy(data, b.Bytes())
-	err := b.Resize(0)
-	if err != nil {
-		t.Error("expected nil buffer for invalid size")
-	}
-	err = b.Resize(-1)
-	if err != nil {
-		t.Error("expected nil buffer for invalid size")
-	}
 	b = b.Resize(128)
 	if b == nil {
 		t.Error("got nil buffer")
@@ -331,25 +311,8 @@ func TestResize(t *testing.T) {
 	if !core.GetBufferState(b.Buffer).IsMutable {
 		t.Error("mutability state not preserved")
 	}
-	b.Freeze()
+	b.Destroy()
 	c := b.Resize(32)
-	if c == nil {
-		t.Error("got nil buffer")
-	}
-	if core.GetBufferState(b.Buffer).IsAlive {
-		t.Error("original buffer not destroyed")
-	}
-	if c.Size() != 32 {
-		t.Error("size is incorrect")
-	}
-	if !bytes.Equal(c.Bytes(), data[:32]) {
-		t.Error("data wasn't copied correctly")
-	}
-	if core.GetBufferState(c.Buffer).IsMutable {
-		t.Error("mutability state not preserved")
-	}
-	c.Destroy()
-	c = c.Resize(32)
 	if c != nil {
 		t.Error("expected nil buffer")
 	}

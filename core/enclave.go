@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"sync"
 )
 
 var (
@@ -19,7 +18,6 @@ func init() {
 Enclave is a sealed and encrypted container for sensitive data.
 */
 type Enclave struct {
-	sync.RWMutex
 	ciphertext []byte
 }
 

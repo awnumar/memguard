@@ -165,6 +165,9 @@ func TestDestroy(t *testing.T) {
 	if b.preguard != nil || b.postguard != nil {
 		t.Error("guard page slice references are not nil")
 	}
+	if b.inner != nil {
+		t.Error("inner pages slice reference not nil")
+	}
 	if b.canary != nil {
 		t.Error("canary slice reference not nil")
 	}
@@ -189,6 +192,9 @@ func TestDestroy(t *testing.T) {
 	}
 	if b.preguard != nil || b.postguard != nil {
 		t.Error("guard page slice references are not nil")
+	}
+	if b.inner != nil {
+		t.Error("inner pages slice reference not nil")
 	}
 	if b.canary != nil {
 		t.Error("canary slice reference not nil")

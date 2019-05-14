@@ -8,11 +8,7 @@ import (
 )
 
 func TestNewEnclave(t *testing.T) {
-	e := NewEnclave([]byte(""))
-	if e != nil {
-		t.Error("expected nil enclave")
-	}
-	e = NewEnclave([]byte("yellow submarine"))
+	e := NewEnclave([]byte("yellow submarine"))
 	if e == nil {
 		t.Error("got nil enclave")
 	}
@@ -27,11 +23,7 @@ func TestNewEnclave(t *testing.T) {
 }
 
 func TestNewEnclaveRandom(t *testing.T) {
-	e := NewEnclaveRandom(0)
-	if e != nil {
-		t.Error("expected nil enclave")
-	}
-	e = NewEnclaveRandom(32)
+	e := NewEnclaveRandom(32)
 	if e == nil {
 		t.Error("got nil enclave")
 	}

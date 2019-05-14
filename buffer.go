@@ -25,13 +25,13 @@ type drop [16]byte
 /*
 NewBuffer is a generic constructor for the LockedBuffer object. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 
-Valid values for the size argument are positive integers strictly greater than zero. If this condition is not met a nil value will be returned.
+The size must be strictly positive or else the function will panic.
 */
 func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
 	buf, err := core.NewBuffer(size)
 	if err != nil {
-		return nil
+		core.Panic(err)
 	}
 
 	// Initialise a LockedBuffer object around it.
@@ -49,14 +49,11 @@ func NewBuffer(size int) *LockedBuffer {
 /*
 NewBufferFromBytes constructs a buffer from a byte slice. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 
-The given slice must have a length of at least 1 byte. If this condition is not met a nil value is returned. The buffer is wiped after the value has been copied over to the LockedBuffer.
+The length of the buffer must be strictly positive or else the function will panic. The buffer is wiped after the value has been copied over to the LockedBuffer.
 */
 func NewBufferFromBytes(buf []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
 	b := NewBuffer(len(buf))
-	if b == nil {
-		return b
-	}
 
 	// Move the data over.
 	core.Move(b.Bytes(), buf)
@@ -68,14 +65,11 @@ func NewBufferFromBytes(buf []byte) *LockedBuffer {
 /*
 NewBufferRandom constructs a buffer filled with cryptographically-secure random bytes. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
 
-Valid values for the size argument are positive integers strictly greater than zero. If this condition is not met a nil value is returned.
+The size must be strictly positive or else the function will panic.
 */
 func NewBufferRandom(size int) *LockedBuffer {
 	// Construct a buffer of the specified size.
 	b := NewBuffer(size)
-	if b == nil {
-		return b
-	}
 
 	// Fill the buffer with random bytes.
 	ScrambleBytes(b.Bytes())
@@ -97,7 +91,7 @@ func (b *LockedBuffer) Melt() {
 /*
 Seal takes a LockedBuffer object and returns its contents encrypted inside a sealed Enclave object. The LockedBuffer is subsequently destroyed and its contents wiped.
 
-If Seal is called on a destroyed buffer, a nil enclave will be returned.
+If Seal is called on a destroyed buffer, a nil enclave is returned.
 */
 func (b *LockedBuffer) Seal() *Enclave {
 	e, err := core.Seal(b.Buffer)
@@ -175,7 +169,9 @@ func (b *LockedBuffer) Size() int {
 }
 
 /*
-Resize allocates a buffer of a positive integer size strictly greater than zero, and copies the data and mutability attributes over from the old one before destroying it. If called on a destroyed container or if the size constraints are violated, a nil object is returned.
+Resize moves the data within a buffer into a new buffer of the specified size.
+
+If called on an immutable container or if size is not strictly positive, the function will panic. If called on a destroyed container, a nil object is returned.
 */
 func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 	if !b.IsAlive() {
@@ -183,17 +179,11 @@ func (b *LockedBuffer) Resize(size int) *LockedBuffer {
 	}
 
 	new := NewBuffer(size)
-	if new == nil {
-		return nil
-	}
 
 	b.RLock()
 
-	core.Copy(new.Bytes(), b.Bytes())
-
-	if !b.IsMutable() {
-		new.Freeze()
-	}
+	// triggers segfault if b is immutable
+	new.Move(b.Bytes())
 
 	b.RUnlock()
 	b.Destroy()

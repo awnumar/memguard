@@ -69,7 +69,7 @@ func NewBuffer(size int) (*Buffer, error) {
 		Panic(err)
 	}
 
-	// Populate the canary values with fresh random bytes.
+	// Initialise the canary value and reference regions.
 	Scramble(b.canary)
 	Copy(b.preguard, b.canary)
 	Copy(b.postguard, b.canary)
@@ -187,6 +187,7 @@ func (b *Buffer) Destroy() {
 	b.data = nil
 	b.memory = nil
 	b.preguard = nil
+	b.inner = nil
 	b.postguard = nil
 	b.canary = nil
 }
