@@ -169,29 +169,6 @@ func (b *LockedBuffer) Size() int {
 }
 
 /*
-Resize moves the data within a buffer into a new buffer of the specified size.
-
-If called on an immutable container or if size is not strictly positive, the function will panic. If called on a destroyed container, a nil object is returned.
-*/
-func (b *LockedBuffer) Resize(size int) *LockedBuffer {
-	if !b.IsAlive() {
-		return nil
-	}
-
-	new := NewBuffer(size)
-
-	b.RLock()
-
-	// triggers segfault if b is immutable
-	new.Move(b.Bytes())
-
-	b.RUnlock()
-	b.Destroy()
-
-	return new
-}
-
-/*
 Destroy wipes and frees the underlying memory of a LockedBuffer. The LockedBuffer will not be accessible or usable after this calls is made.
 */
 func (b *LockedBuffer) Destroy() {
@@ -229,6 +206,9 @@ Uint16 returns a slice pointing to the protected region of memory with the data 
 The length of the buffer must be a multiple of two bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) Uint16() []uint16 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -256,6 +236,9 @@ Uint32 returns a slice pointing to the protected region of memory with the data 
 The length of the buffer must be a multiple of four bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) Uint32() []uint32 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -283,6 +266,9 @@ Uint64 returns a slice pointing to the protected region of memory with the data 
 The length of the buffer must be a multiple of eight bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) Uint64() []uint64 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -310,6 +296,9 @@ Int8 returns a slice pointing to the protected region of memory with the data re
 The LockedBuffer should not be destroyed or else a nil value is returned.
 */
 func (b *LockedBuffer) Int8() []int8 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -332,6 +321,9 @@ Int16 returns a slice pointing to the protected region of memory with the data r
 The length of the buffer must be a multiple of two bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) Int16() []int16 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -359,6 +351,9 @@ Int32 returns a slice pointing to the protected region of memory with the data r
 The length of the buffer must be a multiple of four bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) Int32() []int32 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -386,6 +381,9 @@ Int64 returns a slice pointing to the protected region of memory with the data r
 The length of the buffer must be a multiple of eight bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) Int64() []int64 {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -413,6 +411,9 @@ ByteArray8 takes a start index and returns a pointer to the start of some 8 byte
 The length of the buffer must be at least 8 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray8(start int) *[8]byte {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -433,6 +434,9 @@ ByteArray16 takes a start index and returns a pointer to the start of some 16 by
 The length of the buffer must be at least 16 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray16(start int) *[16]byte {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -453,6 +457,9 @@ ByteArray32 takes a start index and returns a pointer to the start of some 32 by
 The length of the buffer must be at least 32 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray32(start int) *[32]byte {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil
@@ -473,6 +480,9 @@ ByteArray64 takes a start index and returns a pointer to the start of some 64 by
 The length of the buffer must be at least 64 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray64(start int) *[64]byte {
+	b.RLock()
+	defer b.RUnlock()
+
 	// Check if still alive.
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		return nil

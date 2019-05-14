@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
 	"errors"
 	"unsafe"
@@ -39,6 +40,13 @@ func Move(dst, src []byte) {
 // Equal does a constant-time comparison of two byte slices. This is to mitigate against side-channel attacks.
 func Equal(x, y []byte) bool {
 	return subtle.ConstantTimeCompare(x, y) == 1
+}
+
+// Scramble fills a given buffer with cryptographically-secure random bytes.
+func Scramble(buf []byte) {
+	if _, err := rand.Read(buf); err != nil {
+		Panic(err)
+	}
 }
 
 // Hash implements a cryptographic hash function using Blake2b.
