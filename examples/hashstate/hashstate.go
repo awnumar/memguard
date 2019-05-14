@@ -14,7 +14,7 @@
 	limitations under the License.
 */
 
-package structs
+package hashstate
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 	"github.com/awnumar/memguard/examples/hashstate/blake2b"
 )
 
-func structs() {
+func HashState() {
 	// Some safety work
 	memguard.CatchInterrupt()
 	defer memguard.Purge()
@@ -56,5 +56,5 @@ func structs() {
 	if _, err := h.Read(seed.Bytes()); err != nil {
 		memguard.SafePanic(err)
 	}
-	fmt.Println(seed.Bytes())
+	fmt.Println("Output:", seed.Bytes())
 }

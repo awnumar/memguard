@@ -288,36 +288,6 @@ func TestSize(t *testing.T) {
 	}
 }
 
-func TestResize(t *testing.T) {
-	b := NewBufferRandom(64)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
-	data := make([]byte, 64)
-	copy(data, b.Bytes())
-	b = b.Resize(128)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
-	if b.Size() != 128 {
-		t.Error("size is incorrect")
-	}
-	if !bytes.Equal(b.Bytes()[:64], data) {
-		t.Error("data wasn't copied properly")
-	}
-	if !bytes.Equal(b.Bytes()[64:], make([]byte, 64)) {
-		t.Error("rest of buffer not zeroed")
-	}
-	if !core.GetBufferState(b.Buffer).IsMutable {
-		t.Error("mutability state not preserved")
-	}
-	b.Destroy()
-	c := b.Resize(32)
-	if c != nil {
-		t.Error("expected nil buffer")
-	}
-}
-
 func TestDestroy(t *testing.T) {
 	b := NewBuffer(32)
 	if b == nil {
@@ -411,7 +381,21 @@ func TestIsMutable(t *testing.T) {
 }
 
 func TestBytes(t *testing.T) {
-
+	b := NewBufferFromBytes([]byte("yellow submarine"))
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
+		t.Error("not equal contents")
+	}
+	b.Bytes()[8] = ^b.Bytes()[8]
+	if !bytes.Equal(b.Buffer.Data(), b.Bytes()) {
+		t.Error("methods disagree")
+	}
+	b.Destroy()
+	if b.Bytes() != nil {
+		t.Error("expected nil buffer")
+	}
 }
 
 func TestUint16(t *testing.T) {

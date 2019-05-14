@@ -1,7 +1,7 @@
-package structs
+package hashstate
 
 import "testing"
 
 func TestStructs(t *testing.T) {
-	structs()
+	HashState()
 }
