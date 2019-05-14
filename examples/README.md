@@ -31,3 +31,4 @@ You own your intellectual property and so you are free to choose any licence for
 ## Packages
 
 0. [Apache-2.0] [`socketkey`](socketkey) :: Streaming multi-threaded client->server transfer of secure data over a socket.
+1. [Apache-2.0] [`hashstate`](hashstate) :: Initialising a secure hash state struct inside a LockedBuffer allocated by memguard.
