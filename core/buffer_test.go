@@ -47,7 +47,7 @@ func TestNewBuffer(t *testing.T) {
 	}
 
 	// Check if the buffer was added to the buffers list.
-	if !buffers.Exists(b) {
+	if !buffers.exists(b) {
 		t.Error("buffer not in buffers list")
 	}
 
@@ -173,7 +173,7 @@ func TestDestroy(t *testing.T) {
 	}
 
 	// Check if the buffer was removed from the buffers list.
-	if buffers.Exists(b) {
+	if buffers.exists(b) {
 		t.Error("buffer is still in buffers list")
 	}
 
@@ -203,51 +203,51 @@ func TestDestroy(t *testing.T) {
 
 func TestBufferList(t *testing.T) {
 	// Create a new BufferList for testing with.
-	l := new(BufferList)
+	l := new(bufferList)
 
 	// Create some example buffers to test with.
 	a := new(Buffer)
 	b := new(Buffer)
 
 	// Check what Exists is saying.
-	if l.Exists(a) || l.Exists(b) {
+	if l.exists(a) || l.exists(b) {
 		t.Error("list is empty yet contains buffers?!")
 	}
 
 	// Add our two buffers to the list.
-	l.Add(a)
+	l.add(a)
 	if len(l.list) != 1 || l.list[0] != a {
 		t.Error("buffer was not added correctly")
 	}
-	l.Add(b)
+	l.add(b)
 	if len(l.list) != 2 || l.list[1] != b {
 		t.Error("buffer was not added correctly")
 	}
 
 	// Now check that they exist.
-	if !l.Exists(a) || !l.Exists(b) {
+	if !l.exists(a) || !l.exists(b) {
 		t.Error("expected buffers to be in list")
 	}
 
 	// Remove the buffers from the list.
-	l.Remove(a)
+	l.remove(a)
 	if len(l.list) != 1 || l.list[0] != b {
 		t.Error("buffer was not removed correctly")
 	}
-	l.Remove(b)
+	l.remove(b)
 	if len(l.list) != 0 {
 		t.Error("item was not removed correctly")
 	}
 
 	// Check what exists is saying now.
-	if l.Exists(a) || l.Exists(b) {
+	if l.exists(a) || l.exists(b) {
 		t.Error("list is empty yet contains buffers?!")
 	}
 
 	// Add the buffers again to test Empty.
-	l.Add(a)
-	l.Add(b)
-	bufs := l.Flush()
+	l.add(a)
+	l.add(b)
+	bufs := l.flush()
 	if l.list != nil {
 		t.Error("list was not nullified")
 	}
@@ -256,9 +256,9 @@ func TestBufferList(t *testing.T) {
 	}
 
 	// Try appending again.
-	l.Add(a)
-	if !l.Exists(a) || l.Exists(b) {
+	l.add(a)
+	if !l.exists(a) || l.exists(b) {
 		t.Error("list is in invalid state")
 	}
-	l.Remove(a)
+	l.remove(a)
 }

@@ -13,47 +13,14 @@ import (
 // Overhead is the size by which the ciphertext exceeds the plaintext.
 const Overhead int = secretbox.Overhead + 24
 
-// Wipe takes a buffer and wipes it with zeroes.
-func Wipe(buf []byte) {
-	for i := range buf {
-		buf[i] = 0
-	}
-}
+// ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
+var ErrInvalidKeyLength = errors.New("<memguard::core::ErrInvalidKeyLength> key must be exactly 32 bytes")
 
-// Copy is identical to Go's builtin copy function except the copying is done in constant time. This is to mitigate against side-channel attacks.
-func Copy(dst, src []byte) {
-	if len(dst) > len(src) {
-		subtle.ConstantTimeCopy(1, dst[:len(src)], src)
-	} else if len(dst) < len(src) {
-		subtle.ConstantTimeCopy(1, dst, src[:len(dst)])
-	} else {
-		subtle.ConstantTimeCopy(1, dst, src)
-	}
-}
+// ErrBufferTooSmall is returned when the decryption function, Open, is given an output buffer that is too small to hold the plaintext. In practice the plaintext will be Overhead bytes smaller than the ciphertext returned by the encryption function, Seal.
+var ErrBufferTooSmall = errors.New("<memguard::core::ErrBufferTooSmall> the given buffer is too small to hold the plaintext")
 
-// Move is identical to Copy except it wipes the source buffer after the copy operation is executed.
-func Move(dst, src []byte) {
-	Copy(dst, src)
-	Wipe(src)
-}
-
-// Equal does a constant-time comparison of two byte slices. This is to mitigate against side-channel attacks.
-func Equal(x, y []byte) bool {
-	return subtle.ConstantTimeCompare(x, y) == 1
-}
-
-// Scramble fills a given buffer with cryptographically-secure random bytes.
-func Scramble(buf []byte) {
-	if _, err := rand.Read(buf); err != nil {
-		Panic(err)
-	}
-}
-
-// Hash implements a cryptographic hash function using Blake2b.
-func Hash(b []byte) []byte {
-	h := blake2b.Sum256(b)
-	return h[:]
-}
+// ErrDecryptionFailed is returned when the attempted decryption fails. This can occur if the given key is incorrect or if the ciphertext is invalid.
+var ErrDecryptionFailed = errors.New("<memguard::core::ErrDecryptionFailed> decryption failed")
 
 // Encrypt takes a plaintext message and a 32 byte key and returns an authenticated ciphertext.
 func Encrypt(plaintext, key []byte) ([]byte, error) {
@@ -109,13 +76,44 @@ func Decrypt(ciphertext, key []byte, output []byte) (int, error) {
 	return 0, ErrDecryptionFailed
 }
 
-/* Define some errors used by these functions */
+// Hash implements a cryptographic hash function using Blake2b.
+func Hash(b []byte) []byte {
+	h := blake2b.Sum256(b)
+	return h[:]
+}
 
-// ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
-var ErrInvalidKeyLength = errors.New("<memguard::core::ErrInvalidKeyLength> key must be exactly 32 bytes")
+// Scramble fills a given buffer with cryptographically-secure random bytes.
+func Scramble(buf []byte) {
+	if _, err := rand.Read(buf); err != nil {
+		Panic(err)
+	}
+}
 
-// ErrBufferTooSmall is returned when the decryption function, Open, is given an output buffer that is too small to hold the plaintext. In practice the plaintext will be Overhead bytes smaller than the ciphertext returned by the encryption function, Seal.
-var ErrBufferTooSmall = errors.New("<memguard::core::ErrBufferTooSmall> the given buffer is too small to hold the plaintext")
+// Wipe takes a buffer and wipes it with zeroes.
+func Wipe(buf []byte) {
+	for i := range buf {
+		buf[i] = 0
+	}
+}
 
-// ErrDecryptionFailed is returned when the attempted decryption fails. This can occur if the given key is incorrect or if the ciphertext is invalid.
-var ErrDecryptionFailed = errors.New("<memguard::core::ErrDecryptionFailed> decryption failed")
+// Copy is identical to Go's builtin copy function except the copying is done in constant time. This is to mitigate against side-channel attacks.
+func Copy(dst, src []byte) {
+	if len(dst) > len(src) {
+		subtle.ConstantTimeCopy(1, dst[:len(src)], src)
+	} else if len(dst) < len(src) {
+		subtle.ConstantTimeCopy(1, dst, src[:len(dst)])
+	} else {
+		subtle.ConstantTimeCopy(1, dst, src)
+	}
+}
+
+// Move is identical to Copy except it wipes the source buffer after the copy operation is executed.
+func Move(dst, src []byte) {
+	Copy(dst, src)
+	Wipe(src)
+}
+
+// Equal does a constant-time comparison of two byte slices. This is to mitigate against side-channel attacks.
+func Equal(x, y []byte) bool {
+	return subtle.ConstantTimeCompare(x, y) == 1
+}

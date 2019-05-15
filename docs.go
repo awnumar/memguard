@@ -58,7 +58,7 @@ Package memguard implements a secure software enclave for the storage of sensiti
 			b.Bytes()[i] = ^b.Bytes()[i]
 		}
 
-		// Return the new data in encrypted form.
+		// Return the new data in encrypted form
 		return b.Seal() // <- destroys b
 	}
 

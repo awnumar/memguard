@@ -201,9 +201,9 @@ func (b *LockedBuffer) Bytes() []byte {
 }
 
 /*
-Uint16 returns a slice pointing to the protected region of memory with the data represented as []uint16.
+Uint16 returns a slice pointing to the protected region of memory with the data represented as a sequence of unsigned 16 bit integers. Its length will be half that of the byte slice, excluding any remaining part that doesn't form a complete uint16 value.
 
-The length of the buffer must be a multiple of two bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Uint16() []uint16 {
 	b.RLock()
@@ -214,8 +214,9 @@ func (b *LockedBuffer) Uint16() []uint16 {
 		return nil
 	}
 
-	// Check if data size a multiple of two.
-	if len(b.Bytes())%2 != 0 {
+	// Compute size of new slice representation.
+	size := b.Size() / 2
+	if size < 1 {
 		return nil
 	}
 
@@ -224,16 +225,16 @@ func (b *LockedBuffer) Uint16() []uint16 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 2, len(b.Bytes()) / 2}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), size, size}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]uint16)(unsafe.Pointer(&sl))
 }
 
 /*
-Uint32 returns a slice pointing to the protected region of memory with the data represented as []uint32.
+Uint32 returns a slice pointing to the protected region of memory with the data represented as a sequence of unsigned 32 bit integers. Its length will be one quarter that of the byte slice, excluding any remaining part that doesn't form a complete uint32 value.
 
-The length of the buffer must be a multiple of four bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Uint32() []uint32 {
 	b.RLock()
@@ -244,8 +245,9 @@ func (b *LockedBuffer) Uint32() []uint32 {
 		return nil
 	}
 
-	// Check if data size a multiple of two.
-	if len(b.Bytes())%4 != 0 {
+	// Compute size of new slice representation.
+	size := b.Size() / 4
+	if size < 1 {
 		return nil
 	}
 
@@ -254,16 +256,16 @@ func (b *LockedBuffer) Uint32() []uint32 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 4, len(b.Bytes()) / 4}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), size, size}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]uint32)(unsafe.Pointer(&sl))
 }
 
 /*
-Uint64 returns a slice pointing to the protected region of memory with the data represented as []uint64.
+Uint64 returns a slice pointing to the protected region of memory with the data represented as a sequence of unsigned 64 bit integers. Its length will be one eighth that of the byte slice, excluding any remaining part that doesn't form a complete uint64 value.
 
-The length of the buffer must be a multiple of eight bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Uint64() []uint64 {
 	b.RLock()
@@ -274,8 +276,9 @@ func (b *LockedBuffer) Uint64() []uint64 {
 		return nil
 	}
 
-	// Check if data size a multiple of two.
-	if len(b.Bytes())%8 != 0 {
+	// Compute size of new slice representation.
+	size := b.Size() / 8
+	if size < 1 {
 		return nil
 	}
 
@@ -284,16 +287,14 @@ func (b *LockedBuffer) Uint64() []uint64 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 8, len(b.Bytes()) / 8}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), size, size}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]uint64)(unsafe.Pointer(&sl))
 }
 
 /*
-Int8 returns a slice pointing to the protected region of memory with the data represented as []int8.
-
-The LockedBuffer should not be destroyed or else a nil value is returned.
+Int8 returns a slice pointing to the protected region of memory with the data represented as a sequence of signed 8 bit integers. If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int8() []int8 {
 	b.RLock()
@@ -309,16 +310,16 @@ func (b *LockedBuffer) Int8() []int8 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()), len(b.Bytes())}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), b.Size(), b.Size()}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int8)(unsafe.Pointer(&sl))
 }
 
 /*
-Int16 returns a slice pointing to the protected region of memory with the data represented as []int16.
+Int16 returns a slice pointing to the protected region of memory with the data represented as a sequence of signed 16 bit integers. Its length will be half that of the byte slice, excluding any remaining part that doesn't form a complete int16 value.
 
-The length of the buffer must be a multiple of two bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int16() []int16 {
 	b.RLock()
@@ -329,8 +330,9 @@ func (b *LockedBuffer) Int16() []int16 {
 		return nil
 	}
 
-	// Check if data size a multiple of two.
-	if len(b.Bytes())%2 != 0 {
+	// Compute size of new slice representation.
+	size := b.Size() / 2
+	if size < 1 {
 		return nil
 	}
 
@@ -339,16 +341,16 @@ func (b *LockedBuffer) Int16() []int16 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 2, len(b.Bytes()) / 2}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), size, size}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int16)(unsafe.Pointer(&sl))
 }
 
 /*
-Int32 returns a slice pointing to the protected region of memory with the data represented as []int32.
+Int32 returns a slice pointing to the protected region of memory with the data represented as a sequence of signed 32 bit integers. Its length will be one quarter that of the byte slice, excluding any remaining part that doesn't form a complete int32 value.
 
-The length of the buffer must be a multiple of four bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int32() []int32 {
 	b.RLock()
@@ -359,8 +361,9 @@ func (b *LockedBuffer) Int32() []int32 {
 		return nil
 	}
 
-	// Check if data size a multiple of two.
-	if len(b.Bytes())%4 != 0 {
+	// Compute size of new slice representation.
+	size := b.Size() / 4
+	if size < 1 {
 		return nil
 	}
 
@@ -369,16 +372,16 @@ func (b *LockedBuffer) Int32() []int32 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 4, len(b.Bytes()) / 4}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), size, size}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int32)(unsafe.Pointer(&sl))
 }
 
 /*
-Int64 returns a slice pointing to the protected region of memory with the data represented as []int64.
+Int64 returns a slice pointing to the protected region of memory with the data represented as a sequence of signed 64 bit integers. Its length will be one eighth that of the byte slice, excluding any remaining part that doesn't form a complete int64 value.
 
-The length of the buffer must be a multiple of eight bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
+If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int64() []int64 {
 	b.RLock()
@@ -389,8 +392,9 @@ func (b *LockedBuffer) Int64() []int64 {
 		return nil
 	}
 
-	// Check if data size a multiple of two.
-	if len(b.Bytes())%8 != 0 {
+	// Compute size of new slice representation.
+	size := b.Size() / 8
+	if size < 1 {
 		return nil
 	}
 
@@ -399,7 +403,7 @@ func (b *LockedBuffer) Int64() []int64 {
 		addr uintptr
 		len  int
 		cap  int
-	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), len(b.Bytes()) / 8, len(b.Bytes()) / 8}
+	}{uintptr(unsafe.Pointer(&b.Bytes()[0])), size, size}
 
 	// Cast the representation to the correct type and return it.
 	return *(*[]int64)(unsafe.Pointer(&sl))

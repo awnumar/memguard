@@ -20,7 +20,7 @@ func Purge() {
 	}
 
 	// Get a snapshot of existing Buffers.
-	snapshot := buffers.Flush()
+	snapshot := buffers.flush()
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
@@ -39,7 +39,7 @@ func Exit(c int) {
 	key.Destroy()
 
 	// Get a snapshot of existing Buffers.
-	snapshot := buffers.Flush()
+	snapshot := buffers.flush()
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {

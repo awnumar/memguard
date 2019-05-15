@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	buffers = new(BufferList)
+	buffers = new(bufferList)
 )
 
 /*
@@ -87,7 +87,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	b.mutable = true
 
 	// Append the container to list of active buffers.
-	buffers.Add(b)
+	buffers.add(b)
 
 	// Return the created Buffer to the caller.
 	return b, nil
@@ -166,7 +166,7 @@ func (b *Buffer) Destroy() {
 	}
 
 	// Remove this one from global slice.
-	buffers.Remove(b)
+	buffers.remove(b)
 
 	// Wipe the memory.
 	Wipe(b.memory)
@@ -208,13 +208,13 @@ func GetBufferState(b *Buffer) BufferState {
 }
 
 // BufferList stores a list of buffers in a thread-safe manner.
-type BufferList struct {
+type bufferList struct {
 	sync.RWMutex
 	list []*Buffer
 }
 
 // Add appends a given Buffer to the list.
-func (l *BufferList) Add(b *Buffer) {
+func (l *bufferList) add(b *Buffer) {
 	l.Lock()
 	defer l.Unlock()
 
@@ -222,7 +222,7 @@ func (l *BufferList) Add(b *Buffer) {
 }
 
 // Remove removes a given Buffer from the list.
-func (l *BufferList) Remove(b *Buffer) {
+func (l *bufferList) remove(b *Buffer) {
 	l.Lock()
 	defer l.Unlock()
 
@@ -235,7 +235,7 @@ func (l *BufferList) Remove(b *Buffer) {
 }
 
 // Exists checks if a given buffer is in the list.
-func (l *BufferList) Exists(b *Buffer) bool {
+func (l *bufferList) exists(b *Buffer) bool {
 	l.RLock()
 	defer l.RUnlock()
 
@@ -249,7 +249,7 @@ func (l *BufferList) Exists(b *Buffer) bool {
 }
 
 // Flush clears the list and returns its previous contents.
-func (l *BufferList) Flush() []*Buffer {
+func (l *bufferList) flush() []*Buffer {
 	l.Lock()
 	defer l.Unlock()
 
