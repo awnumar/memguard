@@ -62,8 +62,8 @@ func TestNewBufferFromBytes(t *testing.T) {
 	if !bytes.Equal(data, make([]byte, 16)) {
 		t.Error("source buffer not wiped")
 	}
-	if !core.GetBufferState(b.Buffer).IsMutable {
-		t.Error("buffer should be mutable")
+	if core.GetBufferState(b.Buffer).IsMutable {
+		t.Error("buffer should be immutable")
 	}
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		t.Error("buffer should not be destroyed")
@@ -82,8 +82,8 @@ func TestNewBufferRandom(t *testing.T) {
 	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("buffer is zeroed")
 	}
-	if !core.GetBufferState(b.Buffer).IsMutable {
-		t.Error("buffer should be mutable")
+	if core.GetBufferState(b.Buffer).IsMutable {
+		t.Error("buffer should be immutable")
 	}
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		t.Error("buffer should not be destroyed")
@@ -205,6 +205,10 @@ func TestCopy(t *testing.T) {
 	}
 }
 
+func TestCopyAt(t *testing.T) {
+
+}
+
 func TestMove(t *testing.T) {
 	b := NewBuffer(16)
 	if b == nil {
@@ -226,6 +230,10 @@ func TestMove(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+}
+
+func TestMoveAt(t *testing.T) {
+
 }
 
 func TestScramble(t *testing.T) {
@@ -258,6 +266,7 @@ func TestWipe(t *testing.T) {
 	if b == nil {
 		t.Error("got nil buffer")
 	}
+	b.Melt()
 	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("buffer was not randomised")
 	}
@@ -388,6 +397,7 @@ func TestBytes(t *testing.T) {
 	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("not equal contents")
 	}
+	b.Melt()
 	b.Bytes()[8] = ^b.Bytes()[8]
 	if !bytes.Equal(b.Buffer.Data(), b.Bytes()) {
 		t.Error("methods disagree")

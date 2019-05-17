@@ -34,7 +34,7 @@ func NewEnclaveRandom(size int) *Enclave {
 }
 
 /*
-Open decrypts an Enclave object and places its contents into a LockedBuffer. An error will be returned if decryption failed.
+Open decrypts an Enclave object and places its contents into an immutable LockedBuffer. An error will be returned if decryption failed.
 */
 func (e *Enclave) Open() (*LockedBuffer, error) {
 	b, err := core.Open(e.Enclave)
@@ -44,5 +44,6 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 		}
 		return nil, err
 	}
+	b.Freeze()
 	return &LockedBuffer{b, new(drop)}, nil
 }

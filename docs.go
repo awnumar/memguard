@@ -53,13 +53,16 @@ Package memguard implements a secure software enclave for the storage of sensiti
 		}
 		defer b.Destroy() // Destroy the copy when we return
 
+		// Open returns the data in an immutable buffer, so make it mutable
+		b.Melt()
+
 		// Set every element to its complement
 		for i := range b.Bytes() {
 			b.Bytes()[i] = ^b.Bytes()[i]
 		}
 
 		// Return the new data in encrypted form
-		return b.Seal() // <- destroys b
+		return b.Seal() // <- sealing also destroys b
 	}
 
 There are two main container objects exposed in this API. Enclave objects encrypt data and store the ciphertext whereas LockedBuffers are more like guarded memory allocations. There is a limit on the maximum number of LockedBuffer objects that can exist at any one time, imposed by the system's mlock limits. There is no limit on Enclaves.

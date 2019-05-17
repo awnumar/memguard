@@ -11,6 +11,12 @@ var (
 	buffers = new(bufferList)
 )
 
+// ErrNullBuffer is returned when attempting to construct a buffer of size less than one.
+var ErrNullBuffer = errors.New("<memguard::core::ErrNullBuffer> buffer size must be greater than zero")
+
+// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
+var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")
+
 /*
 Buffer is a structure that holds raw sensitive data.
 
@@ -199,7 +205,7 @@ type BufferState struct {
 }
 
 /*
-GetBufferState returns a BufferState struct that encodes state information about a given Buffer object. It exports two fields, IsMutable and IsDestroyed, which signify whether the Buffer is mutable and whether it has been destroyed, respectively.
+GetBufferState returns a BufferState struct that encodes state information about a given Buffer object.
 */
 func GetBufferState(b *Buffer) BufferState {
 	b.RLock()
@@ -260,11 +266,3 @@ func (l *bufferList) flush() []*Buffer {
 
 	return list
 }
-
-/* Define some errors used by these functions... */
-
-// ErrNullBuffer is returned when attempting to construct a buffer of size less than one.
-var ErrNullBuffer = errors.New("<memguard::core::ErrNullBuffer> buffer size must be greater than zero")
-
-// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
-var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")

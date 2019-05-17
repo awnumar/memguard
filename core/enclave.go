@@ -1,8 +1,6 @@
 package core
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
 	// Declare a key for use in encrypting data this session.
@@ -13,6 +11,9 @@ func init() {
 	// Initialize the key declared above with a random value.
 	key = NewCoffer()
 }
+
+// ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
+var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size must be greater than zero")
 
 /*
 Enclave is a sealed and encrypted container for sensitive data.
@@ -65,6 +66,9 @@ func Seal(b *Buffer) (*Enclave, error) {
 		return nil, ErrBufferExpired
 	}
 
+	// Make the buffer mutable so that we can wipe it.
+	b.Melt()
+
 	// Construct the Enclave from the Buffer's data.
 	e, err := NewEnclave(b.Data())
 	if err != nil {
@@ -109,8 +113,3 @@ func Open(e *Enclave) (*Buffer, error) {
 	// Return the contents of the Enclave inside a Buffer.
 	return b, nil
 }
-
-/* Define some errors used by these functions... */
-
-// ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
-var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size must be greater than zero")

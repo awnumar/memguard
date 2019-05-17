@@ -6,11 +6,16 @@ import (
 	"time"
 )
 
-// Interval of time between each verify & rekey cycle.
+var (
+	// Static allocation for fast random bytes reading.
+	buf32, _ = NewBuffer(32)
+)
+
+// Interval of time between each verify & re-key cycle.
 const Interval uint = 8 // milliseconds
 
-// Static allocation for fast random bytes reading.
-var buf32, _ = NewBuffer(32)
+// ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
+var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")
 
 /*
 Coffer is a specialized container for securing highly-sensitive, 32 byte values.
@@ -154,8 +159,3 @@ func (s *Coffer) Destroyed() bool {
 
 	return (!GetBufferState(s.left).IsAlive) && (!GetBufferState(s.right).IsAlive)
 }
-
-/* Define some errors used by these functions... */
-
-// ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
-var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")

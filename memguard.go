@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	// Disable core dumps on unixesque systems.
+	// Disable core dumps on unixesque systems. Does nothing on windows :(
 	memcall.DisableCoreDumps()
 }
 

@@ -7,6 +7,15 @@ import (
 	"github.com/awnumar/memguard/core"
 )
 
+var (
+	nullbuffer *LockedBuffer
+)
+
+func init() {
+	nullbuffer = NewBuffer(1)
+	nullbuffer.Destroy()
+}
+
 /*
 LockedBuffer is a structure that holds raw sensitive data.
 
@@ -23,9 +32,9 @@ This is a value that is monitored by a finalizer so that we can clean up LockedB
 type drop [16]byte
 
 /*
-NewBuffer is a generic constructor for the LockedBuffer object. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
+NewBuffer creates a mutable data container of the specified size.
 
-The size must be strictly positive or else the function will panic.
+The size must be strictly positive or the function will panic.
 */
 func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
@@ -47,9 +56,9 @@ func NewBuffer(size int) *LockedBuffer {
 }
 
 /*
-NewBufferFromBytes constructs a buffer from a byte slice. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
+NewBufferFromBytes constructs an immutable buffer from a byte slice.
 
-The length of the buffer must be strictly positive or else the function will panic. The buffer is wiped after the value has been copied over to the LockedBuffer.
+The length of the buffer must be strictly positive or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
 */
 func NewBufferFromBytes(buf []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
@@ -58,14 +67,17 @@ func NewBufferFromBytes(buf []byte) *LockedBuffer {
 	// Move the data over.
 	core.Move(b.Bytes(), buf)
 
+	// Make the buffer immutable.
+	b.Freeze()
+
 	// Return the created Buffer object.
 	return b
 }
 
 /*
-NewBufferRandom constructs a buffer filled with cryptographically-secure random bytes. The returned buffer will be mutable but this can be changed with the Freeze and Melt methods.
+NewBufferRandom constructs an immutable buffer filled with cryptographically-secure random bytes.
 
-The size must be strictly positive or else the function will panic.
+The size must be strictly positive or the function will panic.
 */
 func NewBufferRandom(size int) *LockedBuffer {
 	// Construct a buffer of the specified size.
@@ -73,6 +85,9 @@ func NewBufferRandom(size int) *LockedBuffer {
 
 	// Fill the buffer with random bytes.
 	ScrambleBytes(b.Bytes())
+
+	// Make the buffer immutable.
+	b.Freeze()
 
 	// Return the created Buffer object.
 	return b
@@ -105,9 +120,16 @@ func (b *LockedBuffer) Seal() *Enclave {
 }
 
 /*
-Copy performs a time-constant copy into a LockedBuffer. Move is preferred if the source is not a LockedBuffer or if the source is no longer needed.
+Copy performs a time-constant copy into a LockedBuffer. Move is preferred if the source is not also a LockedBuffer or if the source is no longer needed.
 */
 func (b *LockedBuffer) Copy(buf []byte) {
+	b.CopyAt(0, buf)
+}
+
+/*
+CopyAt performs a time-constant copy into a LockedBuffer at an offset. Move is preferred if the source is not also a LockedBuffer or if the source is no longer needed.
+*/
+func (b *LockedBuffer) CopyAt(offset int, buf []byte) {
 	if !b.IsAlive() {
 		return
 	}
@@ -115,13 +137,20 @@ func (b *LockedBuffer) Copy(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	core.Copy(b.Bytes(), buf)
+	core.Copy(b.Bytes()[offset:], buf)
 }
 
 /*
 Move performs a time-constant move into a LockedBuffer. The source is wiped after the bytes are copied.
 */
 func (b *LockedBuffer) Move(buf []byte) {
+	b.MoveAt(0, buf)
+}
+
+/*
+MoveAt performs a time-constant move into a LockedBuffer at an offset. The source is wiped after the bytes are copied.
+*/
+func (b *LockedBuffer) MoveAt(offset int, buf []byte) {
 	if !b.IsAlive() {
 		return
 	}
@@ -129,8 +158,7 @@ func (b *LockedBuffer) Move(buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	core.Copy(b.Bytes(), buf)
-	core.Wipe(buf)
+	core.Move(b.Bytes()[offset:], buf)
 }
 
 /*
@@ -187,6 +215,45 @@ IsMutable returns a boolean value indicating if a LockedBuffer is mutable.
 */
 func (b *LockedBuffer) IsMutable() bool {
 	return core.GetBufferState(b.Buffer).IsMutable
+}
+
+/*
+Clone duplicates a LockedBuffer returning another one with the same attributes and containing the same data. A destroyed LockedBuffer will clone to nil.
+*/
+func (b *LockedBuffer) Clone() *LockedBuffer {
+	b.RLock()
+	defer b.RUnlock()
+
+	if !b.IsAlive() {
+		return nil
+	}
+
+	// Construct a new buffer of the right size
+	c := NewBuffer(b.Size())
+
+	// Copy the data over
+	c.Copy(b.Bytes())
+
+	// Set the mutability state
+	if !b.IsMutable() {
+		c.Freeze()
+	}
+
+	return c
+}
+
+/*
+EqualTo performs a time-constant comparison on the contents of a LockedBuffer with a given buffer. Calling on a destroyed LockedBuffer will always return false.
+*/
+func (b *LockedBuffer) EqualTo(buf []byte) bool {
+	b.RLock()
+	defer b.RUnlock()
+
+	if !b.IsAlive() {
+		return false
+	}
+
+	return core.Equal(b.Bytes(), buf)
 }
 
 /*
