@@ -220,11 +220,11 @@ type bufferList struct {
 }
 
 // Add appends a given Buffer to the list.
-func (l *bufferList) add(b *Buffer) {
+func (l *bufferList) add(b ...*Buffer) {
 	l.Lock()
 	defer l.Unlock()
 
-	l.list = append(l.list, b)
+	l.list = append(l.list, b...)
 }
 
 // Remove removes a given Buffer from the list.

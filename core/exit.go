@@ -29,6 +29,9 @@ func Purge() {
 			b.Destroy()
 		}
 	}
+
+	// Add the buffers we did not destroy back to the list.
+	buffers.add(key.left, key.right, buf32)
 }
 
 /*
