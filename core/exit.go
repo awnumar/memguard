@@ -21,6 +21,7 @@ func Purge() {
 
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.flush()
+	buffers.add(key.left, key.right, buf32)
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
@@ -29,9 +30,6 @@ func Purge() {
 			b.Destroy()
 		}
 	}
-
-	// Add the buffers we did not destroy back to the list.
-	buffers.add(key.left, key.right, buf32)
 }
 
 /*

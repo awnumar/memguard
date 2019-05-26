@@ -20,29 +20,19 @@ Package memguard implements a secure software enclave for the storage of sensiti
 		// Generate a key sealed inside an encrypted container
 		key := memguard.NewEnclaveRandom(32)
 
-		// Pass the encrypted key to a function
-		notkey := invert(key)
+		// Passing the key off to another function
+		key = invert(key)
 
-		// Decrypt this complement of the key
-		notKeyData, err := notkey.Open()
+		// Decrypt the result returned from invert
+		keyBuf, err := key.Open()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}
-		defer notKeyData.Destroy()
+		defer keyBuf.Destroy()
 
-		// Decrypt the original key
-		keyData, err := key.Open()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
-		defer keyData.Destroy()
-
-		// Output the xor of the two
-		for i := range notKeyData.Bytes() {
-			fmt.Println(keyData.Bytes()[i] ^ notKeyData.Bytes()[i])
-		}
+		// Um output it
+		fmt.Println(keyBuf.Bytes())
 	}
 
 	func invert(key *memguard.Enclave) *memguard.Enclave {

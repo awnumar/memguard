@@ -17,17 +17,17 @@ This package attempts to reduce the likelihood of sensitive data being exposed. 
 ## Features
 
 * Sensitive data is encrypted and authenticated in memory using xSalsa20 and Poly1305 respectively. The scheme also defends against cold-boot attacks.
-* Memory allocation bypasses the language runtime entirely by using system calls to query the kernel for resources directly. This avoids interference from the garbage-collector.
+* Memory allocation bypasses the language runtime by using system calls to query the kernel for resources directly. This avoids interference from the garbage-collector.
 * Buffers that store plaintext data are fortified with guard pages and canary values to detect spurious accesses and overflows.
-* Effort is taken to prevent sensitive data from ever touching the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never dump secure memory.
-* Kernel-level immutability is implemented. That means that if anything attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
-* It is extremely easy to wipe and destroy stored data. Multiple API endpoints expose session purging capabilities and special Panic and Exit functions allow for process termination without worrying about data being left hanging around.
+* Effort is taken to prevent sensitive data from touching the disk. This includes locking memory to prevent swapping and handling core dumps.
+* Kernel-level immutability is implemented so that attempted modification of protected regions results in an access violation.
+* Multiple endpoints provide session purging and safe termination capabilities as well as signal handling to prevent remnant data being left behind.
 * Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
 * Accidental memory leaks are mitigated against by harnessing the garbage-collector to automatically destroy containers that have become unreachable.
 
 Some features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
-Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard).
+Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard). Interesting and useful code samples can be found within the [examples](examples) subpackage.
 
 ## Installation
 
@@ -35,19 +35,25 @@ Full documentation and a complete overview of the API can be found [here](https:
 $ go get github.com/awnumar/memguard
 ```
 
-We **strongly** encourage you to vendor your dependencies for a clean and reliable build. Go [modules](https://github.com/golang/go/wiki/Modules) make this task relatively frictionless.
+We **strongly** encourage you to pin a specific version for a clean and reliable build. This can be accomplished using [modules](https://github.com/golang/go/wiki/Modules).
 
 ## Contributing
 
+* Using the package and identifying points of friction.
 * Reading the source code and looking for improvements.
 * Adding interesting and useful program samples to [`./examples`](examples).
 * Developing Proof-of-Concept attacks and mitigations.
-* Help with formalizing an appropriate threat model.
 * Improving compatibility with more kernels and architectures.
 * Implementing kernel-specific and cpu-specific protections.
-* Systems to further harden [`core::Coffer`](core/coffer.go) against attack.
-* Improve handling of segmentation faults to purge secrets before crashing.
-* Write forks of popular crypto and security APIs using memguard.
-* Submit performance improvements or benchmarking code.
+* Writing useful security and crypto libraries that utilise memguard.
+* Submitting performance improvements or benchmarking code.
 
 Issues are for reporting bugs and for discussion on proposals. Pull requests should be made against master.
+
+## Future goals
+
+* Ability to stream data to and from encrypted enclave objects.
+* Catch segmentation faults to wipe memory before crashing.
+* Evaluate and improve the strategies in place, particularly for [Coffer](core/coffer.go) objects.
+* Formalise a threat model and evaluate our performance in regards to it.
+* Use lessons learned to apply patches upstream to the Go language and runtime.
