@@ -7,8 +7,8 @@ linux_task:
     GOPROXY: https://proxy.golang.org
   setup_script:
     - apk add go
-    - mkdir ${GOPATH}/go/${CIRRUS_REPO_FULL_NAME}
-    - cd ${GOPATH}/go/${CIRRUS_REPO_FULL_NAME}
+    - mkdir -p ${GOPATH}/src/${CIRRUS_REPO_FULL_NAME}
+    - cd ${GOPATH}/src/${CIRRUS_REPO_FULL_NAME}
   clone_script: |
     if [[ -z "$CIRRUS_PR" ]]; then
       git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git $(pwd)
