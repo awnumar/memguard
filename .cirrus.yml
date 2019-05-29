@@ -58,18 +58,6 @@ windows_task:
     os_version: 1803
   env:
     GOPROXY: https://proxy.golang.org
-    GOPATH: C:\go
-    PATH: ${GOPATH}\bin:${PATH}
-    CIRRUS_WORKING_DIR: C:\go\src\github.com\${CIRRUS_REPO_FULL_NAME}
-  clone_script: |
-    if [[ -z "$CIRRUS_PR" ]]; then
-      git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
-      git reset --hard $CIRRUS_CHANGE_IN_REPO
-    else
-      git clone --recursive https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
-      git fetch origin pull/$CIRRUS_PR/head:pull/$CIRRUS_PR
-      git reset --hard $CIRRUS_CHANGE_IN_REPO
-    fi
   build_script:
     - go version
     - go build -race -v ./...
