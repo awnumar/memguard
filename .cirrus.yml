@@ -1,13 +1,13 @@
 linux_task:
   container:
-    image: alpine:latest
+    image: ubuntu:latest
   env:
     GOPROXY: https://proxy.golang.org
     GOPATH: /tmp/go
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
-    - apk add go git libc-dev
+    - apt install git go
   clone_script: |
     if [[ -z "$CIRRUS_PR" ]]; then
       git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
