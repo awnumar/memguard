@@ -3,16 +3,13 @@ linux_task:
     image: alpine:latest
   env:
     GOPROXY: https://proxy.golang.org
+    MODULEPATH: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
     - apk add go
     - apk add git
-  env_script:
-    - export GOPATH=${CIRRUS_WORKING_DIR}/go
-    - export PATH=${GOPATH}/bin:${PATH}
-    - export MODULEPATH=${GOPATH}/src/github.com/${CIRRUS_REPO_FULL_NAME}
-  setup_script:
-    - mkdir -p ${GOPATH}/src/github.com/${CIRRUS_REPO_OWNER}
-  clone_script: |
+  setup_script: |
+    mkdir -p /tmp/go/src/github.com/${CIRRUS_REPO_OWNER}
+    
     if [[ -z "$CIRRUS_PR" ]]; then
       git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${MODULEPATH}
       git reset --hard $CIRRUS_CHANGE_IN_REPO
@@ -21,6 +18,10 @@ linux_task:
       git fetch origin pull/$CIRRUS_PR/head:pull/$CIRRUS_PR
       git reset --hard $CIRRUS_CHANGE_IN_REPO
     fi
+    
+    export CIRRUS_WORKING_DIR=${MODULEPATH}
+    export GOPATH=/tmp/go
+    export PATH=${GOPATH}/bin:${PATH}
   build_script:
     - go version
     - cd ${MODULEPATH}
