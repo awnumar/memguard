@@ -7,10 +7,8 @@ linux_task:
   install_script:
     - apk add go
     - apk add git
-    - mkdir -p ${MODULEPATH}
-    - cd ${MODULEPATH}
-    - git init
-    - export CIRRUS_WORKING_DIR=${MODULEPATH}
+    - mkdir -p /tmp/go/src/github.com/${CIRRUS_REPO_OWNER}
+    - cd /tmp/go/src/github.com/${CIRRUS_REPO_OWNER}
     - echo $(pwd)
     - ls
   clone_script: |
