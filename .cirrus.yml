@@ -55,6 +55,7 @@ osx_task:
 windows_task:
   windows_container:
     image: golang:windowsservercore-1809
+    os_version: 1809
   env:
     GOPROXY: https://proxy.golang.org
     GOPATH: C:\go
