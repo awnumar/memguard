@@ -1,0 +1,9 @@
+linux_task:
+  container:
+    image: alpine:latest
+  setup_script:
+    - apk add go
+    - go version
+    - export GOPATH = ${HOME}/go
+    - export PATH = ${GOPATH}:${PATH}
+    - pwd
