@@ -7,7 +7,12 @@ linux_task:
   install_script:
     - apk add go
     - apk add git
-    - mkdir -p /tmp/go/src/github.com/${CIRRUS_REPO_OWNER}
+    - mkdir -p ${MODULEPATH}
+    - cd ${MODULEPATH}
+    - git init
+    - export CIRRUS_WORKING_DIR=${MODULEPATH}
+    - echo $(pwd)
+    - ls
   clone_script: |
     if [[ -z "$CIRRUS_PR" ]]; then
       git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${MODULEPATH}
