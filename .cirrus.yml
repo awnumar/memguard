@@ -7,6 +7,7 @@ linux_task:
     GOPROXY: https://proxy.golang.org
   setup_script:
     - apk add go
+    - apk add git
     - mkdir -p ${GOPATH}/src/${CIRRUS_REPO_FULL_NAME}
     - cd ${GOPATH}/src/${CIRRUS_REPO_FULL_NAME}
   clone_script: |
