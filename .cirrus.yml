@@ -21,6 +21,7 @@ linux_task:
     fi
   build_script:
     - go version
+    - pwd
     - go build -race -v ./...
   test_script:
     - go test -race -count=100 ./...
