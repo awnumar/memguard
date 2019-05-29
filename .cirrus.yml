@@ -7,7 +7,8 @@ linux_task:
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
-    - apt install git go
+    - apt-get update
+    - apt-get install git go -y
   clone_script: |
     if [[ -z "$CIRRUS_PR" ]]; then
       git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
