@@ -1,9 +1,20 @@
 linux_task:
   container:
     image: alpine:latest
+  env:
+    - GOPATH: ${HOME}/go
+    - PATH: ${GOPATH}/bin:${PATH}
+    - GOPROXY: https://proxy.golang.org
   setup_script:
     - apk add go
     - go version
-    - export GOPATH = ${HOME}/go
-    - export PATH = ${GOPATH}:${PATH}
-    - pwd
+    - mkdir ${GOPATH}/src/${CIRRUS_REPO_OWNER}
+    - cd ${GOPATH}/src/${CIRRUS_REPO_OWNER}
+    - git clone ${CIRRUS_REPO_CLONE_URL}
+    - cd ${CIRRUS_REPO_NAME}
+  build_script:
+    - go build -race -v ./...
+  test_script:
+    - go test -race -count=100 ./...
+    - go test -race -v -count=1 ./...
+
