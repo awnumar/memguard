@@ -2,13 +2,15 @@ linux_task:
   container:
     image: alpine:latest
   env:
-    GOPATH: ${CIRRUS_WORKING_DIR}/go
-    PATH: ${GOPATH}/bin:${PATH}
     GOPROXY: https://proxy.golang.org
-    MODULEPATH: ${GOPATH}/src/github.com/${CIRRUS_REPO_FULL_NAME}
-  setup_script:
+  install_script:
     - apk add go
     - apk add git
+  env_script:
+    - export GOPATH=${CIRRUS_WORKING_DIR}/go
+    - export PATH=${GOPATH}/bin:${PATH}
+    - export MODULEPATH=${GOPATH}/src/github.com/${CIRRUS_REPO_FULL_NAME}
+  setup_script:
     - mkdir -p ${GOPATH}/src/github.com/${CIRRUS_REPO_OWNER}
   clone_script: |
     if [[ -z "$CIRRUS_PR" ]]; then
