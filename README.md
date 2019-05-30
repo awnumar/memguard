@@ -3,8 +3,7 @@
   <h3 align="center">MemGuard</h3>
   <p align="center">Easy and secure handling of sensitive memory, in pure Go.</p>
   <p align="center">
-    <a href="https://travis-ci.org/awnumar/memguard"><img src="https://travis-ci.org/awnumar/memguard.svg?branch=master"></a>
-    <a href="https://ci.appveyor.com/project/awnumar/memguard/branch/master"><img src="https://ci.appveyor.com/api/projects/status/nrtqmdolndm0pcac/branch/master?svg=true"></a>
+    <a href="https://cirrus-ci.com/github/awnumar/memguard"><img src="https://api.cirrus-ci.com/github/awnumar/memguard.svg"></a>
     <a href="https://godoc.org/github.com/awnumar/memguard"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
     <a href="https://goreportcard.com/report/github.com/awnumar/memguard"><img src="https://goreportcard.com/badge/github.com/awnumar/memguard"></a>
   </p>
