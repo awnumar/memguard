@@ -7,6 +7,7 @@ linux_task:
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
+    - add-apt-repository ppa:longsleep/golang-backports
     - apt-get update
     - apt-get install git golang-go -y
   clone_script: |
