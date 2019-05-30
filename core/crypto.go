@@ -11,7 +11,7 @@ import (
 )
 
 // Overhead is the size by which the ciphertext exceeds the plaintext.
-const Overhead int = secretbox.Overhead + 24
+const Overhead int = secretbox.Overhead + 24 // auth + nonce
 
 // ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
 var ErrInvalidKeyLength = errors.New("<memguard::core::ErrInvalidKeyLength> key must be exactly 32 bytes")

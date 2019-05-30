@@ -200,8 +200,8 @@ func (b *Buffer) Destroy() {
 
 // BufferState encodes a buffer's various states.
 type BufferState struct {
-	IsAlive   bool // T = Buffer not destroyed.
-	IsMutable bool // T = Buffer memory is writable.
+	IsAlive   bool // true = not destroyed
+	IsMutable bool // true = memory is writable
 }
 
 /*

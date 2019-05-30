@@ -51,12 +51,12 @@ NewBufferFromBytes constructs an immutable buffer from a byte slice.
 
 The length of the buffer must be strictly positive or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
 */
-func NewBufferFromBytes(buf []byte) *LockedBuffer {
+func NewBufferFromBytes(src []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
-	b := NewBuffer(len(buf))
+	b := NewBuffer(len(src))
 
 	// Move the data over.
-	core.Move(b.Bytes(), buf)
+	core.Move(b.Bytes(), src)
 
 	// Make the buffer immutable.
 	b.Freeze()
@@ -113,14 +113,14 @@ func (b *LockedBuffer) Seal() *Enclave {
 /*
 Copy performs a time-constant copy into a LockedBuffer. Move is preferred if the source is not also a LockedBuffer or if the source is no longer needed.
 */
-func (b *LockedBuffer) Copy(buf []byte) {
-	b.CopyAt(0, buf)
+func (b *LockedBuffer) Copy(src []byte) {
+	b.CopyAt(0, src)
 }
 
 /*
 CopyAt performs a time-constant copy into a LockedBuffer at an offset. Move is preferred if the source is not also a LockedBuffer or if the source is no longer needed.
 */
-func (b *LockedBuffer) CopyAt(offset int, buf []byte) {
+func (b *LockedBuffer) CopyAt(offset int, src []byte) {
 	if !b.IsAlive() {
 		return
 	}
@@ -128,20 +128,20 @@ func (b *LockedBuffer) CopyAt(offset int, buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	core.Copy(b.Bytes()[offset:], buf)
+	core.Copy(b.Bytes()[offset:], src)
 }
 
 /*
 Move performs a time-constant move into a LockedBuffer. The source is wiped after the bytes are copied.
 */
-func (b *LockedBuffer) Move(buf []byte) {
-	b.MoveAt(0, buf)
+func (b *LockedBuffer) Move(src []byte) {
+	b.MoveAt(0, src)
 }
 
 /*
 MoveAt performs a time-constant move into a LockedBuffer at an offset. The source is wiped after the bytes are copied.
 */
-func (b *LockedBuffer) MoveAt(offset int, buf []byte) {
+func (b *LockedBuffer) MoveAt(offset int, src []byte) {
 	if !b.IsAlive() {
 		return
 	}
@@ -149,7 +149,7 @@ func (b *LockedBuffer) MoveAt(offset int, buf []byte) {
 	b.Lock()
 	defer b.Unlock()
 
-	core.Move(b.Bytes()[offset:], buf)
+	core.Move(b.Bytes()[offset:], src)
 }
 
 /*
@@ -209,7 +209,7 @@ func (b *LockedBuffer) IsMutable() bool {
 }
 
 /*
-EqualTo performs a time-constant comparison on the contents of a LockedBuffer with a given buffer. Calling on a destroyed LockedBuffer will always return false.
+EqualTo performs a time-constant comparison on the contents of a LockedBuffer with a given buffer. A destroyed LockedBuffer will always return false.
 */
 func (b *LockedBuffer) EqualTo(buf []byte) bool {
 	b.RLock()
@@ -223,7 +223,7 @@ func (b *LockedBuffer) EqualTo(buf []byte) bool {
 */
 
 /*
-Bytes returns a byte slice referencing the protected region of memory within which you are able to store and view sensitive data.
+Bytes returns a byte slice referencing the protected region of memory.
 */
 func (b *LockedBuffer) Bytes() []byte {
 	return b.Buffer.Data()

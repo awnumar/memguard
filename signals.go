@@ -27,10 +27,7 @@ CatchSignal assigns a given function to be run in the event of a signal being re
   3. Secure session state is wiped
   4. Process terminates with exit code 1
 
-This function can be called multiple times with the effect that only the last call will have any effect. The arguments are
-
-  var handler func(os.Signal) // Function that is run on catching a signal. Signal is passed to function.
-  var signals os.Signal...    // List of signals to listen out for. If none provided it will default to all.
+This function can be called multiple times with the effect that only the last call will have any effect.
 */
 func CatchSignal(f func(os.Signal), signals ...os.Signal) {
 	create.Do(func() {

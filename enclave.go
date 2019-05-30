@@ -16,8 +16,8 @@ NewEnclave seals up some given data into an encrypted enclave object. The buffer
 
 Alternatively, a LockedBuffer may be converted into an Enclave object using the Seal method provided. This will also have the effect of destroying the LockedBuffer.
 */
-func NewEnclave(buf []byte) *Enclave {
-	e, err := core.NewEnclave(buf)
+func NewEnclave(src []byte) *Enclave {
+	e, err := core.NewEnclave(src)
 	if err != nil {
 		core.Panic(err)
 	}

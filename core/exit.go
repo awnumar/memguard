@@ -9,7 +9,7 @@ Purge wipes all sensitive data and keys before reinitialising the session with a
 
 The creation of new Enclave objects should wait for this function to return since subsequent Enclave objects will use the newly created key.
 
-This function should be called before the program terminates, or else the provided Exit function should be used to terminate.
+This function should be called before the program terminates, or else the provided Exit or Panic functions should be used to terminate.
 */
 func Purge() {
 	// Generate a new encryption key, wiping the old.
