@@ -4,8 +4,8 @@
   <p align="center">Secure software enclave for storage of sensitive information in memory.</p>
   <p align="center">
     <a href="https://cirrus-ci.com/github/awnumar/memguard"><img src="https://api.cirrus-ci.com/github/awnumar/memguard.svg"></a>
+    <a href="https://www.codacy.com/app/awnumar/memguard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=awnumar/memguard&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/eebb7ecd6e794890999cfcf26328e9cb"/></a>
     <a href="https://godoc.org/github.com/awnumar/memguard"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
-    <a href="https://goreportcard.com/report/github.com/awnumar/memguard"><img src="https://goreportcard.com/badge/github.com/awnumar/memguard"></a>
   </p>
 </p>
 
