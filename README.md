@@ -11,6 +11,8 @@
 
 ---
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/7c26384482744ab1a4ffb06a9be81599)](https://app.codacy.com/app/awnumar/memguard?utm_source=github.com&utm_medium=referral&utm_content=awnumar/memguard&utm_campaign=Badge_Grade_Settings)
+
 This is a thread-safe package, designed to allow you to easily handle sensitive values in memory. It supports all major operating systems and is written in pure Go.
 
 ## Features
