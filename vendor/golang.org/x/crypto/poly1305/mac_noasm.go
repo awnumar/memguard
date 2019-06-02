@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package cpu
+// +build !amd64 gccgo appengine
 
-const cacheLineSize = 256
+package poly1305
 
-func doinit() {}
+type mac struct{ macGeneric }
+
+func newMAC(key *[32]byte) mac { return mac{newMACGeneric(key)} }

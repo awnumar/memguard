@@ -1,10 +1,10 @@
-# golang.org/x/crypto v0.0.0-20190222235706-ffb98f73852f
+# golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/salsa20/salsa
-# golang.org/x/sys v0.0.0-20190222171317-cd391775e71e
+# golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/cpu
