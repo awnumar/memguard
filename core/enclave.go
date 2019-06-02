@@ -43,7 +43,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	// Encrypt the plaintext.
 	e.ciphertext, err = Encrypt(buf, k.Data())
 	if err != nil {
-		return nil, err // key is not 32 bytes long
+		Panic(err) // key is not 32 bytes long
 	}
 
 	// Destroy our copy of the key.
