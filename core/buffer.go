@@ -171,13 +171,13 @@ func (b *Buffer) Destroy() {
 		Panic("<memguard::core::buffer> canary verification failed; buffer overflow detected")
 	}
 
-	// Remove this one from global slice.
-	buffers.remove(b)
-
 	// Wipe the memory.
 	Wipe(b.memory)
 
-	// Unlock the pages that hold our data.
+	// Remove this one from global slice.
+	buffers.remove(b)
+
+	// Unlock pages locked into memory.
 	if err := memcall.Unlock(b.inner); err != nil {
 		Panic(err)
 	}
