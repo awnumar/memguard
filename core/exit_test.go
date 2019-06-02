@@ -23,6 +23,14 @@ func TestPurge(t *testing.T) {
 	if len(buffers.list) != 3 {
 		t.Error("buffers list was not flushed", buffers.list)
 	}
+	for i := range buffers.list {
+		if !GetBufferState(buffers.list[i]).IsAlive {
+			t.Error("should not have destroyed excluded buffers")
+		}
+	}
+	if !GetBufferState(key.right).IsAlive || !GetBufferState(key.left).IsAlive || !GetBufferState(buf32).IsAlive {
+		t.Error("buffers left in list aren't the right ones")
+	}
 	buffers.RUnlock()
 
 	// Verify that the buffer was destroyed.
