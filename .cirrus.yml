@@ -7,8 +7,9 @@ linux_task:
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
-    - apt-get update
-    - apt-get install git golang-go -y
+    - apt-get update && apt-get install --reinstall software-properties-common -y
+    - add-apt-repository ppa:longsleep/golang-backports
+    - apt-get update && apt-get install git golang-go -y
   clone_script: |
     if [[ -z "$CIRRUS_PR" ]]; then
       git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
@@ -22,8 +23,7 @@ linux_task:
     - go version
     - go build -race -v ./...
   test_script:
-    - go test -race -count=100 ./...
-    - go test -race -v -count=1 ./...
+    - go test -race -v ./...
 
 osx_task:
   osx_instance:
@@ -48,8 +48,7 @@ osx_task:
     - go version
     - go build -race -v ./...
   test_script:
-    - go test -race -count=100 ./...
-    - go test -race -v -count=1 ./...
+    - go test -race -v ./...
 
 windows_task:
   windows_container:
@@ -64,5 +63,29 @@ windows_task:
     - go version
     - go build -race -v ./...
   test_script:
-    - go test -race -count=100 ./...
-    - go test -race -v -count=1 ./...
+    - go test -race -v ./...
+
+freebsd_task:
+  freebsd_instance:
+    image: freebsd-12-0-release-amd64
+  env:
+    GOPROXY: https://proxy.golang.org
+    GOPATH: /tmp/go
+    PATH: ${GOPATH}/bin:${PATH}
+    CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
+  install_script:
+    - pkg install -y git go
+  clone_script: |
+    if [[ -z "$CIRRUS_PR" ]]; then
+      git clone --recursive --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
+      git reset --hard $CIRRUS_CHANGE_IN_REPO
+    else
+      git clone --recursive https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git ${CIRRUS_WORKING_DIR}
+      git fetch origin pull/$CIRRUS_PR/head:pull/$CIRRUS_PR
+      git reset --hard $CIRRUS_CHANGE_IN_REPO
+    fi
+  build_script:
+    - go version
+    - go build -race -v ./...
+  test_script:
+    - go test -race -v ./...

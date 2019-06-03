@@ -1,71 +1,90 @@
 /*
-Package memguard lets you easily handle sensitive values in memory.
+Package memguard implements a secure software enclave for the storage of sensitive information in memory.
 
-    package main
+	package main
 
-    import (
-        "fmt"
+	import (
+		"fmt"
+		"os"
 
-        "github.com/awnumar/memguard"
-    )
+		"github.com/awnumar/memguard"
+	)
 
-    func main() {
-        // Tell memguard to listen out for interrupts, and cleanup in case of one.
-        memguard.CatchInterrupt(func() {
-            fmt.Println("Interrupt signal received. Exiting...")
-        })
-        // Make sure to destroy all LockedBuffers when returning.
-        defer memguard.DestroyAll()
+	func main() {
+		// Safely terminate in case of an interrupt signal
+		memguard.CatchInterrupt()
 
-        // Normal code continues from here.
-        foo()
-    }
+		// Purge the session when we return
+		defer memguard.Purge()
 
-    func foo() {
-        // Create a 32 byte, immutable, random key.
-        key, err := memguard.NewImmutableRandom(32)
-        if err != nil {
-            // Oh no, an error. Safely exit.
-            fmt.Println(err)
-            memguard.SafeExit(1)
-        }
-        // Remember to destroy this key when the function returns.
-        defer key.Destroy()
+		// Generate a key sealed inside an encrypted container
+		key := memguard.NewEnclaveRandom(32)
 
-        // Do something with the key.
-        fmt.Printf("This is a %d byte key.\n", key.Size())
-        fmt.Printf("This key starts with %x\n", key.Buffer()[0])
-    }
+		// Passing the key off to another function
+		key = invert(key)
 
-The number of LockedBuffers that you are able to create is limited by how much memory your system kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on LockedBuffers that you no longer need, or simply defer a Destroy call after creating a new LockedBuffer.
+		// Decrypt the result returned from invert
+		keyBuf, err := key.Open()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		defer keyBuf.Destroy()
 
-If a function that you're using requires an array, you can cast the buffer to an array and then pass around a pointer. Make sure that you do not dereference the pointer and pass around the resulting value, as this will leave copies all over the place.
+		// Um output it
+		fmt.Println(keyBuf.Bytes())
+	}
 
-    key, err := memguard.NewImmutableRandom(16)
-    if err != nil {
-        fmt.Println(err)
-        memguard.SafeExit(1)
-    }
-    defer key.Destroy()
+	func invert(key *memguard.Enclave) *memguard.Enclave {
+		// Decrypt the key into a local copy
+		b, err := key.Open()
+		if err != nil {
+			memguard.SafePanic(err)
+		}
+		defer b.Destroy() // Destroy the copy when we return
 
-    // Make sure the size of the array matches the size of the Buffer.
-    // In this case that size is 16. This is very important.
-    keyArrayPtr := (*[16]byte)(unsafe.Pointer(&key.Buffer()[0]))
+		// Open returns the data in an immutable buffer, so make it mutable
+		b.Melt()
 
-The MemGuard API is thread-safe. You can extend this thread-safety to outside of the API functions by using the Mutex that each LockedBuffer exposes. Don't use the mutex when calling a function that is part of the MemGuard API though, or the process will deadlock.
+		// Set every element to its complement
+		for i := range b.Bytes() {
+			b.Bytes()[i] = ^b.Bytes()[i]
+		}
 
-When terminating your application, care should be taken to securely cleanup everything.
+		// Return the new data in encrypted form
+		return b.Seal() // <- sealing also destroys b
+	}
 
-    // Start a listener that will wait for interrupt signals and catch them.
-    memguard.CatchInterrupt(func() {
-        // Over here put anything you want executing before program exit.
-        fmt.Println("Interrupt signal received. Exiting...")
-    })
+There are two main container objects exposed in this API. Enclave objects encrypt data and store the ciphertext whereas LockedBuffers are more like guarded memory allocations. There is a limit on the maximum number of LockedBuffer objects that can exist at any one time, imposed by the system's mlock limits. There is no limit on Enclaves.
 
-    // Defer a DestroyAll() in your main() function.
-    defer memguard.DestroyAll()
+The general workflow is to store sensitive information in Enclaves when it is not immediately needed and decrypt it when and where it is. After use, the LockedBuffer should be destroyed.
 
-    // Use memguard.SafeExit() instead of os.Exit().
-    memguard.SafeExit(1) // 1 is the exit code.
+If you need access to the data inside a LockedBuffer in a type not covered by any methods provided by this API, you can type-cast the allocation's memory to whatever type you want.
+
+	key := memguard.NewBuffer(32)
+	keyArrayPtr := (*[32]byte)(unsafe.Pointer(&key.Bytes()[0])) // do not dereference
+
+This is of course an unsafe operation and so care must be taken to ensure that the cast is valid and does not result in memory unsafety. Further examples of code and interesting use-cases can be found in the examples subpackage.
+
+Several functions exist to make the mass purging of data very easy. It is recommended to make use of them when appropriate.
+
+	// Start an interrupt handler that will clean up memory before exiting
+	memguard.CatchInterrupt()
+
+	// Purge the session when returning from the main function of your program
+	defer memguard.Purge()
+
+	// Use the safe variants of exit functions provided in the stdlib
+	memguard.SafeExit(1)
+	memguard.SafePanic(err)
+
+	// Destroy LockedBuffers as soon as possible after using them
+	b, err := enclave.Open()
+	if err != nil {
+		memguard.SafePanic(err)
+	}
+	defer b.Destroy()
+
+Core dumps are disabled by default. If you absolutely require them, you can enable them by using unix.Setrlimit to set RLIMIT_CORE to an appropriate value.
 */
 package memguard

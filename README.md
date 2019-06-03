@@ -1,51 +1,58 @@
 <p align="center">
   <img src="https://cdn.rawgit.com/awnumar/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
-  <p align="center">Easy and secure handling of sensitive memory, in pure Go.</p>
+  <p align="center">Secure software enclave for storage of sensitive information in memory.</p>
   <p align="center">
     <a href="https://cirrus-ci.com/github/awnumar/memguard"><img src="https://api.cirrus-ci.com/github/awnumar/memguard.svg"></a>
+    <a href="https://www.codacy.com/app/awnumar/memguard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=awnumar/memguard&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/eebb7ecd6e794890999cfcf26328e9cb"/></a>
     <a href="https://godoc.org/github.com/awnumar/memguard"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
-    <a href="https://goreportcard.com/report/github.com/awnumar/memguard"><img src="https://goreportcard.com/badge/github.com/awnumar/memguard"></a>
   </p>
 </p>
 
 ---
 
-This is a thread-safe package, designed to allow you to easily handle sensitive values in memory. It supports all major operating systems and is written in pure Go.
+This package attempts to reduce the likelihood of sensitive data being exposed. It supports all major operating systems and is written in pure Go.
 
 ## Features
 
-* Interference from the garbage-collector is blocked by using system-calls to manually allocate memory.
-* It is very difficult for another process to find or access sensitive memory as the data is sandwiched between guard-pages. This feature also acts as an immediate access alarm in case of buffer overflows.
-* Buffer overflows are further protected against using a random canary value. If this value changes, the process will panic.
-* We try our best to prevent the system from writing anything sensitive to the disk. The data is locked to prevent swapping, system core dumps can be disabled, and the kernel is advised (where possible) to never include the secure memory in dumps.
-* True kernel-level immutability is implemented. That means that if _anything_ attempts to modify an immutable container, the kernel will throw an access violation and the process will terminate.
-* All sensitive data is wiped before the associated memory is released back to the operating system.
+* Sensitive data is encrypted and authenticated in memory using xSalsa20 and Poly1305 respectively. The scheme also defends against cold-boot attacks.
+* Memory allocation bypasses the language runtime by using system calls to query the kernel for resources directly. This avoids interference from the garbage-collector.
+* Buffers that store plaintext data are fortified with guard pages and canary values to detect spurious accesses and overflows.
+* Effort is taken to prevent sensitive data from touching the disk. This includes locking memory to prevent swapping and handling core dumps.
+* Kernel-level immutability is implemented so that attempted modification of protected regions results in an access violation.
+* Multiple endpoints provide session purging and safe termination capabilities as well as signal handling to prevent remnant data being left behind.
 * Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
-* Accidental memory leaks are mitigated against by harnessing Go's own garbage-collector to automatically destroy containers that have run out of scope.
+* Accidental memory leaks are mitigated against by harnessing the garbage-collector to automatically destroy containers that have become unreachable.
 
-Some of these features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
+Some features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
-Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard).
+Full documentation and a complete overview of the API can be found [here](https://godoc.org/github.com/awnumar/memguard). Interesting and useful code samples can be found within the [examples](examples) subpackage.
 
 ## Installation
-
-Although we do recommend using a release, the simplest way to install the library is to `go get` it:
 
 ```
 $ go get github.com/awnumar/memguard
 ```
 
-If you would prefer a signed release that you can verify and manually compile yourself, download and extract the [latest release](https://github.com/awnumar/memguard/releases/latest). Then go ahead and run:
+We **strongly** encourage you to pin a specific version for a clean and reliable build. This can be accomplished using [modules](https://github.com/golang/go/wiki/Modules).
 
-```
-$ go install -v ./
-```
+## Contributing
 
-The [latest release](https://github.com/awnumar/memguard/releases/latest) is guaranteed to be cryptographically signed with my most recent PGP key, which can be found on [keybase](https://keybase.io/awn). To import it directly into GPG, run:
+* Using the package and identifying points of friction.
+* Reading the source code and looking for improvements.
+* Adding interesting and useful program samples to [`./examples`](examples).
+* Developing Proof-of-Concept attacks and mitigations.
+* Improving compatibility with more kernels and architectures.
+* Implementing kernel-specific and cpu-specific protections.
+* Writing useful security and crypto libraries that utilise memguard.
+* Submitting performance improvements or benchmarking code.
 
-```
-$ curl https://keybase.io/awn/pgp_keys.asc | gpg --import
-```
+Issues are for reporting bugs and for discussion on proposals. Pull requests should be made against master.
 
-We **strongly** encourage you to vendor your dependencies for a clean and reliable build. Go's [dep](https://github.com/golang/dep) makes this task relatively frictionless.
+## Future goals
+
+* Ability to stream data to and from encrypted enclave objects.
+* Catch segmentation faults to wipe memory before crashing.
+* Evaluate and improve the strategies in place, particularly for [Coffer](core/coffer.go) objects.
+* Formalise a threat model and evaluate our performance in regards to it.
+* Use lessons learned to apply patches upstream to the Go language and runtime.
