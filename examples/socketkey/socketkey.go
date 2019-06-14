@@ -28,6 +28,8 @@ import (
 // Save the data here so we can compare it later. Obviously this leaks the secret.
 var data []byte
 
+// NOTE: Some lines are commented out for the sake of tests.
+
 /*
 SocketKey is a streaming multi-threaded client->server transfer of secure data over a socket.
 */
@@ -69,7 +71,7 @@ func SocketKey(size int) {
 		data = make([]byte, buf.Size())
 		copy(data, buf.Bytes())
 
-		fmt.Printf("Sending key: %#v\n", buf.Bytes())
+		// fmt.Printf("Sending key: %#v\n", buf.Bytes())
 
 		// Send the data to the server
 		var total, written int
@@ -104,7 +106,7 @@ func SocketKey(size int) {
 	}
 	conn.Close()
 
-	fmt.Printf("Received key: %#v\n", buf.Bytes())
+	// fmt.Printf("Received key: %#v\n", buf.Bytes())
 
 	// Compare the key to make sure it wasn't corrupted.
 	if !bytes.Equal(data, buf.Bytes()) {
@@ -115,7 +117,7 @@ func SocketKey(size int) {
 	key := buf.Seal()
 	// <-- buf is destroyed by this point
 
-	fmt.Printf("Encrypted key: %#v\n", key)
+	// fmt.Printf("Encrypted key: %#v\n", key)
 
 	// Decrypt the key into a new buffer.
 	buf, err = key.Open()
@@ -123,11 +125,11 @@ func SocketKey(size int) {
 		memguard.SafePanic(err)
 	}
 
-	fmt.Printf("Decrypted key: %#v\n", buf.Bytes())
+	// fmt.Printf("Decrypted key: %#v\n", buf.Bytes())
 
 	// Destroy the buffer.
 	buf.Destroy()
 
 	// Purge the session and wipe the keys before exiting.
-	memguard.SafeExit(0)
+	// memguard.SafeExit(0)
 }
