@@ -53,7 +53,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	b := new(Buffer)
 
 	// Allocate the total needed memory
-	innerLen := roundToPageSize(size + 32)
+	innerLen := roundToPageSize(size)
 	b.memory, err = memcall.Alloc((2 * pageSize) + innerLen)
 	if err != nil {
 		Panic(err)
@@ -68,7 +68,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	b.postguard = getBytes(&b.memory[pageSize+innerLen], pageSize)
 
 	// Construct slice reference for canary portion of inner page.
-	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data)-32)
+	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data))
 
 	// Lock the pages that will hold sensitive data.
 	if err := memcall.Lock(b.inner); err != nil {
