@@ -67,13 +67,13 @@ func TestLotsOfAllocs(t *testing.T) {
 		if len(b.data) != i {
 			t.Error("invalid data length")
 		}
-		if len(b.memory) != roundToPageSize(i+32)+2*pageSize {
+		if len(b.memory) != roundToPageSize(i)+2*pageSize {
 			t.Error("memory length invalid")
 		}
 		if len(b.preguard) != pageSize || len(b.postguard) != pageSize {
 			t.Error("guard pages length invalid")
 		}
-		if len(b.canary) != len(b.inner)-i-32 {
+		if len(b.canary) != len(b.inner)-i {
 			t.Error("canary length invalid")
 		}
 		b.Destroy()
