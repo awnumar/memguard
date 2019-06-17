@@ -68,7 +68,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	b.postguard = getBytes(&b.memory[pageSize+innerLen], pageSize)
 
 	// Construct slice reference for canary portion of inner page.
-	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data))
+	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data)-32)
 
 	// Lock the pages that will hold sensitive data.
 	if err := memcall.Lock(b.inner); err != nil {

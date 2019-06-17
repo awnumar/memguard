@@ -55,6 +55,31 @@ func TestNewBuffer(t *testing.T) {
 	b.Destroy()
 }
 
+func TestLotsOfAllocs(t *testing.T) {
+	for i := 1; i <= 16385; i++ {
+		b, err := NewBuffer(i)
+		if err != nil {
+			t.Error(err)
+		}
+		if !b.alive || !b.mutable {
+			t.Error("invalid metadata")
+		}
+		if len(b.data) != i {
+			t.Error("invalid data length")
+		}
+		if len(b.memory) != roundToPageSize(i+32)+2*pageSize {
+			t.Error("memory length invalid")
+		}
+		if len(b.preguard) != pageSize || len(b.postguard) != pageSize {
+			t.Error("guard pages length invalid")
+		}
+		if len(b.canary) != len(b.inner)-i-32 {
+			t.Error("canary length invalid")
+		}
+		b.Destroy()
+	}
+}
+
 func TestData(t *testing.T) {
 	b, err := NewBuffer(32)
 	if err != nil {
