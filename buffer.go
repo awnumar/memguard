@@ -89,11 +89,13 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 		// partial read
 		d := NewBuffer(n)
 		d.Copy(b.Bytes()[:n])
+		d.Freeze()
 		b.Destroy()
 		return d
 	}
 
 	// success
+	b.Freeze()
 	return b
 }
 
@@ -135,6 +137,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			// if there was an error, we're done early
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
+			d.Freeze()
 			b.Destroy()
 			return d
 		}
@@ -142,6 +145,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 		if b.Bytes()[i] == delim {
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
+			d.Freeze()
 			b.Destroy()
 			return d
 		}

@@ -85,6 +85,9 @@ func TestNewBufferFromReader(t *testing.T) {
 	if bytes.Equal(b.Bytes(), make([]byte, 4096)) {
 		t.Error("didn't read from reader")
 	}
+	if b.IsMutable() {
+		t.Error("expected buffer to be immutable")
+	}
 	b.Destroy()
 
 	r := bytes.NewReader([]byte("yellow submarine"))
@@ -98,6 +101,9 @@ func TestNewBufferFromReader(t *testing.T) {
 	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("incorrect data")
 	}
+	if b.IsMutable() {
+		t.Error("expected buffer to be immutable")
+	}
 	b.Destroy()
 
 	r = bytes.NewReader([]byte("yellow submarine"))
@@ -110,6 +116,9 @@ func TestNewBufferFromReader(t *testing.T) {
 	}
 	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("incorrect data")
+	}
+	if b.IsMutable() {
+		t.Error("expected buffer to be immutable")
 	}
 	b.Destroy()
 
@@ -153,6 +162,9 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 			t.Error("incorrect data")
 		}
 	}
+	if b.IsMutable() {
+		t.Error("expected buffer to be immutable")
+	}
 	b.Destroy()
 
 	r = bytes.NewReader(data[:32])
@@ -167,6 +179,9 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 		if b.Bytes()[i] != 0 {
 			t.Error("incorrect data")
 		}
+	}
+	if b.IsMutable() {
+		t.Error("expected buffer to be immutable")
 	}
 	b.Destroy()
 
@@ -188,6 +203,9 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 		if b.Bytes()[i] != 0 {
 			t.Error("invalid data")
 		}
+	}
+	if b.IsMutable() {
+		t.Error("expected buffer to be immutable")
 	}
 	b.Destroy()
 }
