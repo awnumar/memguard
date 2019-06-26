@@ -2,6 +2,8 @@ package memguard
 
 import (
 	"bytes"
+	"crypto/rand"
+	mrand "math/rand"
 	"runtime"
 	"testing"
 	"unsafe"
@@ -68,6 +70,124 @@ func TestNewBufferFromBytes(t *testing.T) {
 	}
 	if !core.GetBufferState(b.Buffer).IsAlive {
 		t.Error("buffer should not be destroyed")
+	}
+	b.Destroy()
+}
+
+func TestNewBufferFromReader(t *testing.T) {
+	b := NewBufferFromReader(rand.Reader, 4096)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if b.Size() != 4096 {
+		t.Error("buffer of incorrect size")
+	}
+	if bytes.Equal(b.Bytes(), make([]byte, 4096)) {
+		t.Error("didn't read from reader")
+	}
+	b.Destroy()
+
+	r := bytes.NewReader([]byte("yellow submarine"))
+	b = NewBufferFromReader(r, 16)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if b.Size() != 16 {
+		t.Error("buffer of incorrect size")
+	}
+	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
+		t.Error("incorrect data")
+	}
+	b.Destroy()
+
+	r = bytes.NewReader([]byte("yellow submarine"))
+	b = NewBufferFromReader(r, 17)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if b.Size() != 16 {
+		t.Error("incorrect size")
+	}
+	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
+		t.Error("incorrect data")
+	}
+	b.Destroy()
+
+	r = bytes.NewReader([]byte(""))
+	b = NewBufferFromReader(r, 32)
+	if b != nil {
+		t.Error("expected nil buffer")
+	}
+}
+
+type s struct {
+	count int
+}
+
+func (reader *s) Read(p []byte) (n int, err error) {
+	if mrand.Intn(2) == 0 {
+		return 0, nil
+	}
+	reader.count++
+	if reader.count == 5000 {
+		copy(p, []byte{1})
+		return 1, nil
+	}
+	copy(p, []byte{0})
+	return 1, nil
+}
+
+func TestNewBufferFromReaderUntil(t *testing.T) {
+	data := make([]byte, 5000)
+	data[4999] = 1
+	r := bytes.NewReader(data)
+	b := NewBufferFromReaderUntil(r, 1)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if b.Size() != 4999 {
+		t.Error("buffer has incorrect size")
+	}
+	for i := range b.Bytes() {
+		if b.Bytes()[i] != 0 {
+			t.Error("incorrect data")
+		}
+	}
+	b.Destroy()
+
+	r = bytes.NewReader(data[:32])
+	b = NewBufferFromReaderUntil(r, 1)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if b.Size() != 32 {
+		t.Error("invalid size")
+	}
+	for i := range b.Bytes() {
+		if b.Bytes()[i] != 0 {
+			t.Error("incorrect data")
+		}
+	}
+	b.Destroy()
+
+	r = bytes.NewReader([]byte(""))
+	b = NewBufferFromReaderUntil(r, 1)
+	if b != nil {
+		t.Error("expected nil buffer")
+	}
+
+	rr := new(s)
+	b = NewBufferFromReaderUntil(rr, 1)
+	if b == nil {
+		t.Error("got nil buffer")
+	}
+	if b.Size() != 4999 {
+		t.Error("invalid size")
+	}
+	for i := range b.Bytes() {
+		if b.Bytes()[i] != 0 {
+			t.Error("invalid data")
+		}
 	}
 	b.Destroy()
 }
