@@ -32,3 +32,4 @@ You own your intellectual property and so you are free to choose any licence for
 
 0. [`Apache-2.0`] [socketkey](socketkey) :: Streaming multi-threaded client->server transfer of secure data over a socket.
 1. [`Apache-2.0`] [casting](casting) :: Some examples of representing the data in allocated buffers as different types.
+2. [`Apache-2.0`] [stdin](stdin) :: Reading from standard input directly into a guarded memory region and then sealing it.
