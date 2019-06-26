@@ -149,7 +149,7 @@ func TestRepetitiveSealOpen(t *testing.T) {
 	Copy(buf.Data(), data)
 
 	// keep sealing and unsealing
-	for i := 0; i < 4096; i++ {
+	for i := 0; i < 1024; i++ {
 		sealed, err := Seal(buf)
 		if err != nil {
 			t.Error(err)
