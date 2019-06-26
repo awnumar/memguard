@@ -47,6 +47,9 @@ func SocketKey(size int) {
 		listener.Close()
 	})
 
+	// Purge the session before returning.
+	defer memguard.Purge()
+
 	// Create a client to connect to our server.
 	go func() {
 		// Connect to our server
@@ -129,7 +132,4 @@ func SocketKey(size int) {
 
 	// Destroy the buffer.
 	buf.Destroy()
-
-	// Purge the session and wipe the keys before exiting.
-	// memguard.SafeExit(0)
 }
