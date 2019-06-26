@@ -76,6 +76,17 @@ func TestLotsOfAllocs(t *testing.T) {
 		if len(b.canary) != len(b.inner)-i {
 			t.Error("canary length invalid")
 		}
+		if len(b.inner)%pageSize != 0 {
+			t.Error("inner length is not multiple of page size")
+		}
+		for j := range b.data {
+			b.data[j] = 1
+		}
+		for j := range b.data {
+			if b.data[j] != 1 {
+				t.Error("region rw test failed")
+			}
+		}
 		b.Destroy()
 	}
 }
