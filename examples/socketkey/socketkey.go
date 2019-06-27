@@ -92,21 +92,12 @@ func SocketKey(size int) {
 		memguard.SafePanic(err)
 	}
 
-	// Create a secure buffer.
-	buf := memguard.NewBuffer(size)
+	// Read the data directly into a guarded memory region
+	buf := memguard.NewBufferFromReader(conn, size)
 	if buf == nil {
-		memguard.SafePanic("invalid size")
+		memguard.SafePanic("no data")
 	}
 	defer buf.Destroy()
-
-	// Read bytes from the client into our buffer.
-	var total, read int
-	for total = 0; total < size; total += read {
-		read, err = conn.Read(buf.Bytes()[total:])
-		if err != nil {
-			memguard.SafePanic(err)
-		}
-	}
 	conn.Close()
 
 	// fmt.Printf("Received key: %#v\n", buf.Bytes())

@@ -603,6 +603,16 @@ func TestBytes(t *testing.T) {
 	}
 }
 
+func TestReader(t *testing.T) {
+	b := NewBufferRandom(32)
+	c := NewBufferFromReader(b.Reader(), 32)
+	if !bytes.Equal(b.Bytes(), c.Bytes()) {
+		t.Error("data not equal")
+	}
+	b.Destroy()
+	c.Destroy()
+}
+
 func TestUint16(t *testing.T) {
 	b := NewBuffer(32)
 	if b == nil {
