@@ -3,7 +3,7 @@ package socketkey
 import "testing"
 
 func TestSocketKey(t *testing.T) {
-	SocketKey(8)
+	SocketKey(4096)
 }
 
 func BenchmarkSocketKey32(b *testing.B) {
