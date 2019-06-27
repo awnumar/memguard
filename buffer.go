@@ -78,7 +78,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 	// Construct a buffer of the provided size.
 	b := NewBuffer(size)
 
-	// Attempt to fill it ith data from the Reader.
+	// Attempt to fill it with data from the Reader.
 	if n, err := io.ReadFull(r, b.Bytes()); err != nil {
 		if n == 0 {
 			// nothing was read
@@ -111,7 +111,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 	// Loop over the buffer a byte at a time.
 	for i := 0; ; i++ {
 		// If we have filled this buffer...
-		if i == b.Size()-1 {
+		if i == b.Size() {
 			// Construct a new buffer that is a page size larger.
 			c := NewBuffer(b.Size() + os.Getpagesize())
 
