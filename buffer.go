@@ -21,7 +21,7 @@ type LockedBuffer struct {
 }
 
 /*
-This is a value that is monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
+Value monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
 */
 type drop [16]byte
 
@@ -53,14 +53,14 @@ func NewBuffer(size int) *LockedBuffer {
 /*
 NewBufferFromBytes constructs an immutable buffer from a byte slice.
 
-The length of the buffer must be strictly positive or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
+The length of the buffer must be non-zero or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
 */
 func NewBufferFromBytes(src []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
 	b := NewBuffer(len(src))
 
 	// Move the data over.
-	core.Move(b.Bytes(), src)
+	b.Move(src)
 
 	// Make the buffer immutable.
 	b.Freeze()
@@ -72,7 +72,7 @@ func NewBufferFromBytes(src []byte) *LockedBuffer {
 /*
 NewBufferFromReader reads a given number of bytes from a Reader into a LockedBuffer. The returned object will be immutable.
 
-If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method. If no bytes are read, nil is returned.
+If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method. If no bytes are read, a destroyed LockedBuffer with size zero is returned.
 
 The provided size must be strictly positive or the function will panic.
 */
@@ -85,7 +85,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 		if n == 0 {
 			// nothing was read
 			b.Destroy()
-			return nil
+			return &LockedBuffer{new(core.Buffer), new(drop)}
 		}
 
 		// partial read
@@ -104,7 +104,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 /*
 NewBufferFromReaderUntil constructs an immutable buffer containing data sourced from a Reader object. It will continue reading until either an EOF is encountered or the provided delimiter value is encountered. The delimiter will not be included in the returned data.
 
-The number of bytes read can be inferred using the Size method. If no data was read, nil is returned.
+The number of bytes read can be inferred using the Size method. If no data was read, a destroyed LockedBuffer with size zero is returned.
 */
 func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 	// Construct a buffer with a data page that fills an entire memory page.
@@ -134,7 +134,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			}
 			if i == 0 { // no data read
 				b.Destroy()
-				return nil
+				return &LockedBuffer{new(core.Buffer), new(drop)}
 			}
 			// if there was an error, we're done early
 			d := NewBuffer(i)
@@ -164,7 +164,7 @@ func NewBufferRandom(size int) *LockedBuffer {
 	b := NewBuffer(size)
 
 	// Fill the buffer with random bytes.
-	ScrambleBytes(b.Bytes())
+	b.Scramble()
 
 	// Make the buffer immutable.
 	b.Freeze()
@@ -326,7 +326,7 @@ func (b *LockedBuffer) Reader() *bytes.Reader {
 }
 
 /*
-String returns a string representation of the protected region of memory. Be warned, mutating the memory region will result in the mutation of the string's value.
+String returns a string representation of the protected region of memory.
 */
 func (b *LockedBuffer) String() string {
 	slice := b.Bytes()

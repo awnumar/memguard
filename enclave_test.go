@@ -50,7 +50,7 @@ func TestOpen(t *testing.T) {
 		t.Error("unexpected error;", err)
 	}
 	if b == nil {
-		t.Error("buffer is nil")
+		t.Error("buffer should not be nil")
 	}
 	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("data does not match")

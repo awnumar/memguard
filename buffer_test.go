@@ -13,9 +13,6 @@ import (
 
 func TestFinalizer(t *testing.T) {
 	b := NewBuffer(32)
-	if b == nil {
-		t.Error("nil object")
-	}
 	ib := b.Buffer
 
 	runtime.KeepAlive(b)
@@ -124,8 +121,14 @@ func TestNewBufferFromReader(t *testing.T) {
 
 	r = bytes.NewReader([]byte(""))
 	b = NewBufferFromReader(r, 32)
-	if b != nil {
-		t.Error("expected nil buffer")
+	if b.IsAlive() {
+		t.Error("expected destroyed buffer")
+	}
+	if b.IsMutable() {
+		t.Error("expected immutable buffer")
+	}
+	if b.Size() != 0 {
+		t.Error("expected nul sized buffer")
 	}
 }
 
@@ -187,8 +190,14 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 
 	r = bytes.NewReader([]byte(""))
 	b = NewBufferFromReaderUntil(r, 1)
-	if b != nil {
-		t.Error("expected nil buffer")
+	if b.IsAlive() {
+		t.Error("expected destroyed buffer")
+	}
+	if b.IsMutable() {
+		t.Error("expected immutable buffer")
+	}
+	if b.Size() != 0 {
+		t.Error("expected nul sized buffer")
 	}
 
 	rr := new(s)
@@ -611,6 +620,9 @@ func TestReader(t *testing.T) {
 	}
 	b.Destroy()
 	c.Destroy()
+	if c.Reader().Size() != 0 {
+		t.Error("expected nul reader")
+	}
 }
 
 func TestString(t *testing.T) {
@@ -622,6 +634,11 @@ func TestString(t *testing.T) {
 		if string(b.Bytes()) != s {
 			t.Error("string does not map same memory")
 		}
+	}
+	b.Destroy()
+	s = b.String()
+	if s != "" {
+		t.Error("string should be empty")
 	}
 }
 
