@@ -1,6 +1,6 @@
 module github.com/awnumar/memguard
 
 require (
-	golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
-	golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed
+	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4
+	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
 )
