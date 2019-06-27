@@ -73,9 +73,6 @@ func TestNewBufferFromBytes(t *testing.T) {
 
 func TestNewBufferFromReader(t *testing.T) {
 	b := NewBufferFromReader(rand.Reader, 4096)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
 	if b.Size() != 4096 {
 		t.Error("buffer of incorrect size")
 	}
@@ -89,9 +86,6 @@ func TestNewBufferFromReader(t *testing.T) {
 
 	r := bytes.NewReader([]byte("yellow submarine"))
 	b = NewBufferFromReader(r, 16)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
 	if b.Size() != 16 {
 		t.Error("buffer of incorrect size")
 	}
@@ -105,9 +99,6 @@ func TestNewBufferFromReader(t *testing.T) {
 
 	r = bytes.NewReader([]byte("yellow submarine"))
 	b = NewBufferFromReader(r, 17)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
 	if b.Size() != 16 {
 		t.Error("incorrect size")
 	}
@@ -154,9 +145,6 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	data[4999] = 1
 	r := bytes.NewReader(data)
 	b := NewBufferFromReaderUntil(r, 1)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
 	if b.Size() != 4999 {
 		t.Error("buffer has incorrect size")
 	}
@@ -172,9 +160,6 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 
 	r = bytes.NewReader(data[:32])
 	b = NewBufferFromReaderUntil(r, 1)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
 	if b.Size() != 32 {
 		t.Error("invalid size")
 	}
@@ -187,6 +172,15 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 		t.Error("expected buffer to be immutable")
 	}
 	b.Destroy()
+
+	r = bytes.NewReader([]byte{'x'})
+	b = NewBufferFromReaderUntil(r, 'x')
+	if b.Size() != 0 {
+		t.Error("expected no data")
+	}
+	if b.IsAlive() {
+		t.Error("expected dead buffer")
+	}
 
 	r = bytes.NewReader([]byte(""))
 	b = NewBufferFromReaderUntil(r, 1)
@@ -202,9 +196,6 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 
 	rr := new(s)
 	b = NewBufferFromReaderUntil(rr, 1)
-	if b == nil {
-		t.Error("got nil buffer")
-	}
 	if b.Size() != 4999 {
 		t.Error("invalid size")
 	}

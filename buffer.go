@@ -145,6 +145,11 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 		}
 		// we managed to read a byte, check if it was the delimiter
 		if b.Bytes()[i] == delim {
+			if i == 0 {
+				// if first byte was delimiter, there's no data to return
+				b.Destroy()
+				return &LockedBuffer{new(core.Buffer), new(drop)}
+			}
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
 			d.Freeze()
