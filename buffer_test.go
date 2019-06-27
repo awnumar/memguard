@@ -613,6 +613,18 @@ func TestReader(t *testing.T) {
 	c.Destroy()
 }
 
+func TestString(t *testing.T) {
+	b := NewBufferRandom(32)
+	b.Melt()
+	s := b.String()
+	for i := range b.Bytes() {
+		b.Bytes()[i] = 'x'
+		if string(b.Bytes()) != s {
+			t.Error("string does not map same memory")
+		}
+	}
+}
+
 func TestUint16(t *testing.T) {
 	b := NewBuffer(32)
 	if b == nil {
