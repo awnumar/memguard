@@ -104,7 +104,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 /*
 NewBufferFromReaderUntil constructs an immutable buffer containing data sourced from a Reader object. It will continue reading until either an EOF is encountered or the provided delimiter value is encountered. The delimiter will not be included in the returned data.
 
-The number of bytes read can be inferred using the Size method. If no data was read, a destroyed LockedBuffer with size zero is returned.
+The number of bytes read can be inferred using the Size method. If no data was read, or if the first byte was the delimiter, a destroyed LockedBuffer with size zero is returned.
 */
 func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 	// Construct a buffer with a data page that fills an entire memory page.
