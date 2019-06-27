@@ -38,7 +38,7 @@ func TestPurge(t *testing.T) {
 	if err != core.ErrDecryptionFailed {
 		t.Error(buf.Bytes(), err)
 	}
-	if buf != nil {
+	if buf.Bytes() != nil {
 		t.Error("buffer not nil:", buf)
 	}
 }

@@ -42,7 +42,7 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 		if err != core.ErrDecryptionFailed {
 			core.Panic(err)
 		}
-		return nil, err
+		return &LockedBuffer{new(core.Buffer), new(drop)}, err
 	}
 	b.Freeze()
 	return &LockedBuffer{b, new(drop)}, nil

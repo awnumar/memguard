@@ -25,7 +25,7 @@ import (
 // ReadKeyFromStdin reads a key from standard inputs and returns it sealed inside an Enclave object.
 func ReadKeyFromStdin() *memguard.Enclave {
 	key := memguard.NewBufferFromReaderUntil(os.Stdin, '\n')
-	if key == nil {
+	if key.Size() == 0 {
 		memguard.SafePanic("no input received")
 	}
 	return key.Seal()

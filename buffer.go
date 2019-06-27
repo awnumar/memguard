@@ -21,7 +21,7 @@ type LockedBuffer struct {
 }
 
 /*
-This is a value that is monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
+Value monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
 */
 type drop [16]byte
 
@@ -71,7 +71,7 @@ func NewBufferFromBytes(src []byte) *LockedBuffer {
 /*
 NewBufferFromReader reads a given number of bytes from a Reader into a LockedBuffer. The returned object will be immutable.
 
-If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method. If no bytes are read, nil is returned.
+If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method. If no bytes are read, a destroyed LockedBuffer with size zero is returned.
 
 The provided size must be strictly positive or the function will panic.
 */
@@ -84,7 +84,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 		if n == 0 {
 			// nothing was read
 			b.Destroy()
-			return nil
+			return &LockedBuffer{new(core.Buffer), new(drop)}
 		}
 
 		// partial read
@@ -133,7 +133,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			}
 			if i == 0 { // no data read
 				b.Destroy()
-				return nil
+				return &LockedBuffer{new(core.Buffer), new(drop)}
 			}
 			// if there was an error, we're done early
 			d := NewBuffer(i)

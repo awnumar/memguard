@@ -65,9 +65,6 @@ func SocketKey(size int) {
 
 		// Create a buffer filled with random bytes
 		buf := memguard.NewBufferRandom(size)
-		if buf == nil {
-			memguard.SafePanic("invalid size")
-		}
 		defer buf.Destroy()
 
 		// Save a copy of the key for comparison later.
@@ -94,8 +91,8 @@ func SocketKey(size int) {
 
 	// Read the data directly into a guarded memory region
 	buf := memguard.NewBufferFromReader(conn, size)
-	if buf == nil {
-		memguard.SafePanic("no data")
+	if buf.Size() != size {
+		memguard.SafePanic("not enough data read")
 	}
 	defer buf.Destroy()
 	conn.Close()

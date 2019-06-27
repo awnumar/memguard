@@ -49,8 +49,8 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error;", err)
 	}
-	if b == nil {
-		t.Error("buffer is nil")
+	if !b.IsAlive() {
+		t.Error("buffer should not be destroyed")
 	}
 	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("data does not match")
@@ -60,7 +60,7 @@ func TestOpen(t *testing.T) {
 	if err != core.ErrDecryptionFailed {
 		t.Error("expected decryption error; got", err)
 	}
-	if b != nil {
-		t.Error("buffer should be nil")
+	if b.IsAlive() {
+		t.Error("buffer should be dead")
 	}
 }
