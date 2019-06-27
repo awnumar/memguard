@@ -45,5 +45,5 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 		return nil, err
 	}
 	b.Freeze()
-	return &LockedBuffer{b, new(drop)}, nil
+	return newBuffer(b), nil
 }

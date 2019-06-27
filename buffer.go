@@ -25,6 +25,15 @@ Value monitored by a finalizer so that we can clean up LockedBuffers that have g
 */
 type drop [16]byte
 
+// Constructs a LockedBuffer object from a core.Buffer while also setting up the finaliser for it.
+func newBuffer(buf *core.Buffer) *LockedBuffer {
+	b := &LockedBuffer{buf, new(drop)}
+	runtime.SetFinalizer(b.drop, func(_ *drop) {
+		go buf.Destroy()
+	})
+	return b
+}
+
 /*
 NewBuffer creates a mutable data container of the specified size.
 
@@ -37,16 +46,8 @@ func NewBuffer(size int) *LockedBuffer {
 		core.Panic(err)
 	}
 
-	// Initialise a LockedBuffer object around it.
-	b := &LockedBuffer{buf, new(drop)}
-
-	// Use a finalizer to destroy the Buffer if it falls out of scope.
-	runtime.SetFinalizer(b.drop, func(_ *drop) {
-		go buf.Destroy()
-	})
-
-	// Return the created buffer to the caller.
-	return b
+	// Construct and return the wrapped container object.
+	return newBuffer(buf)
 }
 
 /*
