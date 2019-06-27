@@ -1,6 +1,7 @@
 package memguard
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"runtime"
@@ -314,6 +315,13 @@ Bytes returns a byte slice referencing the protected region of memory.
 */
 func (b *LockedBuffer) Bytes() []byte {
 	return b.Buffer.Data()
+}
+
+/*
+Reader returns a Reader object referencing the protected region of memory.
+*/
+func (b *LockedBuffer) Reader() *bytes.Reader {
+	return bytes.NewReader(b.Bytes())
 }
 
 /*
