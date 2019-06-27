@@ -325,6 +325,14 @@ func (b *LockedBuffer) Reader() *bytes.Reader {
 }
 
 /*
+String returns a string representation of the protected region of memory. Be warned, mutating the memory region will result in the mutation of the string's value.
+*/
+func (b *LockedBuffer) String() string {
+	slice := b.Bytes()
+	return *(*string)(unsafe.Pointer(&slice))
+}
+
+/*
 Uint16 returns a slice pointing to the protected region of memory with the data represented as a sequence of unsigned 16 bit integers. Its length will be half that of the byte slice, excluding any remaining part that doesn't form a complete uint16 value.
 
 If called on a destroyed LockedBuffer, a nil slice will be returned.
