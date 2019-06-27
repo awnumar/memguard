@@ -1,8 +1,6 @@
 package memguard
 
 import (
-	"runtime"
-
 	"github.com/awnumar/memguard/core"
 )
 
@@ -47,9 +45,5 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 		return nil, err
 	}
 	b.Freeze()
-	c := &LockedBuffer{b, new(drop)}
-	runtime.SetFinalizer(c.drop, func(_ *drop) {
-		go b.Destroy()
-	})
-	return c, nil
+	return newBuffer(b), nil
 }
