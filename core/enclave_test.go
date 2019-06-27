@@ -135,3 +135,34 @@ func TestOpen(t *testing.T) {
 		t.Error("expected nil buffer in error case")
 	}
 }
+
+func TestRepetitiveSealOpen(t *testing.T) {
+	// Initialise some data
+	data := make([]byte, 4096)
+	Scramble(data)
+
+	// Create a buffer containing the data
+	buf, err := NewBuffer(4096)
+	if err != nil {
+		t.Error(err)
+	}
+	Copy(buf.Data(), data)
+
+	// keep sealing and unsealing
+	for i := 0; i < 1024; i++ {
+		sealed, err := Seal(buf)
+		if err != nil {
+			t.Error(err)
+		}
+		if GetBufferState(buf).IsAlive {
+			t.Error("buf not destroyed")
+		}
+		buf, err = Open(sealed)
+		if err != nil {
+			t.Error(err)
+		}
+		if !bytes.Equal(buf.Data(), data) {
+			t.Error("data changed")
+		}
+	}
+}

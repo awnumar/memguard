@@ -1,6 +1,8 @@
 package memguard
 
 import (
+	"io"
+	"os"
 	"runtime"
 	"unsafe"
 
@@ -63,6 +65,91 @@ func NewBufferFromBytes(src []byte) *LockedBuffer {
 
 	// Return the created Buffer object.
 	return b
+}
+
+/*
+NewBufferFromReader reads a given number of bytes from a Reader into a LockedBuffer. The returned object will be immutable.
+
+If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method. If no bytes are read, nil is returned.
+
+The provided size must be strictly positive or the function will panic.
+*/
+func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
+	// Construct a buffer of the provided size.
+	b := NewBuffer(size)
+
+	// Attempt to fill it with data from the Reader.
+	if n, err := io.ReadFull(r, b.Bytes()); err != nil {
+		if n == 0 {
+			// nothing was read
+			b.Destroy()
+			return nil
+		}
+
+		// partial read
+		d := NewBuffer(n)
+		d.Copy(b.Bytes()[:n])
+		d.Freeze()
+		b.Destroy()
+		return d
+	}
+
+	// success
+	b.Freeze()
+	return b
+}
+
+/*
+NewBufferFromReaderUntil constructs an immutable buffer containing data sourced from a Reader object. It will continue reading until either an EOF is encountered or the provided delimiter value is encountered. The delimiter will not be included in the returned data.
+
+The number of bytes read can be inferred using the Size method. If no data was read, nil is returned.
+*/
+func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
+	// Construct a buffer with a data page that fills an entire memory page.
+	b := NewBuffer(os.Getpagesize())
+
+	// Loop over the buffer a byte at a time.
+	for i := 0; ; i++ {
+		// If we have filled this buffer...
+		if i == b.Size() {
+			// Construct a new buffer that is a page size larger.
+			c := NewBuffer(b.Size() + os.Getpagesize())
+
+			// Copy the data over.
+			c.Copy(b.Bytes())
+
+			// Destroy the old one and reassign its variable.
+			b.Destroy()
+			b = c
+		}
+
+		// Attempt to read a single byte.
+		n, err := r.Read(b.Bytes()[i : i+1])
+		if n != 1 { // if we did not read a byte
+			if err == nil { // and there was no error
+				i-- // try again
+				continue
+			}
+			if i == 0 { // no data read
+				b.Destroy()
+				return nil
+			}
+			// if there was an error, we're done early
+			d := NewBuffer(i)
+			d.Copy(b.Bytes()[:i])
+			d.Freeze()
+			b.Destroy()
+			return d
+		}
+		// we managed to read a byte, check if it was the delimiter
+		if b.Bytes()[i] == delim {
+			d := NewBuffer(i)
+			d.Copy(b.Bytes()[:i])
+			d.Freeze()
+			b.Destroy()
+			return d
+		}
+	}
 }
 
 /*
