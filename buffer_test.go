@@ -13,9 +13,6 @@ import (
 
 func TestFinalizer(t *testing.T) {
 	b := NewBuffer(32)
-	if b == nil {
-		t.Error("nil object")
-	}
 	ib := b.Buffer
 
 	runtime.KeepAlive(b)

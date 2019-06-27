@@ -53,14 +53,14 @@ func NewBuffer(size int) *LockedBuffer {
 /*
 NewBufferFromBytes constructs an immutable buffer from a byte slice.
 
-The length of the buffer must be strictly positive or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
+The length of the buffer must be non-zero or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
 */
 func NewBufferFromBytes(src []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
 	b := NewBuffer(len(src))
 
 	// Move the data over.
-	core.Move(b.Bytes(), src)
+	b.Move(src)
 
 	// Make the buffer immutable.
 	b.Freeze()
@@ -164,7 +164,7 @@ func NewBufferRandom(size int) *LockedBuffer {
 	b := NewBuffer(size)
 
 	// Fill the buffer with random bytes.
-	ScrambleBytes(b.Bytes())
+	b.Scramble()
 
 	// Make the buffer immutable.
 	b.Freeze()
