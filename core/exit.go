@@ -61,6 +61,7 @@ func Panic(v interface{}) {
 
 	// Wipe all of the currently active LockedBuffers.
 	for _, b := range buffers.list {
+		b.Melt()
 		Wipe(b.Data())
 	}
 
