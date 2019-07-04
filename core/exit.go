@@ -2,6 +2,8 @@ package core
 
 import (
 	"os"
+
+	"github.com/awnumar/memguard/memcall"
 )
 
 /*
@@ -61,7 +63,9 @@ func Panic(v interface{}) {
 
 	// Wipe all of the currently active LockedBuffers.
 	for _, b := range buffers.list {
-		b.Melt()
+		if !b.mutable {
+			memcall.Protect(b.inner, memcall.ReadWrite)
+		}
 		Wipe(b.Data())
 	}
 
