@@ -43,7 +43,7 @@ func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
 	buf, err := core.NewBuffer(size)
 	if err != nil {
-		core.Panic(err)
+		return &LockedBuffer{new(core.Buffer), new(drop)}
 	}
 
 	// Construct and return the wrapped container object.
