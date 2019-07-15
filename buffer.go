@@ -37,7 +37,7 @@ func newBuffer(buf *core.Buffer) *LockedBuffer {
 /*
 NewBuffer creates a mutable data container of the specified size.
 
-The size must be strictly positive or the function will panic.
+A quasi-destroyed LockedBuffer of zero length will be returned if size is not strictly positive.
 */
 func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
@@ -53,11 +53,14 @@ func NewBuffer(size int) *LockedBuffer {
 /*
 NewBufferFromBytes constructs an immutable buffer from a byte slice.
 
-The length of the buffer must be non-zero or the function will panic. The source buffer is wiped after the value has been copied over to the created container.
+The length of the buffer must be non-zero or a quasi-destroyed LockedBuffer of zero length will be returned. The source buffer is wiped after the value has been copied over to the created container.
 */
 func NewBufferFromBytes(src []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
 	b := NewBuffer(len(src))
+	if b.Size() == 0 {
+		return b
+	}
 
 	// Move the data over.
 	b.Move(src)
@@ -72,13 +75,16 @@ func NewBufferFromBytes(src []byte) *LockedBuffer {
 /*
 NewBufferFromReader reads a given number of bytes from a Reader into a LockedBuffer. The returned object will be immutable.
 
-If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method. If no bytes are read, a destroyed LockedBuffer with size zero is returned.
+If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method.
 
-The provided size must be strictly positive or the function will panic.
+If no bytes are read, or if size is not strictly positive, a quasi-destroyed LockedBuffer of zero length is returned.
 */
 func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 	// Construct a buffer of the provided size.
 	b := NewBuffer(size)
+	if b.Size() == 0 {
+		return b
+	}
 
 	// Attempt to fill it with data from the Reader.
 	if n, err := io.ReadFull(r, b.Bytes()); err != nil {
@@ -162,11 +168,14 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 /*
 NewBufferRandom constructs an immutable buffer filled with cryptographically-secure random bytes.
 
-The size must be strictly positive or the function will panic.
+A quasi-destroyed LockedBuffer of zero length will be returned if size is not strictly positive.
 */
 func NewBufferRandom(size int) *LockedBuffer {
 	// Construct a buffer of the specified size.
 	b := NewBuffer(size)
+	if b.Size() == 0 {
+		return b
+	}
 
 	// Fill the buffer with random bytes.
 	b.Scramble()
