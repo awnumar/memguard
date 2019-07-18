@@ -1,10 +1,11 @@
 package core
 
 import (
-	"crypto/rand"
 	"crypto/subtle"
 	"errors"
 	"unsafe"
+
+	"gitlab.com/NebulousLabs/fastrand"
 
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/nacl/secretbox"
@@ -84,9 +85,7 @@ func Hash(b []byte) []byte {
 
 // Scramble fills a given buffer with cryptographically-secure random bytes.
 func Scramble(buf []byte) {
-	if _, err := rand.Read(buf); err != nil {
-		Panic(err)
-	}
+	fastrand.Read(buf)
 }
 
 // Wipe takes a buffer and wipes it with zeroes.

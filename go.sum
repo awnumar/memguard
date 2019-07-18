@@ -1,3 +1,5 @@
+gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40 h1:dizWJqTWjwyD8KGcMOwgrkqu1JIkofYgKkmDeNE7oAs=
+gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40/go.mod h1:rOnSnoRyxMI3fe/7KIbVcsHRGxe30OONv8dEgo+vCfA=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4 h1:ydJNl0ENAG67pFbB+9tfhiL2pYqLhfoaZFw/cjLhY4A=
 golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
