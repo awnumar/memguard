@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/awnumar/memguard/memcall"
+	"gitlab.com/NebulousLabs/fastrand"
 )
 
 var (
@@ -76,7 +77,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	}
 
 	// Initialise the canary value and reference regions.
-	Scramble(b.canary)
+	fastrand.Read(b.canary)
 	Copy(b.preguard, b.canary)
 	Copy(b.postguard, b.canary)
 
