@@ -3,7 +3,10 @@ package memguard
 import (
 	"bytes"
 	"crypto/rand"
+	"io"
+	"io/ioutil"
 	mrand "math/rand"
+	"os"
 	"runtime"
 	"testing"
 	"unsafe"
@@ -206,6 +209,96 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	}
 	if b.IsMutable() {
 		t.Error("expected buffer to be immutable")
+	}
+	b.Destroy()
+}
+
+type ss struct {
+	count int
+}
+
+func (reader *ss) Read(p []byte) (n int, err error) {
+	if mrand.Intn(2) == 0 {
+		return 0, nil
+	}
+	reader.count++
+	if reader.count == 5000 {
+		return 0, io.EOF
+	}
+	copy(p, []byte{0})
+	return 1, nil
+}
+
+func TestNewBufferFromReaderUntilEOF(t *testing.T) {
+	r := bytes.NewReader([]byte("yellow submarine"))
+	b := NewBufferFromReaderUntilEOF(r)
+	if b.Size() != 16 {
+		t.Error("incorrect size", b.Size())
+	}
+	if !b.EqualTo([]byte("yellow submarine")) {
+		t.Error("incorrect data", b.String())
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
+	b.Destroy()
+
+	data := make([]byte, 16000)
+	ScrambleBytes(data)
+	r = bytes.NewReader(data)
+	b = NewBufferFromReaderUntilEOF(r)
+	if b.Size() != len(data) {
+		t.Error("incorrect size", b.Size())
+	}
+	if !b.EqualTo(data) {
+		t.Error("incorrect data")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
+	b.Destroy()
+
+	r = bytes.NewReader([]byte{})
+	b = NewBufferFromReaderUntilEOF(r)
+	if b.Size() != 0 {
+		t.Error("buffer should be nil size")
+	}
+	if b.IsAlive() {
+		t.Error("buffer should appear destroyed")
+	}
+
+	rr := new(ss)
+	b = NewBufferFromReaderUntilEOF(rr)
+	if b.Size() != 4999 {
+		t.Error("incorrect size", b.Size())
+	}
+	if !b.EqualTo(make([]byte, 4999)) {
+		t.Error("incorrect data")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
+	b.Destroy()
+
+	// real world test
+	f, err := os.Open("buffer_test.go")
+	if err != nil {
+		t.Error(err)
+	}
+	data, err = ioutil.ReadAll(f)
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		t.Error(err)
+	}
+	b = NewBufferFromReaderUntilEOF(f)
+	if !b.EqualTo(data) {
+		t.Error("incorrect data")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
 	}
 	b.Destroy()
 }

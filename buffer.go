@@ -25,7 +25,7 @@ Value monitored by a finalizer so that we can clean up LockedBuffers that have g
 */
 type drop [16]byte
 
-// Constructs a LockedBuffer object from a core.Buffer while also setting up the finaliser for it.
+// Constructs a LockedBuffer object from a core.Buffer while also setting up the finalizer for it.
 func newBuffer(buf *core.Buffer) *LockedBuffer {
 	b := &LockedBuffer{buf, new(drop)}
 	runtime.SetFinalizer(b.drop, func(_ *drop) {
@@ -155,6 +155,51 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			d.Freeze()
 			b.Destroy()
 			return d
+		}
+	}
+}
+
+/*
+NewBufferFromReaderUntilEOF reads from a Reader until EOF or until an error occurs, placing the data into an immutable buffer.
+
+The number of bytes read can be inferred using the Size method. If no data was read, a destroyed LockedBuffer with size zero is returned.
+*/
+func NewBufferFromReaderUntilEOF(r io.Reader) *LockedBuffer {
+	// Create a buffer with a data region of one page size.
+	b := NewBuffer(os.Getpagesize())
+
+	for read := 0; ; {
+		// Attempt to read some data from the reader.
+		n, err := r.Read(b.Bytes()[read:])
+
+		// Nothing read but no error, try again.
+		if n == 0 && err == nil {
+			continue
+		}
+
+		// Increment the read count by the number of bytes that we just read.
+		read += n
+
+		// We're done, return the data.
+		if err != nil {
+			if read == 0 {
+				// No data read.
+				b.Destroy()
+				return &LockedBuffer{new(core.Buffer), new(drop)}
+			}
+			d := NewBuffer(read)
+			d.Copy(b.Bytes()[:read])
+			d.Freeze()
+			b.Destroy()
+			return d
+		}
+
+		// If we've filled this buffer, grow it by another page size.
+		if len(b.Bytes()[read:]) == 0 {
+			d := NewBuffer(b.Size() + os.Getpagesize())
+			d.Copy(b.Bytes())
+			b.Destroy()
+			b = d
 		}
 	}
 }
