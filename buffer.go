@@ -180,8 +180,8 @@ func NewBufferFromReaderUntilEOF(r io.Reader) *LockedBuffer {
 		// Increment the read count by the number of bytes that we just read.
 		read += n
 
-		// We're done, return the data.
 		if err != nil {
+			// We're done, return the data.
 			if read == 0 {
 				// No data read.
 				b.Destroy()

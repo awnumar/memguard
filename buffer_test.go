@@ -301,6 +301,7 @@ func TestNewBufferFromReaderUntilEOF(t *testing.T) {
 		t.Error("buffer should be immutable")
 	}
 	b.Destroy()
+	f.Close()
 }
 
 func TestNewBufferRandom(t *testing.T) {
