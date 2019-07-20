@@ -34,6 +34,11 @@ func newBuffer(buf *core.Buffer) *LockedBuffer {
 	return b
 }
 
+// Constructs a quasi-destroyed LockedBuffer with size zero.
+func newNullBuffer() *LockedBuffer {
+	return &LockedBuffer{new(core.Buffer), new(drop)}
+}
+
 /*
 NewBuffer creates a mutable data container of the specified size.
 
@@ -43,7 +48,7 @@ func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
 	buf, err := core.NewBuffer(size)
 	if err != nil {
-		return &LockedBuffer{new(core.Buffer), new(drop)}
+		return newNullBuffer()
 	}
 
 	// Construct and return the wrapped container object.
@@ -91,7 +96,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 		if n == 0 {
 			// nothing was read
 			b.Destroy()
-			return &LockedBuffer{new(core.Buffer), new(drop)}
+			return newNullBuffer()
 		}
 
 		// partial read
@@ -140,7 +145,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			}
 			if i == 0 { // no data read
 				b.Destroy()
-				return &LockedBuffer{new(core.Buffer), new(drop)}
+				return newNullBuffer()
 			}
 			// if there was an error, we're done early
 			d := NewBuffer(i)
@@ -154,7 +159,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			if i == 0 {
 				// if first byte was delimiter, there's no data to return
 				b.Destroy()
-				return &LockedBuffer{new(core.Buffer), new(drop)}
+				return newNullBuffer()
 			}
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
