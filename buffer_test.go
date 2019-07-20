@@ -229,9 +229,9 @@ func (reader *ss) Read(p []byte) (n int, err error) {
 	return 1, nil
 }
 
-func TestNewBufferFromReaderUntilEOF(t *testing.T) {
+func TestNewBufferFromReaderUntilEnd(t *testing.T) {
 	r := bytes.NewReader([]byte("yellow submarine"))
-	b := NewBufferFromReaderUntilEOF(r)
+	b := NewBufferFromReaderUntilEnd(r)
 	if b.Size() != 16 {
 		t.Error("incorrect size", b.Size())
 	}
@@ -246,7 +246,7 @@ func TestNewBufferFromReaderUntilEOF(t *testing.T) {
 	data := make([]byte, 16000)
 	ScrambleBytes(data)
 	r = bytes.NewReader(data)
-	b = NewBufferFromReaderUntilEOF(r)
+	b = NewBufferFromReaderUntilEnd(r)
 	if b.Size() != len(data) {
 		t.Error("incorrect size", b.Size())
 	}
@@ -259,7 +259,7 @@ func TestNewBufferFromReaderUntilEOF(t *testing.T) {
 	b.Destroy()
 
 	r = bytes.NewReader([]byte{})
-	b = NewBufferFromReaderUntilEOF(r)
+	b = NewBufferFromReaderUntilEnd(r)
 	if b.Size() != 0 {
 		t.Error("buffer should be nil size")
 	}
@@ -268,7 +268,7 @@ func TestNewBufferFromReaderUntilEOF(t *testing.T) {
 	}
 
 	rr := new(ss)
-	b = NewBufferFromReaderUntilEOF(rr)
+	b = NewBufferFromReaderUntilEnd(rr)
 	if b.Size() != 4999 {
 		t.Error("incorrect size", b.Size())
 	}
@@ -293,7 +293,7 @@ func TestNewBufferFromReaderUntilEOF(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	b = NewBufferFromReaderUntilEOF(f)
+	b = NewBufferFromReaderUntilEnd(f)
 	if !b.EqualTo(data) {
 		t.Error("incorrect data")
 	}
