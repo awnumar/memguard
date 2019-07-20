@@ -160,11 +160,11 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 }
 
 /*
-NewBufferFromReaderUntilEnd reads from a Reader until EOF or until an error occurs, placing the data into an immutable buffer.
+NewBufferFromEntireReader reads from a Reader until EOF or until an error occurs, placing the data into an immutable buffer.
 
 The number of bytes read can be inferred using the Size method. If no data was read, a destroyed LockedBuffer with size zero is returned.
 */
-func NewBufferFromReaderUntilEnd(r io.Reader) *LockedBuffer {
+func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 	// Create a buffer with a data region of one page size.
 	b := NewBuffer(os.Getpagesize())
 
