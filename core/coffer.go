@@ -17,7 +17,7 @@ var (
 // Interval of time between each verify & re-key cycle.
 var Interval uint64 = 8 // milliseconds
 
-// SetInterval changes the interval in milliseconds between re-key cycles. The default is 8 milliseconds.
+// SetInterval changes the interval in milliseconds between re-key cycles. The default is 8 milliseconds and a value below one second is recommended.
 func SetInterval(interval uint64) {
 	atomic.StoreUint64(&Interval, interval)
 }
