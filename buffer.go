@@ -196,7 +196,7 @@ func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 			if read == 0 {
 				// No data read.
 				b.Destroy()
-				return &LockedBuffer{new(core.Buffer), new(drop)}
+				return newNullBuffer()
 			}
 			d := NewBuffer(read)
 			d.Copy(b.Bytes()[:read])
