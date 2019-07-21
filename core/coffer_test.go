@@ -2,8 +2,21 @@ package core
 
 import (
 	"bytes"
+	"sync/atomic"
 	"testing"
 )
+
+func TestSetInterval(t *testing.T) {
+	interval := atomic.LoadUint64(&Interval)
+	if interval != 8 {
+		t.Error("default should be 8ms")
+	}
+	atomic.StoreUint64(&Interval, 500)
+	interval = atomic.LoadUint64(&Interval)
+	if interval != 500 {
+		t.Error("value did not update")
+	}
+}
 
 func TestNewCoffer(t *testing.T) {
 	s := NewCoffer()
