@@ -19,7 +19,7 @@ var Interval uint64 = 8 // milliseconds
 
 // SetInterval changes the interval in milliseconds between re-key cycles. The default is 8 milliseconds.
 func SetInterval(interval uint64) {
-	atomic.StoreUint64(&Interval, Interval)
+	atomic.StoreUint64(&Interval, interval)
 }
 
 // ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
