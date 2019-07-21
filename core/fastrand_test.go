@@ -105,7 +105,7 @@ func TestRandConcurrent(t *testing.T) {
 		func() { FastRandRead(make([]byte, 16e3)) },
 
 		// Call io.Copy on the global reader.
-		func() { io.CopyN(new(bytes.Buffer), FastRandReader, 16e3) },
+		func() { io.CopyN(new(bytes.Buffer), reader, 16e3) },
 	}
 
 	closeChan := make(chan struct{})

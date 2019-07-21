@@ -18,10 +18,8 @@ type randReader struct {
 	counterExtra uint64 // Second 64 bits of the counter.
 }
 
-// FastRandReader is a global, shared instance of a cryptographically strong pseudo-
-// random generator. It uses blake2b as its hashing function. Reader is safe
-// for concurrent use by multiple goroutines.
-var FastRandReader *randReader
+// Global instance of fast random reader.
+var reader *randReader
 var entropy *Buffer
 
 // init provides the initial entropy for the reader that will seed all numbers
@@ -30,7 +28,7 @@ func init() {
 	r := &randReader{}
 	entropy, _ = NewBuffer(32)
 	Scramble(entropy.Data())
-	FastRandReader = r
+	reader = r
 }
 
 // Read fills b with random data. It always returns len(b), nil.
@@ -101,4 +99,4 @@ func (r *randReader) Read(b []byte) (int, error) {
 
 // FastRandRead is a helper function that calls Reader.Read on b. It always fills b
 // completely.
-func FastRandRead(b []byte) { FastRandReader.Read(b) }
+func FastRandRead(b []byte) { reader.Read(b) }
