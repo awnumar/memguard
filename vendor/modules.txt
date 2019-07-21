@@ -1,5 +1,3 @@
-# gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40
-gitlab.com/NebulousLabs/fastrand
 # golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/nacl/secretbox
