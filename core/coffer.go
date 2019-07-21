@@ -49,11 +49,8 @@ func NewCoffer() *Coffer {
 
 	go func(s *Coffer) {
 		for {
-			// Retrieve interval value atomically.
-			interval := atomic.LoadUint64(&Interval)
-
 			// Sleep for the specified interval.
-			time.Sleep(time.Duration(interval) * time.Millisecond)
+			time.Sleep(time.Duration(atomic.LoadUint64(&Interval)) * time.Millisecond)
 
 			// Re-key the contents, exiting the routine if object destroyed.
 			if err := s.Rekey(); err != nil {

@@ -7,15 +7,14 @@ import (
 )
 
 func TestSetInterval(t *testing.T) {
-	interval := atomic.LoadUint64(&Interval)
-	if interval != 8 {
+	if atomic.LoadUint64(&Interval) != 8 {
 		t.Error("default should be 8ms")
 	}
-	atomic.StoreUint64(&Interval, 500)
-	interval = atomic.LoadUint64(&Interval)
-	if interval != 500 {
+	SetInterval(500)
+	if atomic.LoadUint64(&Interval) != 500 {
 		t.Error("value did not update")
 	}
+	SetInterval(8)
 }
 
 func TestNewCoffer(t *testing.T) {
