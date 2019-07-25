@@ -50,21 +50,26 @@ func TestPurge(t *testing.T) {
 }
 
 func TestPanic(t *testing.T) {
+	// Hold key lock so re-key cycle stops.
 	key.Lock()
 
+	// Create mutable random buffer.
 	b, _ := NewBuffer(32)
 	Scramble(b.Data())
 
+	// Create immutable random buffer.
 	c, _ := NewBuffer(32)
 	Scramble(c.Data())
 	c.Freeze()
 
+	// Call Panic and check if it panics.
 	if !panics(func() {
 		Panic("test")
 	}) {
 		t.Error("should panic")
 	}
 
+	// Check if everything was wiped.
 	for i := range key.left.Data() {
 		if key.left.Data()[i] != 0 || key.right.Data()[i] != 0 {
 			t.Error("key not wiped")
@@ -77,9 +82,11 @@ func TestPanic(t *testing.T) {
 		}
 	}
 
+	// Destroy the buffers we created.
 	b.Destroy()
 	c.Destroy()
 
+	// Reinitialise the key.
 	key.Unlock()
 	key.Destroy()
 	key = NewCoffer()
