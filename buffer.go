@@ -41,8 +41,6 @@ func newNullBuffer() *LockedBuffer {
 
 /*
 NewBuffer creates a mutable data container of the specified size.
-
-A quasi-destroyed LockedBuffer of zero length will be returned if size is not strictly positive.
 */
 func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
@@ -56,9 +54,7 @@ func NewBuffer(size int) *LockedBuffer {
 }
 
 /*
-NewBufferFromBytes constructs an immutable buffer from a byte slice.
-
-The length of the buffer must be non-zero or a quasi-destroyed LockedBuffer of zero length will be returned. The source buffer is wiped after the value has been copied over to the created container.
+NewBufferFromBytes constructs an immutable buffer from a byte slice. The source buffer is wiped after the value has been copied over to the created container.
 */
 func NewBufferFromBytes(src []byte) *LockedBuffer {
 	// Construct a buffer of the correct size.
@@ -78,11 +74,9 @@ func NewBufferFromBytes(src []byte) *LockedBuffer {
 }
 
 /*
-NewBufferFromReader reads a given number of bytes from a Reader into a LockedBuffer. The returned object will be immutable.
+NewBufferFromReader reads some number of bytes from an io.Reader into an immutable LockedBuffer.
 
-If an error is encountered before size bytes are read, a smaller LockedBuffer object will be returned and the number of bytes read can be inferred using the Size method.
-
-If no bytes are read, or if size is not strictly positive, a quasi-destroyed LockedBuffer of zero length is returned.
+If an error is encountered before size bytes are read, they will be returned. The number of bytes read can be inferred using the Size method.
 */
 func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 	// Construct a buffer of the provided size.
@@ -113,9 +107,9 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 }
 
 /*
-NewBufferFromReaderUntil constructs an immutable buffer containing data sourced from a Reader object. It will continue reading until either an EOF is encountered or the provided delimiter value is encountered. The delimiter will not be included in the returned data.
+NewBufferFromReaderUntil constructs an immutable buffer containing data sourced from an io.Reader object.
 
-The number of bytes read can be inferred using the Size method. If no data was read, or if the first byte was the delimiter, a destroyed LockedBuffer with size zero is returned.
+It will continue reading until it encounters the delimiter value, or an error occurs. The delimiter will not be included in the returned data.
 */
 func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 	// Construct a buffer with a data page that fills an entire memory page.
@@ -171,9 +165,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 }
 
 /*
-NewBufferFromEntireReader reads from a Reader until EOF or until an error occurs, placing the data into an immutable buffer.
-
-The number of bytes read can be inferred using the Size method. If no data was read, a destroyed LockedBuffer with size zero is returned.
+NewBufferFromEntireReader reads from an io.Reader into an immutable buffer. It will continue reading until EOF or any other error.
 */
 func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 	// Create a buffer with a data region of one page size.
@@ -217,8 +209,6 @@ func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 
 /*
 NewBufferRandom constructs an immutable buffer filled with cryptographically-secure random bytes.
-
-A quasi-destroyed LockedBuffer of zero length will be returned if size is not strictly positive.
 */
 func NewBufferRandom(size int) *LockedBuffer {
 	// Construct a buffer of the specified size.

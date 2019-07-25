@@ -12,9 +12,9 @@ type Enclave struct {
 }
 
 /*
-NewEnclave seals up some given data into an encrypted enclave object. The buffer is wiped after the data is copied. The length of the buffer must be strictly positive or else the function will return nil.
+NewEnclave seals up some data into an encrypted enclave object. The buffer is wiped after the data is copied. If the length of the buffer is zero, the function will return nil.
 
-Alternatively, a LockedBuffer may be converted into an Enclave object using the Seal method provided. This will also have the effect of destroying the LockedBuffer.
+A LockedBuffer may alternatively be converted into an Enclave object using its Seal method. This will also have the effect of destroying the LockedBuffer.
 */
 func NewEnclave(src []byte) *Enclave {
 	e, err := core.NewEnclave(src)
