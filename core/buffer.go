@@ -199,19 +199,18 @@ func (b *Buffer) Destroy() {
 	b.canary = nil
 }
 
-// BufferState encodes a buffer's various states.
-type BufferState struct {
-	IsAlive   bool // true = not destroyed
-	IsMutable bool // true = memory is writable
-}
-
-/*
-GetBufferState returns a BufferState struct that encodes state information about a given Buffer object.
-*/
-func GetBufferState(b *Buffer) BufferState {
+// Alive returns true if the buffer has not been destroyed.
+func (b *Buffer) Alive() bool {
 	b.RLock()
 	defer b.RUnlock()
-	return BufferState{IsAlive: b.alive, IsMutable: b.mutable}
+	return b.alive
+}
+
+// Mutable returns true if the buffer is mutable.
+func (b *Buffer) Mutable() bool {
+	b.RLock()
+	defer b.RUnlock()
+	return b.mutable
 }
 
 // BufferList stores a list of buffers in a thread-safe manner.
