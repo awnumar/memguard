@@ -20,6 +20,10 @@ func TestNewEnclave(t *testing.T) {
 		t.Error("data doesn't match input")
 	}
 	data.Destroy()
+	e = NewEnclave([]byte{})
+	if e != nil {
+		t.Error("enclave should be nil")
+	}
 }
 
 func TestNewEnclaveRandom(t *testing.T) {
@@ -38,6 +42,10 @@ func TestNewEnclaveRandom(t *testing.T) {
 		t.Error("buffer not randomised")
 	}
 	data.Destroy()
+	e = NewEnclaveRandom(0)
+	if e != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestOpen(t *testing.T) {
@@ -63,4 +71,18 @@ func TestOpen(t *testing.T) {
 	if b != nil {
 		t.Error("buffer should be nil")
 	}
+	e = NewEnclaveRandom(0)
+	if !panics(func() {
+		e.Open()
+	}) {
+		t.Error("func should panic on nil enclave")
+	}
+}
+
+func panics(fn func()) (panicked bool) {
+	defer func() {
+		panicked = (recover() != nil)
+	}()
+	fn()
+	return
 }

@@ -84,6 +84,7 @@ func (s *Coffer) Initialise() error {
 	for i := range hr {
 		s.left.Data()[i] ^= hr[i]
 	}
+	Wipe(hr)
 
 	return nil
 }
@@ -109,6 +110,7 @@ func (s *Coffer) View() (*Buffer, error) {
 	for i := range b.Data() {
 		b.Data()[i] = h[i] ^ s.left.Data()[i]
 	}
+	Wipe(h)
 
 	// Return the view.
 	return b, nil
