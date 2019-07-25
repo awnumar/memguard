@@ -48,6 +48,19 @@ func TestNewBuffer(t *testing.T) {
 		t.Error("buffer should not be destroyed")
 	}
 	b.Destroy()
+	b = NewBuffer(0)
+	if b.Bytes() != nil {
+		t.Error("data slice should be nil")
+	}
+	if b.Size() != 0 {
+		t.Error("size should be zero", b.Size())
+	}
+	if b.IsAlive() {
+		t.Error("buffer should be destroyed")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
 }
 
 func TestNewBufferFromBytes(t *testing.T) {
@@ -72,6 +85,19 @@ func TestNewBufferFromBytes(t *testing.T) {
 		t.Error("buffer should not be destroyed")
 	}
 	b.Destroy()
+	b = NewBufferFromBytes([]byte{})
+	if b.Bytes() != nil {
+		t.Error("data slice should be nil")
+	}
+	if b.Size() != 0 {
+		t.Error("size should be zero", b.Size())
+	}
+	if b.IsAlive() {
+		t.Error("buffer should be destroyed")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
 }
 
 func TestNewBufferFromReader(t *testing.T) {
@@ -123,6 +149,20 @@ func TestNewBufferFromReader(t *testing.T) {
 	}
 	if b.Size() != 0 {
 		t.Error("expected nul sized buffer")
+	}
+	r = bytes.NewReader([]byte("yellow submarine"))
+	b = NewBufferFromReader(r, 0)
+	if b.Bytes() != nil {
+		t.Error("data slice should be nil")
+	}
+	if b.Size() != 0 {
+		t.Error("size should be zero", b.Size())
+	}
+	if b.IsAlive() {
+		t.Error("buffer should be destroyed")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
 	}
 }
 
@@ -281,7 +321,7 @@ func TestNewBufferFromEntireReader(t *testing.T) {
 	b.Destroy()
 
 	// real world test
-	f, err := os.Open("buffer_test.go")
+	f, err := os.Open("LICENSE")
 	if err != nil {
 		t.Error(err)
 	}
@@ -322,6 +362,19 @@ func TestNewBufferRandom(t *testing.T) {
 		t.Error("buffer should not be destroyed")
 	}
 	b.Destroy()
+	b = NewBufferRandom(0)
+	if b.Bytes() != nil {
+		t.Error("data slice should be nil")
+	}
+	if b.Size() != 0 {
+		t.Error("size should be zero", b.Size())
+	}
+	if b.IsAlive() {
+		t.Error("buffer should be destroyed")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
 }
 
 func TestFreeze(t *testing.T) {
@@ -353,6 +406,11 @@ func TestFreeze(t *testing.T) {
 	}
 	if core.GetBufferState(b.Buffer).IsAlive {
 		t.Error("buffer should be destroyed")
+	}
+	b = newNullBuffer()
+	b.Freeze()
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
 	}
 }
 
@@ -391,6 +449,11 @@ func TestMelt(t *testing.T) {
 	}
 	if core.GetBufferState(b.Buffer).IsAlive {
 		t.Error("buffer should be destroyed")
+	}
+	b = newNullBuffer()
+	b.Melt()
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
 	}
 }
 
@@ -436,6 +499,8 @@ func TestCopy(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+	b = newNullBuffer()
+	b.Copy([]byte("yellow submarine"))
 }
 
 func TestCopyAt(t *testing.T) {
@@ -459,6 +524,8 @@ func TestCopyAt(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+	b = newNullBuffer()
+	b.CopyAt(4, []byte("yellow submarine"))
 }
 
 func TestMove(t *testing.T) {
@@ -482,6 +549,8 @@ func TestMove(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+	b = newNullBuffer()
+	b.Move([]byte("yellow submarine"))
 }
 
 func TestMoveAt(t *testing.T) {
@@ -509,6 +578,8 @@ func TestMoveAt(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+	b = newNullBuffer()
+	b.MoveAt(4, []byte("yellow submarine"))
 }
 
 func TestScramble(t *testing.T) {
@@ -534,6 +605,8 @@ func TestScramble(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+	b = newNullBuffer()
+	b.Scramble()
 }
 
 func TestWipe(t *testing.T) {
@@ -556,6 +629,8 @@ func TestWipe(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("buffer should be destroyed")
 	}
+	b = newNullBuffer()
+	b.Wipe()
 }
 
 func TestSize(t *testing.T) {
@@ -569,6 +644,10 @@ func TestSize(t *testing.T) {
 	b.Destroy()
 	if b.Size() != 0 {
 		t.Error("destroyed buffer size should be zero")
+	}
+	b = newNullBuffer()
+	if b.Size() != 0 {
+		t.Error("size should be zero")
 	}
 }
 
@@ -615,6 +694,11 @@ func TestDestroy(t *testing.T) {
 	if core.GetBufferState(b.Buffer).IsMutable {
 		t.Error("buffer should be immutable")
 	}
+	b = newNullBuffer()
+	b.Destroy()
+	if b.IsAlive() {
+		t.Error("buffer should be dead")
+	}
 }
 
 func TestIsAlive(t *testing.T) {
@@ -634,6 +718,10 @@ func TestIsAlive(t *testing.T) {
 	}
 	if b.IsAlive() != core.GetBufferState(b.Buffer).IsAlive {
 		t.Error("states don't match")
+	}
+	b = newNullBuffer()
+	if b.IsAlive() {
+		t.Error("buffer should be dead")
 	}
 }
 
@@ -662,6 +750,10 @@ func TestIsMutable(t *testing.T) {
 	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
 		t.Error("states don't match")
 	}
+	b = newNullBuffer()
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
 }
 
 func TestEqualTo(t *testing.T) {
@@ -675,6 +767,10 @@ func TestEqualTo(t *testing.T) {
 	b.Destroy()
 	if b.EqualTo([]byte("yellow submarine")) {
 		t.Error("comparison with destroyed should be false")
+	}
+	b = newNullBuffer()
+	if !b.EqualTo([]byte{}) {
+		t.Error("buffer should be size zero")
 	}
 }
 
@@ -695,6 +791,10 @@ func TestBytes(t *testing.T) {
 	if b.Bytes() != nil {
 		t.Error("expected nil buffer")
 	}
+	b = newNullBuffer()
+	if b.Bytes() != nil {
+		t.Error("buffer should be nil")
+	}
 }
 
 func TestReader(t *testing.T) {
@@ -705,6 +805,10 @@ func TestReader(t *testing.T) {
 	}
 	b.Destroy()
 	c.Destroy()
+	if c.Reader().Size() != 0 {
+		t.Error("expected nul reader")
+	}
+	b = newNullBuffer()
 	if c.Reader().Size() != 0 {
 		t.Error("expected nul reader")
 	}
@@ -722,6 +826,10 @@ func TestString(t *testing.T) {
 	}
 	b.Destroy()
 	s = b.String()
+	if s != "" {
+		t.Error("string should be empty")
+	}
+	b = newNullBuffer()
 	if s != "" {
 		t.Error("string should be empty")
 	}
@@ -764,6 +872,10 @@ func TestUint16(t *testing.T) {
 	if b.Uint16() != nil {
 		t.Error("expected nil slice as buffer destroyed")
 	}
+	b = newNullBuffer()
+	if b.Uint16() != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestUint32(t *testing.T) {
@@ -802,6 +914,10 @@ func TestUint32(t *testing.T) {
 	b.Destroy()
 	if b.Uint32() != nil {
 		t.Error("expected nil slice as buffer destroyed")
+	}
+	b = newNullBuffer()
+	if b.Uint32() != nil {
+		t.Error("should be nil")
 	}
 }
 
@@ -842,6 +958,10 @@ func TestUint64(t *testing.T) {
 	if b.Uint64() != nil {
 		t.Error("expected nil slice as buffer destroyed")
 	}
+	b = newNullBuffer()
+	if b.Uint64() != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestInt8(t *testing.T) {
@@ -859,6 +979,10 @@ func TestInt8(t *testing.T) {
 	b.Destroy()
 	if b.Int8() != nil {
 		t.Error("expected nil slice as buffer destroyed")
+	}
+	b = newNullBuffer()
+	if b.Int8() != nil {
+		t.Error("should be nil")
 	}
 }
 
@@ -899,6 +1023,10 @@ func TestInt16(t *testing.T) {
 	if b.Int16() != nil {
 		t.Error("expected nil slice as buffer destroyed")
 	}
+	b = newNullBuffer()
+	if b.Int16() != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestInt32(t *testing.T) {
@@ -937,6 +1065,10 @@ func TestInt32(t *testing.T) {
 	b.Destroy()
 	if b.Int32() != nil {
 		t.Error("expected nil slice as buffer destroyed")
+	}
+	b = newNullBuffer()
+	if b.Int32() != nil {
+		t.Error("should be nil")
 	}
 }
 
@@ -977,6 +1109,10 @@ func TestInt64(t *testing.T) {
 	if b.Int64() != nil {
 		t.Error("expected nil slice as buffer destroyed")
 	}
+	b = newNullBuffer()
+	if b.Int32() != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestByteArray8(t *testing.T) {
@@ -998,6 +1134,10 @@ func TestByteArray8(t *testing.T) {
 	b.Destroy()
 	if b.ByteArray8() != nil {
 		t.Error("expected nil byte array from destroyed buffer")
+	}
+	b = newNullBuffer()
+	if b.ByteArray8() != nil {
+		t.Error("should be nil")
 	}
 }
 
@@ -1021,6 +1161,10 @@ func TestByteArray16(t *testing.T) {
 	if b.ByteArray16() != nil {
 		t.Error("expected nil byte array from destroyed buffer")
 	}
+	b = newNullBuffer()
+	if b.ByteArray16() != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestByteArray32(t *testing.T) {
@@ -1043,6 +1187,10 @@ func TestByteArray32(t *testing.T) {
 	if b.ByteArray32() != nil {
 		t.Error("expected nil byte array from destroyed buffer")
 	}
+	b = newNullBuffer()
+	if b.ByteArray32() != nil {
+		t.Error("should be nil")
+	}
 }
 
 func TestByteArray64(t *testing.T) {
@@ -1064,5 +1212,9 @@ func TestByteArray64(t *testing.T) {
 	b.Destroy()
 	if b.ByteArray64() != nil {
 		t.Error("expected nil byte array from destroyed buffer")
+	}
+	b = newNullBuffer()
+	if b.ByteArray64() != nil {
+		t.Error("should be nil")
 	}
 }
