@@ -48,3 +48,54 @@ func TestPurge(t *testing.T) {
 		t.Error("expected decryption failed; got", err)
 	}
 }
+
+func TestPanic(t *testing.T) {
+	// Hold key lock so re-key cycle stops.
+	key.Lock()
+
+	// Create mutable random buffer.
+	b, _ := NewBuffer(32)
+	Scramble(b.Data())
+
+	// Create immutable random buffer.
+	c, _ := NewBuffer(32)
+	Scramble(c.Data())
+	c.Freeze()
+
+	// Call Panic and check if it panics.
+	if !panics(func() {
+		Panic("test")
+	}) {
+		t.Error("should panic")
+	}
+
+	// Check if everything was wiped.
+	for i := range key.left.Data() {
+		if key.left.Data()[i] != 0 || key.right.Data()[i] != 0 {
+			t.Error("key not wiped")
+		}
+		if b.Data()[i] != 0 {
+			t.Error("mutable buffer not wiped")
+		}
+		if c.Data()[i] != 0 {
+			t.Error("immutable buffer not wiped")
+		}
+	}
+
+	// Destroy the buffers we created.
+	b.Destroy()
+	c.Destroy()
+
+	// Reinitialise the key.
+	key.Unlock()
+	key.Destroy()
+	key = NewCoffer()
+}
+
+func panics(fn func()) (panicked bool) {
+	defer func() {
+		panicked = (recover() != nil)
+	}()
+	fn()
+	return
+}

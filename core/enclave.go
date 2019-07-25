@@ -92,7 +92,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	// Allocate a secure Buffer to hold the decrypted data.
 	b, err := NewBuffer(len(e.ciphertext) - Overhead)
 	if err != nil {
-		Panic(err) // ciphertext has invalid length
+		Panic("<memguard:core> ciphertext has invalid length") // ciphertext has invalid length
 	}
 
 	// Grab a view of the key.
