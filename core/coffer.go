@@ -168,5 +168,5 @@ func (s *Coffer) Destroyed() bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	return (!GetBufferState(s.left).IsAlive) && (!GetBufferState(s.right).IsAlive)
+	return (!s.left.Alive()) && (!s.right.Alive())
 }

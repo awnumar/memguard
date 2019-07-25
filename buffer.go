@@ -341,14 +341,14 @@ func (b *LockedBuffer) Destroy() {
 IsAlive returns a boolean value indicating if a LockedBuffer is alive, i.e. that it has not been destroyed.
 */
 func (b *LockedBuffer) IsAlive() bool {
-	return core.GetBufferState(b.Buffer).IsAlive
+	return b.Buffer.Alive()
 }
 
 /*
 IsMutable returns a boolean value indicating if a LockedBuffer is mutable.
 */
 func (b *LockedBuffer) IsMutable() bool {
-	return core.GetBufferState(b.Buffer).IsMutable
+	return b.Buffer.Mutable()
 }
 
 /*
@@ -397,7 +397,7 @@ func (b *LockedBuffer) Uint16() []uint16 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -428,7 +428,7 @@ func (b *LockedBuffer) Uint32() []uint32 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -459,7 +459,7 @@ func (b *LockedBuffer) Uint64() []uint64 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -488,7 +488,7 @@ func (b *LockedBuffer) Int8() []int8 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -513,7 +513,7 @@ func (b *LockedBuffer) Int16() []int16 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -544,7 +544,7 @@ func (b *LockedBuffer) Int32() []int32 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -575,7 +575,7 @@ func (b *LockedBuffer) Int64() []int64 {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -606,7 +606,7 @@ func (b *LockedBuffer) ByteArray8() *[8]byte {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -629,7 +629,7 @@ func (b *LockedBuffer) ByteArray16() *[16]byte {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -652,7 +652,7 @@ func (b *LockedBuffer) ByteArray32() *[32]byte {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 
@@ -675,7 +675,7 @@ func (b *LockedBuffer) ByteArray64() *[64]byte {
 	defer b.RUnlock()
 
 	// Check if still alive.
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.Buffer.Alive() {
 		return nil
 	}
 

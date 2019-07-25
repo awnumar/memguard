@@ -10,8 +10,6 @@ import (
 	"runtime"
 	"testing"
 	"unsafe"
-
-	"github.com/awnumar/memguard/core"
 )
 
 func TestFinalizer(t *testing.T) {
@@ -23,7 +21,7 @@ func TestFinalizer(t *testing.T) {
 
 	runtime.GC()
 	for {
-		if !core.GetBufferState(ib).IsAlive {
+		if !ib.Alive() {
 			break
 		}
 		runtime.Gosched() // should collect b
@@ -41,10 +39,10 @@ func TestNewBuffer(t *testing.T) {
 	if !bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("buffer is not zeroed")
 	}
-	if !core.GetBufferState(b.Buffer).IsMutable {
+	if !b.IsMutable() {
 		t.Error("buffer should be mutable")
 	}
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.IsAlive() {
 		t.Error("buffer should not be destroyed")
 	}
 	b.Destroy()
@@ -78,10 +76,10 @@ func TestNewBufferFromBytes(t *testing.T) {
 	if !bytes.Equal(data, make([]byte, 16)) {
 		t.Error("source buffer not wiped")
 	}
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer should be immutable")
 	}
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.IsAlive() {
 		t.Error("buffer should not be destroyed")
 	}
 	b.Destroy()
@@ -355,10 +353,10 @@ func TestNewBufferRandom(t *testing.T) {
 	if bytes.Equal(b.Bytes(), make([]byte, 32)) {
 		t.Error("buffer is zeroed")
 	}
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer should be immutable")
 	}
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.IsAlive() {
 		t.Error("buffer should not be destroyed")
 	}
 	b.Destroy()
@@ -382,18 +380,18 @@ func TestFreeze(t *testing.T) {
 	if b == nil {
 		t.Error("buffer is nil")
 	}
-	if !core.GetBufferState(b.Buffer).IsMutable {
+	if !b.IsMutable() {
 		t.Error("buffer isn't mutable")
 	}
 	b.Freeze()
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer did not change to immutable")
 	}
 	if !bytes.Equal(b.Bytes(), make([]byte, 8)) {
 		t.Error("buffer changed value") // also tests readability
 	}
 	b.Freeze() // Test idempotency
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer should be immutable")
 	}
 	if !bytes.Equal(b.Bytes(), make([]byte, 8)) {
@@ -401,10 +399,10 @@ func TestFreeze(t *testing.T) {
 	}
 	b.Destroy()
 	b.Freeze()
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer is mutable")
 	}
-	if core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() {
 		t.Error("buffer should be destroyed")
 	}
 	b = newNullBuffer()
@@ -420,11 +418,11 @@ func TestMelt(t *testing.T) {
 		t.Error("buffer is nil")
 	}
 	b.Freeze()
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer is mutable")
 	}
 	b.Melt()
-	if !core.GetBufferState(b.Buffer).IsMutable {
+	if !b.IsMutable() {
 		t.Error("buffer did not become mutable")
 	}
 	if !bytes.Equal(b.Bytes(), make([]byte, 8)) {
@@ -435,7 +433,7 @@ func TestMelt(t *testing.T) {
 		t.Error("buffer value not changed")
 	}
 	b.Melt() // Test idempotency
-	if !core.GetBufferState(b.Buffer).IsMutable {
+	if !b.IsMutable() {
 		t.Error("buffer should be mutable")
 	}
 	b.Bytes()[0] = 0x2
@@ -444,10 +442,10 @@ func TestMelt(t *testing.T) {
 	}
 	b.Destroy()
 	b.Melt()
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer shouldn't be mutable")
 	}
-	if core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() {
 		t.Error("buffer should be destroyed")
 	}
 	b = newNullBuffer()
@@ -468,7 +466,7 @@ func TestSeal(t *testing.T) {
 	if e == nil {
 		t.Error("got nil enclave")
 	}
-	if core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() {
 		t.Error("buffer should be destroyed")
 	}
 	b, err := e.Open()
@@ -662,10 +660,10 @@ func TestDestroy(t *testing.T) {
 	if len(b.Bytes()) != 32 || cap(b.Bytes()) != 32 {
 		t.Error("buffer sizes incorrect")
 	}
-	if !core.GetBufferState(b.Buffer).IsAlive {
+	if !b.IsAlive() {
 		t.Error("buffer should be alive")
 	}
-	if !core.GetBufferState(b.Buffer).IsMutable {
+	if !b.IsMutable() {
 		t.Error("buffer should be mutable")
 	}
 	b.Destroy()
@@ -675,10 +673,10 @@ func TestDestroy(t *testing.T) {
 	if len(b.Bytes()) != 0 || cap(b.Bytes()) != 0 {
 		t.Error("buffer sizes incorrect")
 	}
-	if core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() {
 		t.Error("buffer should be destroyed")
 	}
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer should be immutable")
 	}
 	b.Destroy()
@@ -688,10 +686,10 @@ func TestDestroy(t *testing.T) {
 	if len(b.Bytes()) != 0 || cap(b.Bytes()) != 0 {
 		t.Error("buffer sizes incorrect")
 	}
-	if core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() {
 		t.Error("buffer should be destroyed")
 	}
-	if core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() {
 		t.Error("buffer should be immutable")
 	}
 	b = newNullBuffer()
@@ -709,14 +707,14 @@ func TestIsAlive(t *testing.T) {
 	if !b.IsAlive() {
 		t.Error("invalid state")
 	}
-	if b.IsAlive() != core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() != b.IsAlive() {
 		t.Error("states don't match")
 	}
 	b.Destroy()
 	if b.IsAlive() {
 		t.Error("invalid state")
 	}
-	if b.IsAlive() != core.GetBufferState(b.Buffer).IsAlive {
+	if b.IsAlive() != b.IsAlive() {
 		t.Error("states don't match")
 	}
 	b = newNullBuffer()
@@ -733,21 +731,21 @@ func TestIsMutable(t *testing.T) {
 	if !b.IsMutable() {
 		t.Error("invalid state")
 	}
-	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() != b.IsMutable() {
 		t.Error("states don't match")
 	}
 	b.Freeze()
 	if b.IsMutable() {
 		t.Error("invalid state")
 	}
-	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() != b.IsMutable() {
 		t.Error("states don't match")
 	}
 	b.Destroy()
 	if b.IsMutable() {
 		t.Error("invalid state")
 	}
-	if b.IsMutable() != core.GetBufferState(b.Buffer).IsMutable {
+	if b.IsMutable() != b.IsMutable() {
 		t.Error("states don't match")
 	}
 	b = newNullBuffer()

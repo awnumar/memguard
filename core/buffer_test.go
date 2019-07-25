@@ -131,49 +131,41 @@ func TestBufferState(t *testing.T) {
 		t.Error("expected nil err; got", err)
 	}
 
-	state := GetBufferState(b)
-
-	if state.IsMutable != true {
+	if b.Mutable() != true {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsAlive != true {
+	if b.Alive() != true {
 		t.Error("state mismatch: alive")
 	}
 
 	b.Freeze()
 
-	state = GetBufferState(b)
-
-	if state.IsMutable != false {
+	if b.Mutable() != false {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsAlive != true {
+	if b.Alive() != true {
 		t.Error("state mismatch: alive")
 	}
 
 	b.Melt()
 
-	state = GetBufferState(b)
-
-	if state.IsMutable != true {
+	if b.Mutable() != true {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsAlive != true {
+	if b.Alive() != true {
 		t.Error("state mismatch: alive")
 	}
 
 	b.Destroy()
 
-	state = GetBufferState(b)
-
-	if state.IsMutable != false {
+	if b.Mutable() != false {
 		t.Error("state mismatch: mutability")
 	}
 
-	if state.IsAlive != false {
+	if b.Alive() != false {
 		t.Error("state mismatch: alive")
 	}
 }
