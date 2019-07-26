@@ -108,8 +108,8 @@ func (b *Buffer) Data() []byte {
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Freeze() {
 	// Attain lock.
-	b.RLock()
-	defer b.RUnlock()
+	b.Lock()
+	defer b.Unlock()
 
 	// Check if destroyed.
 	if !b.alive {
@@ -129,8 +129,8 @@ func (b *Buffer) Freeze() {
 // Melt makes the underlying memory of a given buffer mutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Melt() {
 	// Attain lock.
-	b.RLock()
-	defer b.RUnlock()
+	b.Lock()
+	defer b.Unlock()
 
 	// Check if destroyed.
 	if !b.alive {
