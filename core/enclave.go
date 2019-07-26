@@ -59,15 +59,13 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 Seal consumes a given Buffer object and returns its data secured and encrypted inside an Enclave. The given Buffer is destroyed after the Enclave is created.
 */
 func Seal(b *Buffer) (*Enclave, error) {
-	b.RLock()
-
 	// Check if the Buffer has been destroyed.
-	if !b.alive {
+	if !b.Alive() {
 		return nil, ErrBufferExpired
 	}
 
-	// Make the buffer mutable so that we can wipe it.
-	b.Melt()
+	b.Melt()  // Make the buffer mutable so that we can wipe it.
+	b.RLock() // Attain a read lock.
 
 	// Construct the Enclave from the Buffer's data.
 	e, err := NewEnclave(b.Data())
