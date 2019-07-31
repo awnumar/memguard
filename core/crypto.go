@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"errors"
+	"runtime"
 	"unsafe"
 
 	"golang.org/x/crypto/blake2b"
@@ -87,6 +88,9 @@ func Scramble(buf []byte) {
 	if _, err := rand.Read(buf); err != nil {
 		Panic(err)
 	}
+
+	// See Wipe
+	runtime.KeepAlive(buf)
 }
 
 // Wipe takes a buffer and wipes it with zeroes.
@@ -94,6 +98,11 @@ func Wipe(buf []byte) {
 	for i := range buf {
 		buf[i] = 0
 	}
+
+	// This should keep buf's backing array live and thus prevent dead store
+	// elimination, according to discussion at
+	// https://github.com/golang/go/issues/33325 .
+	runtime.KeepAlive(buf)
 }
 
 // Copy is identical to Go's builtin copy function except the copying is done in constant time. This is to mitigate against side-channel attacks.
