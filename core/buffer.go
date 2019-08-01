@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/awnumar/memguard/memcall"
@@ -11,12 +10,6 @@ import (
 var (
 	buffers = new(bufferList)
 )
-
-// ErrNullBuffer is returned when attempting to construct a buffer of size less than one.
-var ErrNullBuffer = errors.New("<memguard::core::ErrNullBuffer> buffer size must be greater than zero")
-
-// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
-var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")
 
 /*
 Buffer is a structure that holds raw sensitive data.
@@ -47,7 +40,7 @@ func NewBuffer(size int) (*Buffer, error) {
 
 	// Return an error if length < 1.
 	if size < 1 {
-		return nil, ErrNullBuffer
+		return nil, errors[errCodeNullBuffer]
 	}
 
 	// Declare and allocate

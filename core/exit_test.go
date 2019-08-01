@@ -44,7 +44,7 @@ func TestPurge(t *testing.T) {
 	}
 
 	// Verify that the key changed by decrypting the Enclave.
-	if _, err := Open(enclave); err != ErrDecryptionFailed {
+	if _, err := Open(enclave); !IsDecryptionFailed(err) {
 		t.Error("expected decryption failed; got", err)
 	}
 }

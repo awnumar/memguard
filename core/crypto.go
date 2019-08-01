@@ -3,7 +3,6 @@ package core
 import (
 	"crypto/rand"
 	"crypto/subtle"
-	"errors"
 	"runtime"
 	"unsafe"
 
@@ -14,20 +13,11 @@ import (
 // Overhead is the size by which the ciphertext exceeds the plaintext.
 const Overhead int = secretbox.Overhead + 24 // auth + nonce
 
-// ErrInvalidKeyLength is returned when attempting to encrypt or decrypt with a key that is not exactly 32 bytes in size.
-var ErrInvalidKeyLength = errors.New("<memguard::core::ErrInvalidKeyLength> key must be exactly 32 bytes")
-
-// ErrBufferTooSmall is returned when the decryption function, Open, is given an output buffer that is too small to hold the plaintext. In practice the plaintext will be Overhead bytes smaller than the ciphertext returned by the encryption function, Seal.
-var ErrBufferTooSmall = errors.New("<memguard::core::ErrBufferTooSmall> the given buffer is too small to hold the plaintext")
-
-// ErrDecryptionFailed is returned when the attempted decryption fails. This can occur if the given key is incorrect or if the ciphertext is invalid.
-var ErrDecryptionFailed = errors.New("<memguard::core::ErrDecryptionFailed> decryption failed")
-
 // Encrypt takes a plaintext message and a 32 byte key and returns an authenticated ciphertext.
 func Encrypt(plaintext, key []byte) ([]byte, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
-		return nil, ErrInvalidKeyLength
+		return nil, errors[errCodeInvalidKeyLength]
 	}
 
 	// Get a reference to the key's underlying array without making a copy.
@@ -51,12 +41,12 @@ The size of the decrypted data is returned.
 func Decrypt(ciphertext, key []byte, output []byte) (int, error) {
 	// Check the length of the key is correct.
 	if len(key) != 32 {
-		return 0, ErrInvalidKeyLength
+		return 0, errors[errCodeInvalidKeyLength]
 	}
 
 	// Check the capacity of the given output buffer.
 	if cap(output) < (len(ciphertext) - Overhead) {
-		return 0, ErrBufferTooSmall
+		return 0, errors[errCodeBufferTooSmall]
 	}
 
 	// Get a reference to the key's underlying array without making a copy.
@@ -74,7 +64,7 @@ func Decrypt(ciphertext, key []byte, output []byte) (int, error) {
 	}
 
 	// Decryption unsuccessful. Either the key was wrong or the authentication failed.
-	return 0, ErrDecryptionFailed
+	return 0, errors[errCodeDecryptionFailed]
 }
 
 // Hash implements a cryptographic hash function using Blake2b.

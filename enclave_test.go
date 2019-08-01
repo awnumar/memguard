@@ -65,7 +65,7 @@ func TestOpen(t *testing.T) {
 	}
 	Purge() // reset the session
 	b, err = e.Open()
-	if err != core.ErrDecryptionFailed {
+	if !core.IsDecryptionFailed(err) {
 		t.Error("expected decryption error; got", err)
 	}
 	if b != nil {

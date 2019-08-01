@@ -19,7 +19,7 @@ A LockedBuffer may alternatively be converted into an Enclave object using its S
 func NewEnclave(src []byte) *Enclave {
 	e, err := core.NewEnclave(src)
 	if err != nil {
-		if err == core.ErrNullEnclave {
+		if core.IsNullEnclave(err) {
 			return nil
 		}
 		core.Panic(err)
@@ -42,7 +42,7 @@ Open decrypts an Enclave object and places its contents into an immutable Locked
 func (e *Enclave) Open() (*LockedBuffer, error) {
 	b, err := core.Open(e.Enclave)
 	if err != nil {
-		if err != core.ErrDecryptionFailed {
+		if !core.IsDecryptionFailed(err) {
 			core.Panic(err)
 		}
 		return nil, err

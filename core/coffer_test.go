@@ -82,7 +82,7 @@ func TestCofferInitialise(t *testing.T) {
 	s.Destroy()
 
 	// Check error condition.
-	if err := s.Initialise(); err != ErrCofferExpired {
+	if err := s.Initialise(); !IsCofferExpired(err) {
 		t.Error("expected ErrCofferExpired; got", err)
 	}
 }
@@ -114,7 +114,7 @@ func TestCofferView(t *testing.T) {
 
 	// Check error condition.
 	view, err = s.View()
-	if err != ErrCofferExpired {
+	if !IsCofferExpired(err) {
 		t.Error("expected ErrCofferExpired; got", err)
 	}
 	if view != nil {
@@ -170,7 +170,7 @@ func TestCofferRekey(t *testing.T) {
 	s.RUnlock() // Release lock to allow destruction.
 	s.Destroy()
 
-	if err := s.Rekey(); err != ErrCofferExpired {
+	if err := s.Rekey(); !IsCofferExpired(err) {
 		t.Error("expected ErrCofferExpired; got", err)
 	}
 }

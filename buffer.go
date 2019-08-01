@@ -245,7 +245,7 @@ If Seal is called on a destroyed buffer, a nil enclave is returned.
 func (b *LockedBuffer) Seal() *Enclave {
 	e, err := core.Seal(b.Buffer)
 	if err != nil {
-		if err == core.ErrBufferExpired {
+		if core.IsBufferExpired(err) {
 			return nil
 		}
 		core.Panic(err)

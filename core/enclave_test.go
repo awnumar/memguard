@@ -49,7 +49,7 @@ func TestNewEnclave(t *testing.T) {
 	// Attempt with an empty data slice.
 	data = make([]byte, 0)
 	e, err = NewEnclave(data)
-	if err != ErrNullEnclave {
+	if !IsNullEnclave(err) {
 		t.Error("expected ErrNullEnclave; got", err)
 	}
 }
@@ -90,7 +90,7 @@ func TestSeal(t *testing.T) {
 
 	// Attempt sealing the destroyed buffer.
 	e, err = Seal(b)
-	if err != ErrBufferExpired {
+	if !IsBufferExpired(err) {
 		t.Error("expected ErrBufferExpired; got", err)
 	}
 	if e != nil {
@@ -128,7 +128,7 @@ func TestOpen(t *testing.T) {
 
 	// Check for the error.
 	buf, err = Open(e)
-	if err != ErrDecryptionFailed {
+	if !IsDecryptionFailed(err) {
 		t.Error("expected decryption error; got", err)
 	}
 	if buf != nil {

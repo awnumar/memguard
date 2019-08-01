@@ -1,7 +1,5 @@
 package core
 
-import "errors"
-
 var (
 	// Declare a key for use in encrypting data this session.
 	key *Coffer
@@ -11,9 +9,6 @@ func init() {
 	// Initialize the key declared above with a random value.
 	key = NewCoffer()
 }
-
-// ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
-var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size must be greater than zero")
 
 /*
 Enclave is a sealed and encrypted container for sensitive data.
@@ -28,7 +23,7 @@ NewEnclave is a raw constructor for the Enclave object. The given buffer is wipe
 func NewEnclave(buf []byte) (*Enclave, error) {
 	// Return an error if length < 1.
 	if len(buf) < 1 {
-		return nil, ErrNullEnclave
+		return nil, errors[errCodeNullEnclave]
 	}
 
 	// Create a new Enclave.
@@ -61,7 +56,7 @@ Seal consumes a given Buffer object and returns its data secured and encrypted i
 func Seal(b *Buffer) (*Enclave, error) {
 	// Check if the Buffer has been destroyed.
 	if !b.Alive() {
-		return nil, ErrBufferExpired
+		return nil, errors[errCodeBufferExpired]
 	}
 
 	b.Melt()  // Make the buffer mutable so that we can wipe it.

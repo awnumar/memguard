@@ -35,7 +35,7 @@ func TestPurge(t *testing.T) {
 		t.Error("buffer not destroyed")
 	}
 	buf, err = key.Open()
-	if err != core.ErrDecryptionFailed {
+	if !core.IsDecryptionFailed(err) {
 		t.Error(buf.Bytes(), err)
 	}
 	if buf != nil {

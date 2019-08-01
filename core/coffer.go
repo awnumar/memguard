@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,9 +20,6 @@ var Interval uint64 = 8 // milliseconds
 func SetInterval(interval uint64) {
 	atomic.StoreUint64(&Interval, interval)
 }
-
-// ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
-var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")
 
 /*
 Coffer is a specialized container for securing highly-sensitive, 32 byte values.
@@ -68,7 +64,7 @@ Initialise is used to reset the value stored inside a Coffer to a new random 32 
 func (s *Coffer) Initialise() error {
 	// Check if it has been destroyed.
 	if s.Destroyed() {
-		return ErrCofferExpired
+		return errors[errCodeCofferExpired]
 	}
 
 	// Attain the mutex.
@@ -99,7 +95,7 @@ func (s *Coffer) View() (*Buffer, error) {
 
 	// Check if it's destroyed.
 	if s.Destroyed() {
-		return nil, ErrCofferExpired
+		return nil, errors[errCodeCofferExpired]
 	}
 
 	// Create a new Buffer for the data.
@@ -122,7 +118,7 @@ Rekey is used to re-key a Coffer. Ideally this should be done at short, regular 
 func (s *Coffer) Rekey() error {
 	// Check if it has been destroyed.
 	if s.Destroyed() {
-		return ErrCofferExpired
+		return errors[errCodeCofferExpired]
 	}
 
 	// Attain the mutex.

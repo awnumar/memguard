@@ -144,7 +144,7 @@ func TestEncryptDecrypt(t *testing.T) {
 	// Attempt decryption /w buffer that is too small to hold the output.
 	out := make([]byte, len(x)-Overhead-1)
 	length, err = Decrypt(x, k, out)
-	if err != ErrBufferTooSmall {
+	if !IsBufferTooSmall(err) {
 		t.Error("expected error; got", err)
 	}
 	if length != 0 {
@@ -177,7 +177,7 @@ func TestEncryptDecrypt(t *testing.T) {
 	if length != 0 {
 		t.Error("expected length = 0; got", length)
 	}
-	if err != ErrDecryptionFailed {
+	if !IsDecryptionFailed(err) {
 		t.Error("expected error with incorrect key; got", err)
 	}
 
@@ -193,7 +193,7 @@ func TestEncryptDecrypt(t *testing.T) {
 	if length != 0 {
 		t.Error("expected length = 0; got", length)
 	}
-	if err != ErrDecryptionFailed {
+	if !IsDecryptionFailed(err) {
 		t.Error("expected error with modified ciphertext; got", err)
 	}
 
@@ -203,7 +203,7 @@ func TestEncryptDecrypt(t *testing.T) {
 
 	// Attempt encryption with the invalid key.
 	ix, err := Encrypt(m, ik)
-	if err != ErrInvalidKeyLength {
+	if !IsInvalidKeyLength(err) {
 		t.Error("expected error with invalid key; got", err)
 	}
 	if ix != nil {
@@ -215,7 +215,7 @@ func TestEncryptDecrypt(t *testing.T) {
 	if length != 0 {
 		t.Error("expected length = 0; got", length)
 	}
-	if err != ErrInvalidKeyLength {
+	if !IsInvalidKeyLength(err) {
 		t.Error("expected error with invalid key; got", err)
 	}
 }
