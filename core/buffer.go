@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/awnumar/memguard/memcall"
+	"github.com/awnumar/memcall"
 	"gitlab.com/NebulousLabs/fastrand"
 )
 
