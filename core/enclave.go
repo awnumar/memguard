@@ -9,6 +9,9 @@ var (
 
 func init() {
 	// Initialize the key declared above with a random value.
+	if key != nil {
+		key.Destroy()
+	}
 	key = NewCoffer()
 }
 

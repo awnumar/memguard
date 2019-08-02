@@ -12,9 +12,6 @@ import (
 var (
 	// interval of time between each verify & re-key cycle.
 	interval uint32 = 50 // milliseconds
-
-	// Static allocation for fast random bytes reading.
-	buf32, _ = NewBuffer(32)
 )
 
 // SetInterval changes the interval time in milliseconds between re-key cycles.
@@ -25,7 +22,7 @@ var (
 // If you disagree with their choice, you may specify your preferred value in
 // your package root.
 //
-// MOST USERS SHOULD COMPLETELY LEAVE THIS VALUE ALONE AND UNTOUCHED.
+// MOST USERS SHOULD RESPECT THE DEFAULTS AND COMPLETELY LEAVE THIS VALUE UNTOUCHED.
 func SetInterval(new uint32) {
 	atomic.StoreUint32(&interval, new)
 }
@@ -46,6 +43,8 @@ type Coffer struct {
 
 	left  *Buffer // Left partition.
 	right *Buffer // Right partition.
+
+	rand *Buffer // Static allocation for fast random bytes reading.
 }
 
 // NewCoffer is a raw constructor for the *Coffer object.
@@ -56,6 +55,7 @@ func NewCoffer() *Coffer {
 	// Allocate the partitions.
 	s.left, _ = NewBuffer(32)
 	s.right, _ = NewBuffer(32)
+	s.rand, _ = NewBuffer(32)
 
 	// Initialise with a random 32 byte value.
 	s.Initialise()
@@ -143,14 +143,14 @@ func (s *Coffer) Rekey() error {
 	defer s.Unlock()
 
 	// Attain 32 bytes of fresh cryptographic buf32.
-	fastrand.Read(buf32.Data())
+	fastrand.Read(s.rand.Data())
 
 	// Hash the current right partition for later.
 	hashRightCurrent := Hash(s.right.Data())
 
 	// new_right = current_right XOR buf32
 	for i := range s.right.Data() {
-		s.right.Data()[i] ^= buf32.Data()[i]
+		s.right.Data()[i] ^= s.rand.Data()[i]
 	}
 
 	// new_left = current_left XOR hash(current_right) XOR hash(new_right)
@@ -174,6 +174,7 @@ func (s *Coffer) Destroy() {
 	// Destroy the partitions.
 	s.left.Destroy()
 	s.right.Destroy()
+	s.rand.Destroy()
 }
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.
