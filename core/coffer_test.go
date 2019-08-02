@@ -2,16 +2,15 @@ package core
 
 import (
 	"bytes"
-	"sync/atomic"
 	"testing"
 )
 
 func TestSetInterval(t *testing.T) {
-	if atomic.LoadUintptr(&interval) != 50 {
+	if GetInterval() != 50 {
 		t.Error("default should be 50ms")
 	}
 	SetInterval(500)
-	if atomic.LoadUintptr(&interval) != 500 {
+	if GetInterval() != 500 {
 		t.Error("value did not update")
 	}
 	SetInterval(50)
