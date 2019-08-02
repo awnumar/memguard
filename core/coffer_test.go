@@ -7,11 +7,11 @@ import (
 )
 
 func TestSetInterval(t *testing.T) {
-	if atomic.LoadUint64(&interval) != 8 {
+	if atomic.LoadUintptr(&interval) != 8 {
 		t.Error("default should be 8ms")
 	}
 	SetInterval(500)
-	if atomic.LoadUint64(&interval) != 500 {
+	if atomic.LoadUintptr(&interval) != 500 {
 		t.Error("value did not update")
 	}
 	SetInterval(8)

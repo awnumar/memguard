@@ -11,7 +11,7 @@ import (
 
 var (
 	// interval of time between each verify & re-key cycle.
-	interval uint64 = 50 // milliseconds
+	interval uintptr = 50 // milliseconds
 
 	// Static allocation for fast random bytes reading.
 	buf32, _ = NewBuffer(32)
@@ -20,8 +20,8 @@ var (
 // SetInterval changes the interval time in milliseconds between re-key cycles.
 // The default is 50 milliseconds and a value below one second is recommended.
 // Only call this function if you have a very specific reason to do so.
-func SetInterval(newInterval uint64) {
-	atomic.StoreUint64(&interval, newInterval)
+func SetInterval(newInterval uintptr) {
+	atomic.StoreUintptr(&interval, newInterval)
 }
 
 // ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
@@ -52,7 +52,7 @@ func NewCoffer() *Coffer {
 	go func(s *Coffer) {
 		for {
 			// Sleep for the specified interval.
-			time.Sleep(time.Duration(atomic.LoadUint64(&interval)) * time.Millisecond)
+			time.Sleep(time.Duration(atomic.LoadUintptr(&interval)) * time.Millisecond)
 
 			// Re-key the contents, exiting the routine if object destroyed.
 			if err := s.Rekey(); err != nil {
