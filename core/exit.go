@@ -23,12 +23,12 @@ func Purge() {
 
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.flush()
-	buffers.add(key.left, key.right, buf32)
+	buffers.add(key.left, key.right, key.rand)
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
 		// Don't destroy the key partitions.
-		if b != key.left && b != key.right && b != buf32 {
+		if b != key.left && b != key.right && b != key.rand {
 			b.Destroy()
 		}
 	}

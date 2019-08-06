@@ -28,7 +28,7 @@ func TestPurge(t *testing.T) {
 			t.Error("should not have destroyed excluded buffers")
 		}
 	}
-	if !key.right.Alive() || !key.left.Alive() || !buf32.Alive() {
+	if !key.right.Alive() || !key.left.Alive() || !key.rand.Alive() {
 		t.Error("buffers left in list aren't the right ones")
 	}
 	buffers.RUnlock()

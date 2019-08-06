@@ -9,7 +9,9 @@ var (
 
 func init() {
 	// Initialize the key declared above with a random value.
-	key = NewCoffer()
+	if key == nil {
+		key = NewCoffer()
+	}
 }
 
 // ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
