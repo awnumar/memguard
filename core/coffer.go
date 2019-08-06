@@ -3,34 +3,13 @@ package core
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"gitlab.com/NebulousLabs/fastrand"
 )
 
-var (
-	// interval of time between each verify & re-key cycle.
-	interval uint32 = 50 // milliseconds
-)
-
-// SetInterval changes the interval time in milliseconds between re-key cycles.
-// The default is 50 milliseconds and a value below one second is recommended.
-// Only call this function if you have a very specific reason to do so.
-//
-// Dependencies of your program may mutate this value globally for your program.
-// If you disagree with their choice, you may specify your preferred value in
-// your package root.
-//
-// MOST USERS SHOULD RESPECT THE DEFAULTS AND COMPLETELY LEAVE THIS VALUE UNTOUCHED.
-func SetInterval(new uint32) {
-	atomic.StoreUint32(&interval, new)
-}
-
-// GetInterval returns the current interval in milliseconds between successive Coffer re-key cycles. The default is 50 milliseconds.
-func GetInterval() uint32 {
-	return atomic.LoadUint32(&interval)
-}
+// Interval of time between each verify & re-key cycle.
+const Interval = 500 // milliseconds
 
 // ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
 var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")
@@ -63,7 +42,7 @@ func NewCoffer() *Coffer {
 	go func(s *Coffer) {
 		for {
 			// Sleep for the specified interval.
-			time.Sleep(time.Duration(GetInterval()) * time.Millisecond)
+			time.Sleep(Interval * time.Millisecond)
 
 			// Re-key the contents, exiting the routine if object destroyed.
 			if err := s.Rekey(); err != nil {

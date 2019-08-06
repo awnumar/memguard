@@ -5,17 +5,6 @@ import (
 	"testing"
 )
 
-func TestSetInterval(t *testing.T) {
-	if GetInterval() != 50 {
-		t.Error("default should be 50ms")
-	}
-	SetInterval(500)
-	if GetInterval() != 500 {
-		t.Error("value did not update")
-	}
-	SetInterval(50)
-}
-
 func TestNewCoffer(t *testing.T) {
 	s := NewCoffer()
 
