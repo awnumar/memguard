@@ -4,8 +4,6 @@ import (
 	"errors"
 	"sync"
 	"time"
-
-	"gitlab.com/NebulousLabs/fastrand"
 )
 
 // Interval of time between each verify & re-key cycle.
@@ -122,7 +120,7 @@ func (s *Coffer) Rekey() error {
 	defer s.Unlock()
 
 	// Attain 32 bytes of fresh cryptographic buf32.
-	fastrand.Read(s.rand.Data())
+	Scramble(s.rand.Data())
 
 	// Hash the current right partition for later.
 	hashRightCurrent := Hash(s.right.Data())
