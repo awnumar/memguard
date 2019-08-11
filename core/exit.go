@@ -64,7 +64,7 @@ func Panic(v interface{}) {
 	// Wipe all of the currently active LockedBuffers.
 	for _, b := range buffers.list {
 		if !b.mutable {
-			memcall.Protect(b.inner, memcall.ReadWrite)
+			memcall.Protect(b.inner, memcall.ReadWrite())
 		}
 		Wipe(b.Data())
 	}
