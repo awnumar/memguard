@@ -1,5 +1,5 @@
-github.com/awnumar/memcall v0.0.0-20190808153224-92b5aac61e68 h1:sqUhQxqaZ/noGr8vdR6OaM2/zpVzBvXbQvCwaMfQ92k=
-github.com/awnumar/memcall v0.0.0-20190808153224-92b5aac61e68/go.mod h1:sbEXyqNZZ3Cebk+6zOUmFNN8OuHHlugjiUmqn2tfiiM=
+github.com/awnumar/memcall v0.0.0-20190811121346-2affb857f00a h1:6J0k3xexdYoYYUdzPqnoAKxu1YokxUa/XTIunY7IzrY=
+github.com/awnumar/memcall v0.0.0-20190811121346-2affb857f00a/go.mod h1:sbEXyqNZZ3Cebk+6zOUmFNN8OuHHlugjiUmqn2tfiiM=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 h1:HuIa8hRrWRSrqYzx1qI49NNxhdi2PrY7gxVSq1JjLDc=
 golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
