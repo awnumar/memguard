@@ -81,10 +81,10 @@ func NewBuffer(size int) (*Buffer, error) {
 	Copy(b.postguard, b.canary)
 
 	// Make the guard pages inaccessible.
-	if err := memcall.Protect(b.preguard, memcall.NoAccess); err != nil {
+	if err := memcall.Protect(b.preguard, memcall.NoAccess()); err != nil {
 		Panic(err)
 	}
-	if err := memcall.Protect(b.postguard, memcall.NoAccess); err != nil {
+	if err := memcall.Protect(b.postguard, memcall.NoAccess()); err != nil {
 		Panic(err)
 	}
 
@@ -118,7 +118,7 @@ func (b *Buffer) Freeze() {
 	// Only do anything if currently mutable.
 	if b.mutable {
 		// Make the memory immutable.
-		if err := memcall.Protect(b.inner, memcall.ReadOnly); err != nil {
+		if err := memcall.Protect(b.inner, memcall.ReadOnly()); err != nil {
 			Panic(err)
 		}
 		b.mutable = false
@@ -139,7 +139,7 @@ func (b *Buffer) Melt() {
 	// Only do anything if currently immutable.
 	if !b.mutable {
 		// Make the memory mutable.
-		if err := memcall.Protect(b.inner, memcall.ReadWrite); err != nil {
+		if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
 			Panic(err)
 		}
 		b.mutable = true
@@ -162,7 +162,7 @@ func (b *Buffer) Destroy() {
 	}
 
 	// Make all of the memory readable and writable.
-	if err := memcall.Protect(b.memory, memcall.ReadWrite); err != nil {
+	if err := memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
 		Panic(err)
 	}
 
