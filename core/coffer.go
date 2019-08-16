@@ -3,24 +3,11 @@ package core
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
-
-	"gitlab.com/NebulousLabs/fastrand"
-)
-
-var (
-	// Static allocation for fast random bytes reading.
-	buf32, _ = NewBuffer(32)
 )
 
 // Interval of time between each verify & re-key cycle.
-var Interval uint64 = 8 // milliseconds
-
-// SetInterval changes the interval in milliseconds between re-key cycles. The default is 8 milliseconds and a value below one second is recommended.
-func SetInterval(interval uint64) {
-	atomic.StoreUint64(&Interval, interval)
-}
+const Interval = 500 // milliseconds
 
 // ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
 var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")
@@ -33,6 +20,8 @@ type Coffer struct {
 
 	left  *Buffer // Left partition.
 	right *Buffer // Right partition.
+
+	rand *Buffer // Static allocation for fast random bytes reading.
 }
 
 // NewCoffer is a raw constructor for the *Coffer object.
@@ -43,6 +32,7 @@ func NewCoffer() *Coffer {
 	// Allocate the partitions.
 	s.left, _ = NewBuffer(32)
 	s.right, _ = NewBuffer(32)
+	s.rand, _ = NewBuffer(32)
 
 	// Initialise with a random 32 byte value.
 	s.Initialise()
@@ -50,7 +40,7 @@ func NewCoffer() *Coffer {
 	go func(s *Coffer) {
 		for {
 			// Sleep for the specified interval.
-			time.Sleep(time.Duration(atomic.LoadUint64(&Interval)) * time.Millisecond)
+			time.Sleep(Interval * time.Millisecond)
 
 			// Re-key the contents, exiting the routine if object destroyed.
 			if err := s.Rekey(); err != nil {
@@ -130,14 +120,14 @@ func (s *Coffer) Rekey() error {
 	defer s.Unlock()
 
 	// Attain 32 bytes of fresh cryptographic buf32.
-	fastrand.Read(buf32.Data())
+	Scramble(s.rand.Data())
 
 	// Hash the current right partition for later.
 	hashRightCurrent := Hash(s.right.Data())
 
 	// new_right = current_right XOR buf32
 	for i := range s.right.Data() {
-		s.right.Data()[i] ^= buf32.Data()[i]
+		s.right.Data()[i] ^= s.rand.Data()[i]
 	}
 
 	// new_left = current_left XOR hash(current_right) XOR hash(new_right)
@@ -161,6 +151,7 @@ func (s *Coffer) Destroy() {
 	// Destroy the partitions.
 	s.left.Destroy()
 	s.right.Destroy()
+	s.rand.Destroy()
 }
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.

@@ -2,7 +2,7 @@ package memguard
 
 import (
 	"github.com/awnumar/memguard/core"
-	"github.com/awnumar/memguard/memcall"
+	"github.com/awnumar/memcall"
 )
 
 func init() {
