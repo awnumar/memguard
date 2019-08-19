@@ -40,7 +40,7 @@ API is experimental and may have unstable changes. You should pin a version. [[m
 
 `memguard` - high level easy to use wrapper over core functionality, with additional features
 
-`memguard/core` - unstable low level interface
+`memguard/core` - low level interface
 
 ## Contributing
 

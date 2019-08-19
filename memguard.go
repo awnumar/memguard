@@ -2,13 +2,7 @@ package memguard
 
 import (
 	"github.com/awnumar/memguard/core"
-	"github.com/awnumar/memcall"
 )
-
-func init() {
-	// Disable core dumps on unixesque systems. Does nothing on windows :(
-	memcall.DisableCoreDumps()
-}
 
 /*
 ScrambleBytes overwrites an arbitrary buffer with cryptographically-secure random bytes.
