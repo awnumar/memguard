@@ -52,8 +52,8 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 }
 
 /*
-PlaintextSize returns the length of the plaintext after the ciphertext is decrypted.
+PlaintextSize returns the length of the plaintext of an Enclave after its ciphertext is decrypted.
 */
 func (e *Enclave) PlaintextSize() int {
-	return e.Enclave.PlaintextSize()
+	return core.PlaintextSize(e.Enclave)
 }
