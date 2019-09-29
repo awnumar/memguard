@@ -115,8 +115,8 @@ func Open(e *Enclave) (*Buffer, error) {
 }
 
 /*
-PlaintextSize returns the length of the plaintext of an Enclave after its ciphertext is decrypted.
+EnclaveSize returns the number of bytes of plaintext data stored inside an Enclave.
 */
-func PlaintextSize(e *Enclave) int {
+func EnclaveSize(e *Enclave) int {
 	return len(e.ciphertext) - Overhead
 }
