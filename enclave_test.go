@@ -60,6 +60,9 @@ func TestOpen(t *testing.T) {
 	if b == nil {
 		t.Error("buffer should not be nil")
 	}
+	if e.Size() != b.Size() {
+		t.Error("sizes don't match")
+	}
 	if !bytes.Equal(b.Bytes(), []byte("yellow submarine")) {
 		t.Error("data does not match")
 	}
