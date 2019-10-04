@@ -54,7 +54,7 @@ freebsd_task:
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
-    - pkg install -y go
+    - pkg install -y go git
   build_script:
     - go version
     - go get ./...
