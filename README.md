@@ -34,25 +34,20 @@ Full documentation and a complete overview of the API can be found [here](https:
 $ go get github.com/awnumar/memguard
 ```
 
-We **strongly** encourage you to pin a specific version for a clean and reliable build. This can be accomplished using [modules](https://github.com/golang/go/wiki/Modules).
+API is experimental and may have unstable changes. You should pin a version. [[modules](https://github.com/golang/go/wiki/Modules)]
+
+## Packages
+
+`memguard` - high level easy to use wrapper over core functionality, with additional features
+
+`memguard/core` - low level interface
 
 ## Contributing
 
-* Using the package and identifying points of friction.
-* Reading the source code and looking for improvements.
-* Adding interesting and useful program samples to [`./examples`](examples).
-* Developing Proof-of-Concept attacks and mitigations.
-* Improving compatibility with more kernels and architectures.
-* Implementing kernel-specific and cpu-specific protections.
+* Submitting program samples to [`./examples`](examples).
+* Reporting bugs, vulnerabilities, and any difficulties in using the API.
 * Writing useful security and crypto libraries that utilise memguard.
-* Submitting performance improvements or benchmarking code.
+* Implementing kernel-specific/cpu-specific protections.
+* Submitting performance improvements.
 
 Issues are for reporting bugs and for discussion on proposals. Pull requests should be made against master.
-
-## Future goals
-
-* Ability to stream data to and from encrypted enclave objects.
-* Catch segmentation faults to wipe memory before crashing.
-* Evaluate and improve the strategies in place, particularly for [Coffer](core/coffer.go) objects.
-* Formalise a threat model and evaluate our performance in regards to it.
-* Use lessons learned to apply patches upstream to the Go language and runtime.

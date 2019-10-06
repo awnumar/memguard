@@ -3,7 +3,6 @@ linux_task:
     image: golang:latest
   env:
     GO111MODULE: on
-    GOPROXY: https://proxy.golang.org
     GOPATH: /tmp/go
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   build_script:
@@ -18,7 +17,6 @@ osx_task:
     image: mojave-base
   env:
     GO111MODULE: on
-    GOPROXY: https://proxy.golang.org
     GOPATH: /tmp/go
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
@@ -37,10 +35,9 @@ windows_task:
     os_version: 1803
   env:
     GO111MODULE: on
-    GOPROXY: https://proxy.golang.org
-    GOPATH: C:\go
+    GOPATH: C:\golang
     PATH: ${GOPATH}\bin:${PATH}
-    CIRRUS_WORKING_DIR: C:\go\src\github.com\${CIRRUS_REPO_FULL_NAME}
+    CIRRUS_WORKING_DIR: C:\golang\src\github.com\${CIRRUS_REPO_FULL_NAME}
   build_script:
     - go version
     - go get ./...
@@ -53,12 +50,11 @@ freebsd_task:
     image: freebsd-12-0-release-amd64
   env:
     GO111MODULE: on
-    GOPROXY: https://proxy.golang.org
     GOPATH: /tmp/go
     PATH: ${GOPATH}/bin:${PATH}
     CIRRUS_WORKING_DIR: /tmp/go/src/github.com/${CIRRUS_REPO_FULL_NAME}
   install_script:
-    - pkg install -y go
+    - pkg install -y go git
   build_script:
     - go version
     - go get ./...

@@ -135,3 +135,9 @@ func TestOpen(t *testing.T) {
 		t.Error("expected nil buffer in error case")
 	}
 }
+
+func TestEnclaveSize(t *testing.T) {
+	if EnclaveSize(&Enclave{make([]byte, 1234)}) != 1234-Overhead {
+		t.Error("invalid enclave size")
+	}
+}

@@ -50,3 +50,10 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 	b.Freeze()
 	return newBuffer(b), nil
 }
+
+/*
+Size returns the number of bytes of data stored within an Enclave.
+*/
+func (e *Enclave) Size() int {
+	return core.EnclaveSize(e.Enclave)
+}
