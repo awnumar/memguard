@@ -3,24 +3,30 @@ package memguard
 import (
 	"container/list"
 	"io"
+	"sync"
 
 	"github.com/awnumar/memguard/core"
 )
 
 // Stream is a streaming in-memory encrypted data vault.
 type Stream struct {
+	sync.Mutex
 	*list.List
 }
 
 // NewStream initialises a new empty Stream object.
 func NewStream() *Stream {
-	return &Stream{list.New()}
+	s := new(Stream)
+	s.List = list.New()
+	return s
 }
 
 /*
 Write encrypts and writes some given data to a Stream object. The last thing to be written to the Stream will be the last thing to be read.
-*/
+*/ /* break up data int page-size chunks? */
 func (s *Stream) Write(data []byte) (int, error) {
+	s.Lock()
+	defer s.Unlock()
 	s.PushBack(NewEnclave(data))
 	return len(data), nil
 }
@@ -29,6 +35,9 @@ func (s *Stream) Write(data []byte) (int, error) {
 Read decrypts and places some data from a Stream object into some provided buffer.
 */
 func (s *Stream) Read(buf []byte) (int, error) {
+	s.Lock()
+	s.Unlock()
+
 	// Pop data from the front of the list.
 	e := s.Front()
 	if e == nil {
