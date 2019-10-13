@@ -34,7 +34,11 @@ func (q *queue) pop() *Enclave {
 	return e.Value.(*Enclave) // unwrap and return (potential panic)
 }
 
-// Stream is a streaming in-memory encrypted data vault.
+/*
+Stream is an in-memory encrypted container implementing the reader and writer interfaces.
+
+It is most useful when you need to store lots of data in memory and are able to work on it in chunks.
+*/
 type Stream struct {
 	sync.Mutex
 	*queue
@@ -46,7 +50,9 @@ func NewStream() *Stream {
 }
 
 /*
-Write encrypts and writes some given data to a Stream object. The last thing to be written to the Stream will be the last thing to be read.
+Write encrypts and writes some given data to a Stream object.
+
+The data is broken down into page-sized chunks and added to the stream in order. The last thing to be written to the stream is the last thing that will be read back.
 */
 func (s *Stream) Write(data []byte) (int, error) {
 	s.Lock()
@@ -65,6 +71,8 @@ func (s *Stream) Write(data []byte) (int, error) {
 
 /*
 Read decrypts and places some data from a Stream object into some provided buffer.
+
+If there is no data, the call will return an io.EOF error.
 */
 func (s *Stream) Read(buf []byte) (int, error) {
 	s.Lock()
