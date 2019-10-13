@@ -3,6 +3,7 @@ package memguard
 import (
 	"container/list"
 	"io"
+	"os"
 	"sync"
 
 	"github.com/awnumar/memguard/core"
@@ -46,9 +47,16 @@ func NewStream() *Stream {
 
 /*
 Write encrypts and writes some given data to a Stream object. The last thing to be written to the Stream will be the last thing to be read.
-*/ /* break up data int page-size chunks? */
+*/
 func (s *Stream) Write(data []byte) (int, error) {
-	s.push(NewEnclave(data))
+	ps := os.Getpagesize()
+	for i := 0; i < len(data); i += ps {
+		if i+ps > len(data) {
+			s.push(NewEnclave(data[len(data)-(len(data)%ps):]))
+		} else {
+			s.push(NewEnclave(data[i : i+ps]))
+		}
+	}
 	return len(data), nil
 }
 
