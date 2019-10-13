@@ -10,23 +10,22 @@ import (
 )
 
 type queue struct {
-	sync.Mutex
 	*list.List
 }
 
 // add data to back of queue
-func (q *queue) push(e *Enclave) {
-	q.Lock()
+func (q *queue) join(e *Enclave) {
 	q.PushBack(e)
-	q.Unlock()
+}
+
+// add data to front of queue
+func (q *queue) push(e *Enclave) {
+	q.PushFront(e)
 }
 
 // pop data off front of queue
 // returns nil if queue is empty
 func (q *queue) pop() *Enclave {
-	q.Lock()
-	defer q.Unlock()
-
 	e := q.Front() // get element at front of queue
 	if e == nil {
 		return nil // no data
@@ -37,6 +36,7 @@ func (q *queue) pop() *Enclave {
 
 // Stream is a streaming in-memory encrypted data vault.
 type Stream struct {
+	sync.Mutex
 	*queue
 }
 
@@ -49,12 +49,15 @@ func NewStream() *Stream {
 Write encrypts and writes some given data to a Stream object. The last thing to be written to the Stream will be the last thing to be read.
 */
 func (s *Stream) Write(data []byte) (int, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	ps := os.Getpagesize()
 	for i := 0; i < len(data); i += ps {
 		if i+ps > len(data) {
-			s.push(NewEnclave(data[len(data)-(len(data)%ps):]))
+			s.join(NewEnclave(data[len(data)-(len(data)%ps):]))
 		} else {
-			s.push(NewEnclave(data[i : i+ps]))
+			s.join(NewEnclave(data[i : i+ps]))
 		}
 	}
 	return len(data), nil
