@@ -119,8 +119,8 @@ func TestStreamReadWrite(t *testing.T) {
 	}
 	b = make([]byte, 8)
 	n, err = s.Read(b)
-	if err != io.ErrShortBuffer {
-		t.Error("expected errshortbuffer")
+	if err != nil {
+		t.Error(err)
 	}
 	if n != len(b) {
 		t.Error("not enough data read")
