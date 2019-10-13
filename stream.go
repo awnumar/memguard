@@ -13,10 +13,6 @@ type queue struct {
 	*list.List
 }
 
-func newQ() *queue {
-	return &queue{List: list.New()}
-}
-
 // add data to back of queue
 func (q *queue) push(e *Enclave) {
 	q.Lock()
@@ -45,7 +41,7 @@ type Stream struct {
 
 // NewStream initialises a new empty Stream object.
 func NewStream() *Stream {
-	return &Stream{queue: newQ()}
+	return &Stream{queue: &queue{List: list.New()}}
 }
 
 /*
