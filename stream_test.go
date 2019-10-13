@@ -2,6 +2,7 @@ package memguard
 
 import (
 	"bytes"
+	"io"
 	"testing"
 )
 
@@ -34,5 +35,14 @@ func TestReadWrite(t *testing.T) {
 	}
 	if !bytes.Equal(ref, b) {
 		t.Error("data mismatch")
+	}
+
+	// Check for end of data error
+	n, err = s.Read(b)
+	if err != io.EOF {
+		t.Error("expected EOF")
+	}
+	if n != 0 {
+		t.Error("expected no data")
 	}
 }
