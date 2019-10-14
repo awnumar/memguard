@@ -76,7 +76,7 @@ If there is no data, the call will return an io.EOF error.
 */
 func (s *Stream) Read(buf []byte) (int, error) {
 	s.Lock()
-	s.Unlock()
+	defer s.Unlock()
 
 	// Pop data from the front of the list.
 	e := s.pop()
