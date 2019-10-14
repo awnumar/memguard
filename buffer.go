@@ -137,11 +137,11 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 				i-- // try again
 				continue
 			}
+			// if instead there was an error, we're done early
 			if i == 0 { // no data read
 				b.Destroy()
 				return newNullBuffer()
 			}
-			// if there was an error, we're done early
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
 			d.Freeze()

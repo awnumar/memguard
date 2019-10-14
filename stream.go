@@ -70,9 +70,12 @@ func (s *Stream) Write(data []byte) (int, error) {
 }
 
 /*
-Read decrypts and places some data from a Stream object into some provided buffer.
+Read decrypts and places some data from a Stream object into a provided buffer.
 
-If there is no data, the call will return an io.EOF error.
+If there is no data, the call will return an io.EOF error. If the caller provides a buffer
+that is too small to hold the next chunk of data, the remaining bytes are re-encrypted and
+added to the front of the queue to be returned in the next call. In this case an
+io.ErrShortBuffer error is also returned.
 */
 func (s *Stream) Read(buf []byte) (int, error) {
 	s.Lock()
@@ -101,7 +104,7 @@ func (s *Stream) Read(buf []byte) (int, error) {
 		c := NewBuffer(n)
 		c.Copy(b.Bytes()[n:])
 		s.push(c.Seal())
-		return len(buf), nil
+		return len(buf), io.ErrShortBuffer
 	}
 
 	// Not enough data or perfect amount of data.
