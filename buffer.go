@@ -149,6 +149,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			return d
 		}
 		// we managed to read a byte, check if it was the delimiter
+		// note that errors are ignored in this case where we got data
 		if b.Bytes()[i] == delim {
 			if i == 0 {
 				// if first byte was delimiter, there's no data to return

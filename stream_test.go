@@ -81,7 +81,8 @@ func TestStreamReadWrite(t *testing.T) {
 	copy(ref, data)
 	write(t, s, data)
 	write(t, s, data) // have two enclaves in the stream, 32 bytes total
-	read(t, s, ref[:8], io.ErrShortBuffer)
+	read(t, s, ref[:4], io.ErrShortBuffer)
+	read(t, s, ref[4:8], io.ErrShortBuffer)
 	read(t, s, ref[8:], nil)
 	read(t, s, make([]byte, 16), nil)
 	read(t, s, nil, io.EOF)
