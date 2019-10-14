@@ -94,5 +94,62 @@ func TestStreamReadWrite(t *testing.T) {
 }
 
 func TestStreamingSanity(t *testing.T) {
+	s := NewStream()
 
+	// write 2 pages + 1024 bytes to the stream
+	size := 2*os.Getpagesize() + 1024
+	b := make([]byte, size)
+	ScrambleBytes(b)
+	ref := make([]byte, len(b))
+	copy(ref, b)
+	write(t, s, b)
+
+	// read it back exactly
+	c := NewBufferFromReader(s, size)
+	if c.Size() != size {
+		t.Error("not enough data read back")
+	}
+	if !c.EqualTo(ref) {
+		t.Error("data mismatch")
+	}
+	c.Destroy()
+
+	// should be no data left
+	read(t, s, nil, io.EOF)
+
+	// write the data back to the stream
+	copy(b, ref)
+	write(t, s, b)
+
+	// read it all back
+	c = NewBufferFromEntireReader(s)
+	if c.Size() != size {
+		t.Error("not enough data read back")
+	}
+	if !c.EqualTo(ref) {
+		t.Error("data mismatch")
+	}
+	c.Destroy()
+
+	// should be no data left
+	read(t, s, nil, io.EOF)
+
+	// write a page + 1024 bytes
+	size = os.Getpagesize() + 1024
+	b = make([]byte, size)
+	b[size-1] = 'x'
+	write(t, s, b)
+
+	// read it back until the delimiter
+	c = NewBufferFromReaderUntil(s, 'x')
+	if c.Size() != size-1 {
+		t.Error("not enough data read back:", c.Size(), "want", size-1)
+	}
+	if !c.EqualTo(make([]byte, size-1)) {
+		t.Error("data mismatch")
+	}
+	c.Destroy()
+
+	// should be no data left
+	read(t, s, nil, io.EOF)
 }
