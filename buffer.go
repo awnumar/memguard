@@ -180,6 +180,10 @@ func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 			continue
 		}
 
+		// 1) so either have data and no error
+		// 2) or have error and no data
+		// 3) or both have data and have error
+
 		// Increment the read count by the number of bytes that we just read.
 		read += n
 

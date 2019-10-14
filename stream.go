@@ -100,9 +100,8 @@ func (s *Stream) Read(buf []byte) (int, error) {
 	// Check if there is data left over.
 	if len(buf) < b.Size() {
 		// Re-encrypt it and push onto the front of the list.
-		n := b.Size() - len(buf)
-		c := NewBuffer(n)
-		c.Copy(b.Bytes()[n:])
+		c := NewBuffer(b.Size() - len(buf))
+		c.Copy(b.Bytes()[len(buf):])
 		s.push(c.Seal())
 		return len(buf), io.ErrShortBuffer
 	}
