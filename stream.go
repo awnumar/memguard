@@ -103,7 +103,7 @@ func (s *Stream) Read(buf []byte) (int, error) {
 		c := NewBuffer(b.Size() - len(buf))
 		c.Copy(b.Bytes()[len(buf):])
 		s.push(c.Seal())
-		return len(buf), io.ErrShortBuffer
+		return len(buf), nil
 	}
 
 	// Not enough data or perfect amount of data.
