@@ -104,6 +104,11 @@ func (b *Buffer) Data() []byte {
 	return b.data
 }
 
+// Inner returns a byte slice representing the entire inner memory pages. This should NOT be used unless you have a specific need.
+func (b *Buffer) Inner() []byte {
+	return b.inner
+}
+
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Freeze() {
 	// Attain lock.
