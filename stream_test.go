@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/awnumar/memguard/core"
@@ -155,4 +156,32 @@ func TestStreamingSanity(t *testing.T) {
 	read(t, s, nil, io.EOF)
 }
 
-func TestStreamVariable(t *testing.T) {}
+func BenchmarkStreamWrite(b *testing.B) {
+	b.ReportAllocs()
+	b.SetBytes(int64(os.Getpagesize()))
+
+	s := NewStream()
+	buf := make([]byte, os.Getpagesize())
+	for i := 0; i < b.N; i++ {
+		s.Write(buf)
+	}
+	runtime.KeepAlive(s)
+}
+
+func BenchmarkStreamRead(b *testing.B) {
+	b.ReportAllocs()
+	b.SetBytes(int64(os.Getpagesize()))
+
+	s := NewStream()
+	buf := make([]byte, os.Getpagesize())
+	for i := 0; i < 32000; i++ {
+		s.Write(buf)
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		s.Read(buf)
+	}
+
+	runtime.KeepAlive(s)
+}
