@@ -177,6 +177,7 @@ func BenchmarkStreamRead(b *testing.B) {
 	for i := 0; i < 32000; i++ {
 		s.Write(buf)
 	}
+
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
