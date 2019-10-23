@@ -61,6 +61,9 @@ func Panic(v interface{}) {
 	Wipe(key.left.Data())
 	Wipe(key.right.Data())
 
+	buffers.RLock()
+	defer buffers.RUnlock()
+
 	// Wipe all of the currently active LockedBuffers.
 	for _, b := range buffers.list {
 		if !b.mutable {
