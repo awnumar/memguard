@@ -43,12 +43,12 @@ func TestPurge(t *testing.T) {
 
 	// Verify that the old key was destroyed.
 	if oldKey.left.alive || oldKey.right.alive {
-		t.Error("key was destroyed")
+		t.Error("old key was not destroyed")
 	}
 
 	// Verify that the key is not destroyed.
 	if !key.left.alive || !key.right.alive {
-		t.Error("key was destroyed")
+		t.Error("current key is destroyed")
 	}
 
 	// Verify that the key changed by decrypting the Enclave.
