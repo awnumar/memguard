@@ -12,24 +12,21 @@ The creation of new Enclave objects should wait for this function to return sinc
 This function should be called before the program terminates, or else the provided Exit or Panic functions should be used to terminate.
 */
 func Purge() {
-	// Generate a new encryption key, wiping the old.
-	err := key.Initialise()
-	if err != nil {
-		key.Destroy()
-		key = NewCoffer()
-	}
+	// Halt the re-key cycle and prevent new enclaves.
+	key.Lock()
 
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.flush()
-	buffers.add(key.left, key.right, key.rand)
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
-		// Don't destroy the key partitions.
-		if b != key.left && b != key.right && b != key.rand {
-			b.Destroy()
-		}
+		b.Destroy()
 	}
+
+	// Destroy and recreate the key.
+	key.Unlock()
+	key.Destroy()
+	key = NewCoffer()
 }
 
 /*

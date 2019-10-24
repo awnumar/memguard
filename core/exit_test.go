@@ -15,6 +15,9 @@ func TestPurge(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Keep a reference to the old key.
+	oldKey := key
+
 	// Purge the session.
 	Purge()
 
@@ -36,6 +39,11 @@ func TestPurge(t *testing.T) {
 	// Verify that the buffer was destroyed.
 	if buffer.alive {
 		t.Error("buffer was not destroyed")
+	}
+
+	// Verify that the old key was destroyed.
+	if oldKey.left.alive || oldKey.right.alive {
+		t.Error("key was destroyed")
 	}
 
 	// Verify that the key is not destroyed.
