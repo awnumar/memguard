@@ -57,12 +57,14 @@ func Exit(c int) {
 Panic is identical to the builtin panic except it wipes all it can before calling panic.
 */
 func Panic(v interface{}) {
-	// Wipe both halves of the Enclave encryption key.
-	Wipe(key.left.Data())
-	Wipe(key.right.Data())
+	// Halt the coffer re-key cycle
+	key.Lock()
 
-	// Wipe all of the currently active LockedBuffers.
-	for _, b := range buffers.list {
+	// Wipe all of the currently active LockedBuffers (includes key partitions).
+	snapshot := buffers.flush()
+	for _, b := range snapshot {
+		// skip acquiring the local buffer lock in case the caller
+		// has the lock and this triggers a deadlock condition
 		if !b.mutable {
 			memcall.Protect(b.inner, memcall.ReadWrite())
 		}
