@@ -2,8 +2,6 @@ package core
 
 import (
 	"os"
-
-	"github.com/awnumar/memcall"
 )
 
 /*
@@ -54,23 +52,9 @@ func Exit(c int) {
 }
 
 /*
-Panic is identical to the builtin panic except it wipes all it can before calling panic.
+Panic is identical to the builtin panic except it purges the session before calling panic.
 */
 func Panic(v interface{}) {
-	// Halt the coffer re-key cycle
-	key.Lock()
-
-	// Wipe all of the currently active LockedBuffers (includes key partitions).
-	snapshot := buffers.flush()
-	for _, b := range snapshot {
-		// skip acquiring the local buffer lock in case the caller
-		// has the lock and this triggers a deadlock condition
-		if !b.mutable {
-			memcall.Protect(b.inner, memcall.ReadWrite())
-		}
-		Wipe(b.Data())
-	}
-
-	// Panic.
+	Purge() // purge creates a new key in case the caller recovers from the panic
 	panic(v)
 }
