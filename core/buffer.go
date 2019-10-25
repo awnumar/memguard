@@ -154,26 +154,33 @@ func (b *Buffer) Melt() {
 /*
 Destroy performs some security checks, securely wipes the contents of, and then releases a Buffer's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
 
-If the Buffer has already been destroyed, subsequent calls are idempotent.
+If the Buffer has already been destroyed, the function does nothing and returns nil.
 */
 func (b *Buffer) Destroy() {
+	if err := b.destroy(); err != nil {
+		Panic(err)
+	}
+}
+
+func (b *Buffer) destroy() error {
 	// Attain a mutex lock on this Buffer.
 	b.Lock()
 	defer b.Unlock()
 
 	// Return if it's already destroyed.
 	if !b.alive {
-		return
+		return nil
 	}
 
 	// Make all of the memory readable and writable.
 	if err := memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
-		Panic(err)
+		return err
 	}
+	b.mutable = true
 
 	// Verify the canary
 	if !Equal(b.preguard, b.postguard) || !Equal(b.preguard[:len(b.canary)], b.canary) {
-		Panic("<memguard::core::buffer> canary verification failed; buffer overflow detected")
+		return errors.New("<memguard::core::buffer> canary verification failed; buffer overflow detected")
 	}
 
 	// Wipe the memory.
@@ -184,12 +191,12 @@ func (b *Buffer) Destroy() {
 
 	// Unlock pages locked into memory.
 	if err := memcall.Unlock(b.inner); err != nil {
-		Panic(err)
+		return err
 	}
 
 	// Free all related memory.
 	if err := memcall.Free(b.memory); err != nil {
-		Panic(err)
+		return err
 	}
 
 	// Reset the fields.
@@ -201,6 +208,7 @@ func (b *Buffer) Destroy() {
 	b.inner = nil
 	b.postguard = nil
 	b.canary = nil
+	return nil
 }
 
 // Alive returns true if the buffer has not been destroyed.

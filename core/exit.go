@@ -2,6 +2,8 @@ package core
 
 import (
 	"os"
+
+	"github.com/awnumar/memcall"
 )
 
 /*
@@ -18,9 +20,30 @@ func Purge() {
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.flush()
 
+	// Create a buffer to hold things we couldn't handle.
+	var failed []*Buffer
+
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
-		b.Destroy()
+		if err := b.destroy(); err != nil {
+			// failed to destroy the buffer; let's just wipe it
+			b.Lock()
+			if !b.mutable {
+				if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
+					// couldn't change it to mutable; we can't wipe it! (could this happen?)
+					// not sure what we can do at this point, just move on
+					failed = append(failed, b)
+					continue
+				}
+			}
+			Wipe(b.data)
+			b.Unlock()
+		}
+	}
+
+	// If any failed, attempt to wipe them anyways. (Could cause a segmentation fault.)
+	for _, b := range failed {
+		Wipe(b.data)
 	}
 
 	// Destroy and recreate the key.
@@ -52,6 +75,6 @@ func Exit(c int) {
 Panic is identical to the builtin panic except it purges the session before calling panic.
 */
 func Panic(v interface{}) {
-	Purge() // purge creates a new key in case the caller recovers from the panic
+	Purge() // creates a new key so it is safe to recover from this panic
 	panic(v)
 }
