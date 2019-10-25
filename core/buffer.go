@@ -160,6 +160,8 @@ func (b *Buffer) Destroy() {
 	if err := b.destroy(); err != nil {
 		Panic(err)
 	}
+	// Remove this one from global slice.
+	buffers.remove(b)
 }
 
 func (b *Buffer) destroy() error {
@@ -185,9 +187,6 @@ func (b *Buffer) destroy() error {
 
 	// Wipe the memory.
 	Wipe(b.memory)
-
-	// Remove this one from global slice.
-	buffers.remove(b)
 
 	// Unlock pages locked into memory.
 	if err := memcall.Unlock(b.inner); err != nil {
