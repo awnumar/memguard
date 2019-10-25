@@ -24,7 +24,7 @@ func Purge() {
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
 		if err := b.destroy(); err != nil { // buffer destroy failed; wipe instead
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprintf(os.Stderr, "warn: failed to destroy buffer at %p; attempting wipe (err: %s)", b, err.Error())
 			b.Lock()
 			defer b.Unlock()
 			if !b.mutable {
