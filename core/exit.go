@@ -20,7 +20,7 @@ func Purge() {
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
-		go b.Destroy()
+		b.Destroy()
 	}
 
 	// Destroy and recreate the key.
