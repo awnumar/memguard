@@ -20,12 +20,12 @@ func Purge() {
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
-		b.Destroy()
+		go b.Destroy()
 	}
 
 	// Destroy and recreate the key.
 	key.Unlock()
-	key.Destroy()
+	key.Destroy() // should be a no-op
 	key = NewCoffer()
 }
 
