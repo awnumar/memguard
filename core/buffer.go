@@ -238,6 +238,17 @@ func (l *bufferList) add(b ...*Buffer) {
 	l.list = append(l.list, b...)
 }
 
+// Copy returns an instantaneous snapshot of the list.
+func (l *bufferList) copy() []*Buffer {
+	l.Lock()
+	defer l.Unlock()
+
+	list := make([]*Buffer, len(l.list))
+	copy(list, l.list)
+
+	return list
+}
+
 // Remove removes a given Buffer from the list.
 func (l *bufferList) remove(b *Buffer) {
 	l.Lock()

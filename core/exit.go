@@ -53,7 +53,7 @@ func Exit(c int) {
 	key.Destroy()
 
 	// Get a snapshot of existing Buffers.
-	snapshot := buffers.flush()
+	snapshot := buffers.copy() // copy ensures the buffers stay in the list until they are destroyed.
 
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
