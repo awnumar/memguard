@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/awnumar/memcall"
@@ -20,30 +21,22 @@ func Purge() {
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.flush()
 
-	// Create a buffer to hold things we couldn't handle.
-	var failed []*Buffer
-
 	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
-		if err := b.destroy(); err != nil {
-			// failed to destroy the buffer; let's just wipe it
+		if err := b.destroy(); err != nil { // buffer destroy failed; wipe instead
+			fmt.Fprintf(os.Stderr, err.Error())
 			b.Lock()
+			defer b.Unlock()
 			if !b.mutable {
 				if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
 					// couldn't change it to mutable; we can't wipe it! (could this happen?)
-					// not sure what we can do at this point, just move on
-					failed = append(failed, b)
+					// not sure what we can do at this point, just warn and move on
+					fmt.Fprintf(os.Stderr, "!WARNING: failed to wipe immutable data at address %p", &b.data)
 					continue
 				}
 			}
 			Wipe(b.data)
-			b.Unlock()
 		}
-	}
-
-	// If any failed, attempt to wipe them anyways. (Could cause a segmentation fault.)
-	for _, b := range failed {
-		Wipe(b.data)
 	}
 
 	// Destroy and recreate the key.
