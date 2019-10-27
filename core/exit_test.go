@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -61,11 +62,15 @@ func TestPurge(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	b.inner[0] = ^b.inner[0] // invert a single byte of the canary
+	Scramble(b.inner)
+	b.Freeze()
 	if !panics(func() {
 		Purge()
 	}) {
 		t.Error("did not panic")
+	}
+	if !bytes.Equal(b.data, make([]byte, 32)) {
+		t.Error("data not wiped")
 	}
 }
 
