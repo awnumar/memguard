@@ -24,8 +24,8 @@ func Purge() {
 	// Destroy them, performing the usual sanity checks.
 	var err error
 	for _, b := range snapshot {
-		err = b.destroy()
-		if err != nil { // buffer destroy failed; wipe instead
+		if err = b.destroy(); err != nil {
+			// buffer destroy failed; wipe instead
 			b.Lock()
 			defer b.Unlock()
 			if !b.mutable {
