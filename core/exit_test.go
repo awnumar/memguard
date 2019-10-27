@@ -72,6 +72,7 @@ func TestPurge(t *testing.T) {
 	if !bytes.Equal(b.data, make([]byte, 32)) {
 		t.Error("data not wiped")
 	}
+	buffers.remove(b)
 }
 
 func TestPanic(t *testing.T) {
