@@ -55,6 +55,18 @@ func TestPurge(t *testing.T) {
 	if _, err := Open(enclave); err != ErrDecryptionFailed {
 		t.Error("expected decryption failed; got", err)
 	}
+
+	// Create a buffer with invalid canary.
+	b, err := NewBuffer(32)
+	if err != nil {
+		t.Error(err)
+	}
+	b.inner[0] = ^b.inner[0] // invert a single byte of the canary
+	if !panics(func() {
+		Purge()
+	}) {
+		t.Error("did not panic")
+	}
 }
 
 func TestPanic(t *testing.T) {
@@ -62,7 +74,7 @@ func TestPanic(t *testing.T) {
 	if !panics(func() {
 		Panic("test")
 	}) {
-		t.Error("should panic")
+		t.Error("did not panic")
 	}
 }
 
