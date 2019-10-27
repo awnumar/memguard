@@ -22,9 +22,10 @@ func Purge() {
 	snapshot := buffers.flush()
 
 	// Destroy them, performing the usual sanity checks.
+	var err error
 	for _, b := range snapshot {
-		if err := b.destroy(); err != nil { // buffer destroy failed; wipe instead
-			fmt.Fprintf(os.Stderr, "warn: failed to destroy buffer at %p; attempting wipe (err: %s)", b, err.Error())
+		err = b.destroy()
+		if err != nil { // buffer destroy failed; wipe instead
 			b.Lock()
 			defer b.Unlock()
 			if !b.mutable {
@@ -43,6 +44,11 @@ func Purge() {
 	key.Unlock()
 	key.Destroy() // should be a no-op
 	key = NewCoffer()
+
+	// If we encountered an error, panic.
+	if err != nil {
+		panic(err)
+	}
 }
 
 /*
