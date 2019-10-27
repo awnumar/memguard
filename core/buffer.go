@@ -180,6 +180,9 @@ func (b *Buffer) destroy() error {
 	}
 	b.mutable = true
 
+	// Wipe data field.
+	Wipe(b.data)
+
 	// Verify the canary
 	if !Equal(b.preguard, b.postguard) || !Equal(b.preguard[:len(b.canary)], b.canary) {
 		return errors.New("<memguard::core::buffer> canary verification failed; buffer overflow detected")
