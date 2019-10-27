@@ -36,12 +36,6 @@ $ go get github.com/awnumar/memguard
 
 API is experimental and may have unstable changes. You should pin a version. [[modules](https://github.com/golang/go/wiki/Modules)]
 
-## Packages
-
-`memguard` - high level easy to use wrapper over core functionality, with additional features
-
-`memguard/core` - low level interface
-
 ## Contributing
 
 * Submitting program samples to [`./examples`](examples).
