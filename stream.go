@@ -110,3 +110,15 @@ func (s *Stream) Read(buf []byte) (int, error) {
 	// Either way we copied the entire buffer.
 	return b.Size(), nil
 }
+
+// Size returns the number of bytes of data currently stored within a Stream object.
+func (s *Stream) Size() int {
+	s.Lock()
+	defer s.Unlock()
+
+	var n int
+	for e := s.Front(); e != nil; e = e.Next() {
+		n += e.Value.(*Enclave).Size()
+	}
+	return n
+}

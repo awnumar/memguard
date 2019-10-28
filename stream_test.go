@@ -156,6 +156,22 @@ func TestStreamingSanity(t *testing.T) {
 	read(t, s, nil, io.EOF)
 }
 
+func TestStreamSize(t *testing.T) {
+	s := NewStream()
+
+	if s.Size() != 0 {
+		t.Error("size is", s.Size())
+	}
+
+	size := 1024 * 32
+	b := make([]byte, size)
+	write(t, s, b)
+
+	if s.Size() != size {
+		t.Error("size should be", size, "instead is", s.Size())
+	}
+}
+
 func BenchmarkStreamWrite(b *testing.B) {
 	b.ReportAllocs()
 	b.SetBytes(int64(os.Getpagesize()))
