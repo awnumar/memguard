@@ -104,6 +104,11 @@ func (b *Buffer) Data() []byte {
 	return b.data
 }
 
+// Inner returns a byte slice representing the entire inner memory pages. This should NOT be used unless you have a specific need.
+func (b *Buffer) Inner() []byte {
+	return b.inner
+}
+
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Freeze() {
 	// Attain lock.
@@ -149,42 +154,51 @@ func (b *Buffer) Melt() {
 /*
 Destroy performs some security checks, securely wipes the contents of, and then releases a Buffer's memory back to the OS. If a security check fails, the process will attempt to wipe all it can before safely panicking.
 
-If the Buffer has already been destroyed, subsequent calls are idempotent.
+If the Buffer has already been destroyed, the function does nothing and returns nil.
 */
 func (b *Buffer) Destroy() {
+	if err := b.destroy(); err != nil {
+		Panic(err)
+	}
+	// Remove this one from global slice.
+	buffers.remove(b)
+}
+
+func (b *Buffer) destroy() error {
 	// Attain a mutex lock on this Buffer.
 	b.Lock()
 	defer b.Unlock()
 
 	// Return if it's already destroyed.
 	if !b.alive {
-		return
+		return nil
 	}
 
 	// Make all of the memory readable and writable.
 	if err := memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
-		Panic(err)
+		return err
 	}
+	b.mutable = true
+
+	// Wipe data field.
+	Wipe(b.data)
 
 	// Verify the canary
 	if !Equal(b.preguard, b.postguard) || !Equal(b.preguard[:len(b.canary)], b.canary) {
-		Panic("<memguard::core::buffer> canary verification failed; buffer overflow detected")
+		return errors.New("<memguard::core::buffer> canary verification failed; buffer overflow detected")
 	}
 
 	// Wipe the memory.
 	Wipe(b.memory)
 
-	// Remove this one from global slice.
-	buffers.remove(b)
-
 	// Unlock pages locked into memory.
 	if err := memcall.Unlock(b.inner); err != nil {
-		Panic(err)
+		return err
 	}
 
 	// Free all related memory.
 	if err := memcall.Free(b.memory); err != nil {
-		Panic(err)
+		return err
 	}
 
 	// Reset the fields.
@@ -196,6 +210,7 @@ func (b *Buffer) Destroy() {
 	b.inner = nil
 	b.postguard = nil
 	b.canary = nil
+	return nil
 }
 
 // Alive returns true if the buffer has not been destroyed.
@@ -224,6 +239,17 @@ func (l *bufferList) add(b ...*Buffer) {
 	defer l.Unlock()
 
 	l.list = append(l.list, b...)
+}
+
+// Copy returns an instantaneous snapshot of the list.
+func (l *bufferList) copy() []*Buffer {
+	l.Lock()
+	defer l.Unlock()
+
+	list := make([]*Buffer, len(l.list))
+	copy(list, l.list)
+
+	return list
 }
 
 // Remove removes a given Buffer from the list.
