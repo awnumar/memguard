@@ -7,7 +7,7 @@ import (
 )
 
 // Interval of time between each verify & re-key cycle.
-const Interval = 500 // milliseconds
+const interval = 500 * time.Millisecond
 
 // ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
 var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")
@@ -40,7 +40,7 @@ func NewCoffer() *Coffer {
 	go func(s *Coffer) {
 		for {
 			// Sleep for the specified interval.
-			time.Sleep(Interval * time.Millisecond)
+			time.Sleep(interval)
 
 			// Re-key the contents, exiting the routine if object destroyed.
 			if err := s.Rekey(); err != nil {
