@@ -23,6 +23,7 @@ If applicable, add screenshots to help explain your problem.
 **System (please complete the following information):**
  - OS and Kernel Versions: 
  - Memguard Version: 
+ - Go Version: 
 
 **Additional context**
 Add any other context about the problem here.
