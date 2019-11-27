@@ -137,11 +137,11 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 				i-- // try again
 				continue
 			}
+			// if instead there was an error, we're done early
 			if i == 0 { // no data read
 				b.Destroy()
 				return newNullBuffer()
 			}
-			// if there was an error, we're done early
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
 			d.Freeze()
@@ -149,6 +149,7 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			return d
 		}
 		// we managed to read a byte, check if it was the delimiter
+		// note that errors are ignored in this case where we got data
 		if b.Bytes()[i] == delim {
 			if i == 0 {
 				// if first byte was delimiter, there's no data to return
@@ -179,6 +180,10 @@ func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 		if n == 0 && err == nil {
 			continue
 		}
+
+		// 1) so either have data and no error
+		// 2) or have error and no data
+		// 3) or both have data and have error
 
 		// Increment the read count by the number of bytes that we just read.
 		read += n
