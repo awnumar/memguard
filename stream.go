@@ -74,8 +74,7 @@ Read decrypts and places some data from a Stream object into a provided buffer.
 
 If there is no data, the call will return an io.EOF error. If the caller provides a buffer
 that is too small to hold the next chunk of data, the remaining bytes are re-encrypted and
-added to the front of the queue to be returned in the next call. In this case an
-io.ErrShortBuffer error is also returned.
+added to the front of the queue to be returned in the next call.
 */
 func (s *Stream) Read(buf []byte) (int, error) {
 	s.Lock()
