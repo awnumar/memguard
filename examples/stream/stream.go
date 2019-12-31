@@ -24,6 +24,7 @@ func SlowRandByte() byte {
 
 	// Create a buffer to work on this data in chunks.
 	buf := memguard.NewBuffer(os.Getpagesize())
+	defer buf.Destroy()
 
 	// Read the data back in chunks.
 	var parity byte
