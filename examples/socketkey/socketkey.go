@@ -45,7 +45,7 @@ func SocketKey(size int) {
 	memguard.CatchSignal(func(s os.Signal) {
 		fmt.Println("Received signal:", s.String())
 		listener.Close()
-	})
+	}, os.Interrupt, os.Kill)
 
 	// Purge the session before returning.
 	defer memguard.Purge()
