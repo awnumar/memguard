@@ -80,14 +80,8 @@ func (s *Stream) Read(buf []byte) (int, error) {
 	s.Lock()
 	defer s.Unlock()
 
-	// Pop data from the front of the list.
-	e := s.pop()
-	if e == nil {
-		return 0, io.EOF
-	}
-
-	// Decrypt the data into a guarded allocation.
-	b, err := e.Open()
+	// Grab the next chunk of data from the stream.
+	b, err := s.Next()
 	if err != nil {
 		return 0, err
 	}
@@ -120,6 +114,22 @@ func (s *Stream) Size() int {
 		n += e.Value.(*Enclave).Size()
 	}
 	return n
+}
+
+// Next grabs the next chunk of data from the Stream and returns it decrypted inside a LockedBuffer. Any error from the stream is forwarded.
+func (s *Stream) Next() (*LockedBuffer, error) {
+	// Pop data from the front of the list.
+	e := s.pop()
+	if e == nil {
+		return newNullBuffer(), io.EOF
+	}
+
+	// Decrypt the data into a guarded allocation.
+	b, err := e.Open()
+	if err != nil {
+		return newNullBuffer(), err
+	}
+	return b, nil
 }
 
 // Flush reads all of the data from a Stream and returns it inside a LockedBuffer. If an error is encountered before all the data could be read, it is returned along with any data read up until that point.

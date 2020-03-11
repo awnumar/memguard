@@ -37,6 +37,29 @@ func read(t *testing.T, s *Stream, ref []byte, expectedErr error) {
 	}
 }
 
+func TestFlush(t *testing.T) {
+	s := NewStream()
+
+	size := 2*os.Getpagesize() + 1024
+	b := make([]byte, size)
+	ScrambleBytes(b)
+	ref := make([]byte, len(b))
+	copy(ref, b)
+	write(t, s, b)
+
+	c, err := s.Flush()
+	if err != nil {
+		t.Error(err)
+	}
+	if c.Size() != size {
+		t.Error("unexpected length:", c.Size())
+	}
+	if !c.EqualTo(ref) {
+		t.Error("incorrect data")
+	}
+	c.Destroy()
+}
+
 func TestStreamReadWrite(t *testing.T) {
 	// Create new stream object.
 	s := NewStream()
@@ -107,7 +130,10 @@ func TestStreamingSanity(t *testing.T) {
 	write(t, s, b)
 
 	// read it back exactly
-	c := NewBufferFromReader(s, size)
+	c, err := NewBufferFromReader(s, size)
+	if err != nil {
+		t.Error(err)
+	}
 	if c.Size() != size {
 		t.Error("not enough data read back")
 	}
@@ -124,7 +150,10 @@ func TestStreamingSanity(t *testing.T) {
 	write(t, s, b)
 
 	// read it all back
-	c = NewBufferFromEntireReader(s)
+	c, err = NewBufferFromEntireReader(s)
+	if err != nil {
+		t.Error(err)
+	}
 	if c.Size() != size {
 		t.Error("not enough data read back")
 	}
@@ -143,7 +172,10 @@ func TestStreamingSanity(t *testing.T) {
 	write(t, s, b)
 
 	// read it back until the delimiter
-	c = NewBufferFromReaderUntil(s, 'x')
+	c, err = NewBufferFromReaderUntil(s, 'x')
+	if err != nil {
+		t.Error(err)
+	}
 	if c.Size() != size-1 {
 		t.Error("not enough data read back:", c.Size(), "want", size-1)
 	}
