@@ -4,6 +4,8 @@ import (
 	"github.com/awnumar/memguard/core"
 )
 
+/* Enhancement: check for low memory locking limit and print warning?*/
+
 /*
 ScrambleBytes overwrites an arbitrary buffer with cryptographically-secure random bytes.
 */

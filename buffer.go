@@ -76,13 +76,13 @@ func NewBufferFromBytes(src []byte) *LockedBuffer {
 /*
 NewBufferFromReader reads some number of bytes from an io.Reader into an immutable LockedBuffer.
 
-If an error is encountered before size bytes are read, they will be returned. The number of bytes read can be inferred using the Size method.
+An error is returned precisely when the number of bytes read is less than the requested amount. Any data read is returned in either case.
 */
-func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
+func NewBufferFromReader(r io.Reader, size int) (*LockedBuffer, error) {
 	// Construct a buffer of the provided size.
 	b := NewBuffer(size)
 	if b.Size() == 0 {
-		return b
+		return b, nil
 	}
 
 	// Attempt to fill it with data from the Reader.
@@ -90,7 +90,7 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 		if n == 0 {
 			// nothing was read
 			b.Destroy()
-			return newNullBuffer()
+			return newNullBuffer(), err
 		}
 
 		// partial read
@@ -98,20 +98,20 @@ func NewBufferFromReader(r io.Reader, size int) *LockedBuffer {
 		d.Copy(b.Bytes()[:n])
 		d.Freeze()
 		b.Destroy()
-		return d
+		return d, err
 	}
 
 	// success
 	b.Freeze()
-	return b
+	return b, nil
 }
 
 /*
 NewBufferFromReaderUntil constructs an immutable buffer containing data sourced from an io.Reader object.
 
-It will continue reading until it encounters the delimiter value, or an error occurs. The delimiter will not be included in the returned data.
+If an error is encountered before the delimiter value, the error will be returned along with the data read up until that point.
 */
-func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
+func NewBufferFromReaderUntil(r io.Reader, delim byte) (*LockedBuffer, error) {
 	// Construct a buffer with a data page that fills an entire memory page.
 	b := NewBuffer(os.Getpagesize())
 
@@ -140,13 +140,13 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			// if instead there was an error, we're done early
 			if i == 0 { // no data read
 				b.Destroy()
-				return newNullBuffer()
+				return newNullBuffer(), err
 			}
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
 			d.Freeze()
 			b.Destroy()
-			return d
+			return d, err
 		}
 		// we managed to read a byte, check if it was the delimiter
 		// note that errors are ignored in this case where we got data
@@ -154,21 +154,23 @@ func NewBufferFromReaderUntil(r io.Reader, delim byte) *LockedBuffer {
 			if i == 0 {
 				// if first byte was delimiter, there's no data to return
 				b.Destroy()
-				return newNullBuffer()
+				return newNullBuffer(), nil
 			}
 			d := NewBuffer(i)
 			d.Copy(b.Bytes()[:i])
 			d.Freeze()
 			b.Destroy()
-			return d
+			return d, nil
 		}
 	}
 }
 
 /*
-NewBufferFromEntireReader reads from an io.Reader into an immutable buffer. It will continue reading until EOF or any other error.
+NewBufferFromEntireReader reads from an io.Reader into an immutable buffer. It will continue reading until EOF.
+
+A nil error is returned precisely when we managed to read all the way until EOF. Any data read is returned in either case.
 */
-func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
+func NewBufferFromEntireReader(r io.Reader) (*LockedBuffer, error) {
 	// Create a buffer with a data region of one page size.
 	b := NewBuffer(os.Getpagesize())
 
@@ -189,17 +191,21 @@ func NewBufferFromEntireReader(r io.Reader) *LockedBuffer {
 		read += n
 
 		if err != nil {
+			// Suppress EOF error
+			if err == io.EOF {
+				err = nil
+			}
 			// We're done, return the data.
 			if read == 0 {
 				// No data read.
 				b.Destroy()
-				return newNullBuffer()
+				return newNullBuffer(), err
 			}
 			d := NewBuffer(read)
 			d.Copy(b.Bytes()[:read])
 			d.Freeze()
 			b.Destroy()
-			return d
+			return d, err
 		}
 
 		// If we've filled this buffer, grow it by another page size.

@@ -121,3 +121,8 @@ func (s *Stream) Size() int {
 	}
 	return n
 }
+
+// Flush reads all of the data from a Stream and returns it inside a LockedBuffer. If an error is encountered before all the data could be read, it is returned along with any data read up until that point.
+func (s *Stream) Flush() (*LockedBuffer, error) {
+	return NewBufferFromEntireReader(s)
+}
