@@ -35,13 +35,14 @@ osx_task:
 
 windows_task:
   windows_container:
-    image: golang:windowsservercore-1803
-    os_version: 1803
+    image: cirrusci/windowsservercore:2019
   env:
     GO111MODULE: on
     GOPATH: C:\golang
-    PATH: ${GOPATH}\bin:${PATH}
+    PATH: C:\Go\bin:${GOPATH}\bin:${PATH}
     CIRRUS_WORKING_DIR: C:\golang\src\github.com\${CIRRUS_REPO_FULL_NAME}
+  install_script:
+    - choco install golang -y
   build_script:
     - go version
     - go get ./...
