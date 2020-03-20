@@ -45,7 +45,7 @@ func SocketKey(size int) {
 	memguard.CatchSignal(func(s os.Signal) {
 		fmt.Println("Received signal:", s.String())
 		listener.Close()
-	})
+	}, os.Interrupt, os.Kill)
 
 	// Purge the session before returning.
 	defer memguard.Purge()
@@ -90,9 +90,9 @@ func SocketKey(size int) {
 	}
 
 	// Read the data directly into a guarded memory region
-	buf := memguard.NewBufferFromReader(conn, size)
-	if buf.Size() != size {
-		memguard.SafePanic("not enough data read")
+	buf, err := memguard.NewBufferFromReader(conn, size)
+	if err != nil {
+		memguard.SafePanic(err)
 	}
 	defer buf.Destroy()
 	conn.Close()

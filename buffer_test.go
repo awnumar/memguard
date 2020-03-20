@@ -3,6 +3,7 @@ package memguard
 import (
 	"bytes"
 	"crypto/rand"
+	"errors"
 	"io"
 	"io/ioutil"
 	mrand "math/rand"
@@ -99,7 +100,10 @@ func TestNewBufferFromBytes(t *testing.T) {
 }
 
 func TestNewBufferFromReader(t *testing.T) {
-	b := NewBufferFromReader(rand.Reader, 4096)
+	b, err := NewBufferFromReader(rand.Reader, 4096)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 4096 {
 		t.Error("buffer of incorrect size")
 	}
@@ -112,7 +116,10 @@ func TestNewBufferFromReader(t *testing.T) {
 	b.Destroy()
 
 	r := bytes.NewReader([]byte("yellow submarine"))
-	b = NewBufferFromReader(r, 16)
+	b, err = NewBufferFromReader(r, 16)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 16 {
 		t.Error("buffer of incorrect size")
 	}
@@ -125,7 +132,10 @@ func TestNewBufferFromReader(t *testing.T) {
 	b.Destroy()
 
 	r = bytes.NewReader([]byte("yellow submarine"))
-	b = NewBufferFromReader(r, 17)
+	b, err = NewBufferFromReader(r, 17)
+	if err == nil {
+		t.Error("expected error got nil;", err)
+	}
 	if b.Size() != 16 {
 		t.Error("incorrect size")
 	}
@@ -138,7 +148,10 @@ func TestNewBufferFromReader(t *testing.T) {
 	b.Destroy()
 
 	r = bytes.NewReader([]byte(""))
-	b = NewBufferFromReader(r, 32)
+	b, err = NewBufferFromReader(r, 32)
+	if err == nil {
+		t.Error("expected error got nil")
+	}
 	if b.IsAlive() {
 		t.Error("expected destroyed buffer")
 	}
@@ -149,7 +162,10 @@ func TestNewBufferFromReader(t *testing.T) {
 		t.Error("expected nul sized buffer")
 	}
 	r = bytes.NewReader([]byte("yellow submarine"))
-	b = NewBufferFromReader(r, 0)
+	b, err = NewBufferFromReader(r, 0)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Bytes() != nil {
 		t.Error("data slice should be nil")
 	}
@@ -185,7 +201,10 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	data := make([]byte, 5000)
 	data[4999] = 1
 	r := bytes.NewReader(data)
-	b := NewBufferFromReaderUntil(r, 1)
+	b, err := NewBufferFromReaderUntil(r, 1)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 4999 {
 		t.Error("buffer has incorrect size")
 	}
@@ -200,7 +219,10 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	b.Destroy()
 
 	r = bytes.NewReader(data[:32])
-	b = NewBufferFromReaderUntil(r, 1)
+	b, err = NewBufferFromReaderUntil(r, 1)
+	if err == nil {
+		t.Error("expected error got nil")
+	}
 	if b.Size() != 32 {
 		t.Error("invalid size")
 	}
@@ -215,7 +237,10 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	b.Destroy()
 
 	r = bytes.NewReader([]byte{'x'})
-	b = NewBufferFromReaderUntil(r, 'x')
+	b, err = NewBufferFromReaderUntil(r, 'x')
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 0 {
 		t.Error("expected no data")
 	}
@@ -224,7 +249,10 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	}
 
 	r = bytes.NewReader([]byte(""))
-	b = NewBufferFromReaderUntil(r, 1)
+	b, err = NewBufferFromReaderUntil(r, 1)
+	if err == nil {
+		t.Error("expected error got nil")
+	}
 	if b.IsAlive() {
 		t.Error("expected destroyed buffer")
 	}
@@ -236,7 +264,10 @@ func TestNewBufferFromReaderUntil(t *testing.T) {
 	}
 
 	rr := new(s)
-	b = NewBufferFromReaderUntil(rr, 1)
+	b, err = NewBufferFromReaderUntil(rr, 1)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 4999 {
 		t.Error("invalid size")
 	}
@@ -267,9 +298,25 @@ func (reader *ss) Read(p []byte) (n int, err error) {
 	return 1, nil
 }
 
+type se struct {
+	count int
+}
+
+func (reader *se) Read(p []byte) (n int, err error) {
+	copy(p, []byte{0})
+	reader.count++
+	if reader.count == 5000 {
+		return 1, errors.New("shut up bro")
+	}
+	return 1, nil
+}
+
 func TestNewBufferFromEntireReader(t *testing.T) {
 	r := bytes.NewReader([]byte("yellow submarine"))
-	b := NewBufferFromEntireReader(r)
+	b, err := NewBufferFromEntireReader(r)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 16 {
 		t.Error("incorrect size", b.Size())
 	}
@@ -284,7 +331,10 @@ func TestNewBufferFromEntireReader(t *testing.T) {
 	data := make([]byte, 16000)
 	ScrambleBytes(data)
 	r = bytes.NewReader(data)
-	b = NewBufferFromEntireReader(r)
+	b, err = NewBufferFromEntireReader(r)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != len(data) {
 		t.Error("incorrect size", b.Size())
 	}
@@ -297,7 +347,10 @@ func TestNewBufferFromEntireReader(t *testing.T) {
 	b.Destroy()
 
 	r = bytes.NewReader([]byte{})
-	b = NewBufferFromEntireReader(r)
+	b, err = NewBufferFromEntireReader(r)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 0 {
 		t.Error("buffer should be nil size")
 	}
@@ -306,11 +359,30 @@ func TestNewBufferFromEntireReader(t *testing.T) {
 	}
 
 	rr := new(ss)
-	b = NewBufferFromEntireReader(rr)
+	b, err = NewBufferFromEntireReader(rr)
+	if err != nil {
+		t.Error(err)
+	}
 	if b.Size() != 4999 {
 		t.Error("incorrect size", b.Size())
 	}
 	if !b.EqualTo(make([]byte, 4999)) {
+		t.Error("incorrect data")
+	}
+	if b.IsMutable() {
+		t.Error("buffer should be immutable")
+	}
+	b.Destroy()
+
+	re := new(se)
+	b, err = NewBufferFromEntireReader(re)
+	if err == nil {
+		t.Error("expected error got nil")
+	}
+	if b.Size() != 5000 {
+		t.Error(b.Size())
+	}
+	if !b.EqualTo(make([]byte, 5000)) {
 		t.Error("incorrect data")
 	}
 	if b.IsMutable() {
@@ -331,7 +403,10 @@ func TestNewBufferFromEntireReader(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	b = NewBufferFromEntireReader(f)
+	b, err = NewBufferFromEntireReader(f)
+	if err != nil {
+		t.Error(err)
+	}
 	if !b.EqualTo(data) {
 		t.Error("incorrect data")
 	}
@@ -797,7 +872,10 @@ func TestBytes(t *testing.T) {
 
 func TestReader(t *testing.T) {
 	b := NewBufferRandom(32)
-	c := NewBufferFromReader(b.Reader(), 32)
+	c, err := NewBufferFromReader(b.Reader(), 32)
+	if err != nil {
+		t.Error(err)
+	}
 	if !bytes.Equal(b.Bytes(), c.Bytes()) {
 		t.Error("data not equal")
 	}
