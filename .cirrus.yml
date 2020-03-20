@@ -36,20 +36,18 @@ osx_task:
 windows_task:
   windows_container:
     image: cirrusci/windowsservercore:2019
-  env:
-    GO111MODULE: on
-    GOPATH: C:\golang
-    PATH: C:\Go\bin:${GOPATH}\bin:${PATH}
-    CIRRUS_WORKING_DIR: C:\golang\src\github.com\${CIRRUS_REPO_FULL_NAME}
-  install_script:
-    - choco install golang -y
+    os_version: 2019
+  install_script: choco install -y golang
   build_script:
+    - refreshenv
     - go version
     - go get ./...
     - go build -race -v ./...
   test_script:
+    - refreshenv
     - go test -race -v ./...
   bench_script:
+    - refreshenv
     - go test -run=XXX -bench=. ./...
 
 freebsd_task:
