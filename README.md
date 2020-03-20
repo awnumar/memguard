@@ -5,7 +5,7 @@
   <p align="center">
     <a href="https://cirrus-ci.com/github/awnumar/memguard"><img src="https://api.cirrus-ci.com/github/awnumar/memguard.svg"></a>
     <a href="https://www.codacy.com/app/awnumar/memguard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=awnumar/memguard&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/eebb7ecd6e794890999cfcf26328e9cb"/></a>
-    <a href="https://godoc.org/github.com/awnumar/memguard"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
+    <a href="https://pkg.go.dev/github.com/awnumar/memguard?tab=doc"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
   </p>
 </p>
 
