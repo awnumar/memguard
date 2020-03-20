@@ -39,12 +39,15 @@ windows_task:
     os_version: 2019
   install_script: choco install -y golang
   build_script:
+    - refreshenv
     - go version
     - go get ./...
     - go build -race -v ./...
   test_script:
+    - refreshenv
     - go test -race -v ./...
   bench_script:
+    - refreshenv
     - go test -run=XXX -bench=. ./...
 
 freebsd_task:
