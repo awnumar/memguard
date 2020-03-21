@@ -81,7 +81,7 @@ func (s *Stream) Read(buf []byte) (int, error) {
 	defer s.Unlock()
 
 	// Grab the next chunk of data from the stream.
-	b, err := s.Next()
+	b, err := s.next()
 	if err != nil {
 		return 0, err
 	}
@@ -118,6 +118,14 @@ func (s *Stream) Size() int {
 
 // Next grabs the next chunk of data from the Stream and returns it decrypted inside a LockedBuffer. Any error from the stream is forwarded.
 func (s *Stream) Next() (*LockedBuffer, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.next()
+}
+
+// does not acquire mutex lock
+func (s *Stream) next() (*LockedBuffer, error) {
 	// Pop data from the front of the list.
 	e := s.pop()
 	if e == nil {

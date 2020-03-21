@@ -37,7 +37,7 @@ func read(t *testing.T, s *Stream, ref []byte, expectedErr error) {
 	}
 }
 
-func TestFlush(t *testing.T) {
+func TestStreamNextFlush(t *testing.T) {
 	s := NewStream()
 
 	size := 2*os.Getpagesize() + 1024
@@ -47,14 +47,26 @@ func TestFlush(t *testing.T) {
 	copy(ref, b)
 	write(t, s, b)
 
-	c, err := s.Flush()
+	c, err := s.Next()
 	if err != nil {
 		t.Error(err)
 	}
-	if c.Size() != size {
+	if c.Size() != os.Getpagesize() {
+		t.Error(c.Size())
+	}
+	if !c.EqualTo(ref[:os.Getpagesize()]) {
+		t.Error("incorrect data")
+	}
+	c.Destroy()
+
+	c, err = s.Flush()
+	if err != nil {
+		t.Error(err)
+	}
+	if c.Size() != size-os.Getpagesize() {
 		t.Error("unexpected length:", c.Size())
 	}
-	if !c.EqualTo(ref) {
+	if !c.EqualTo(ref[os.Getpagesize():]) {
 		t.Error("incorrect data")
 	}
 	c.Destroy()
