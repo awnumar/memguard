@@ -52,7 +52,7 @@ windows_task:
 
 freebsd_task:
   freebsd_instance:
-    image: freebsd-13-0-snap
+    image_family: freebsd-13-0-snap
   env:
     GO111MODULE: on
     GOPATH: /tmp/go
