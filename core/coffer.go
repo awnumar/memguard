@@ -88,7 +88,7 @@ func (s *Coffer) View() (*Buffer, error) {
 	defer s.RUnlock()
 
 	// Check if it's destroyed.
-	if s.Destroyed() {
+	if s.destroyed() {
 		return nil, ErrCofferExpired
 	}
 
@@ -159,5 +159,9 @@ func (s *Coffer) Destroyed() bool {
 	s.RLock()
 	defer s.RUnlock()
 
+	return s.destroyed()
+}
+
+func (s *Coffer) destroyed() bool {
 	return (!s.left.Alive()) && (!s.right.Alive())
 }
