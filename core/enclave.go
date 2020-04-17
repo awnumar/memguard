@@ -66,17 +66,18 @@ func Seal(b *Buffer) (*Enclave, error) {
 		return nil, ErrBufferExpired
 	}
 
-	b.Melt()  // Make the buffer mutable so that we can wipe it.
-	b.RLock() // Attain a read lock.
-
 	// Construct the Enclave from the Buffer's data.
-	e, err := NewEnclave(b.Data())
+	e, err := func() (*Enclave, error) {
+		b.RLock() // Attain a read lock.
+		defer b.RUnlock()
+		return NewEnclave(b.Data())
+	}()
 	if err != nil {
 		return nil, err
 	}
 
 	// Destroy the Buffer object.
-	b.RUnlock()
+	b.Melt() // Make the buffer mutable so that we can wipe it.
 	b.Destroy()
 
 	// Return the newly created Enclave.
