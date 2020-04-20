@@ -314,10 +314,7 @@ func (b *LockedBuffer) Scramble() {
 		return
 	}
 
-	b.Lock()
-	defer b.Unlock()
-
-	core.Scramble(b.Bytes())
+	b.Buffer.Scramble()
 }
 
 /*

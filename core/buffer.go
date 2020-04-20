@@ -76,7 +76,9 @@ func NewBuffer(size int) (*Buffer, error) {
 	}
 
 	// Initialise the canary value and reference regions.
-	Scramble(b.canary)
+	if err := Scramble(b.canary); err != nil {
+		Panic(err)
+	}
 	Copy(b.preguard, b.canary)
 	Copy(b.postguard, b.canary)
 
@@ -111,44 +113,73 @@ func (b *Buffer) Inner() []byte {
 
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Freeze() {
+	if err := b.freeze(); err != nil {
+		Panic(err)
+	}
+}
+
+func (b *Buffer) freeze() error {
 	// Attain lock.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if destroyed.
 	if !b.alive {
-		return
+		return nil
 	}
 
 	// Only do anything if currently mutable.
 	if b.mutable {
 		// Make the memory immutable.
 		if err := memcall.Protect(b.inner, memcall.ReadOnly()); err != nil {
-			Panic(err)
+			return err
 		}
 		b.mutable = false
 	}
+
+	return nil
 }
 
 // Melt makes the underlying memory of a given buffer mutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Melt() {
+	if err := b.melt(); err != nil {
+		Panic(err)
+	}
+}
+
+func (b *Buffer) melt() error {
 	// Attain lock.
 	b.Lock()
 	defer b.Unlock()
 
 	// Check if destroyed.
 	if !b.alive {
-		return
+		return nil
 	}
 
 	// Only do anything if currently immutable.
 	if !b.mutable {
 		// Make the memory mutable.
 		if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
-			Panic(err)
+			return err
 		}
 		b.mutable = true
 	}
+	return nil
+}
+
+// Scramble attempts to overwrite the data with cryptographically-secure random bytes.
+func (b *Buffer) Scramble() {
+	if err := b.scramble(); err != nil {
+		Panic(err)
+	}
+}
+
+func (b *Buffer) scramble() error {
+	// Attain lock.
+	b.Lock()
+	defer b.Unlock()
+	return Scramble(b.Data())
 }
 
 /*

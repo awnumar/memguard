@@ -10,7 +10,9 @@ import (
 ScrambleBytes overwrites an arbitrary buffer with cryptographically-secure random bytes.
 */
 func ScrambleBytes(buf []byte) {
-	core.Scramble(buf)
+	if err := core.Scramble(buf); err != nil {
+		core.Panic(err)
+	}
 }
 
 /*
