@@ -35,7 +35,9 @@ func Encrypt(plaintext, key []byte) ([]byte, error) {
 
 	// Allocate space for and generate a nonce value.
 	var nonce [24]byte
-	Scramble(nonce[:])
+	if err := Scramble(nonce[:]); err != nil {
+		Panic(err)
+	}
 
 	// Encrypt m and return the result.
 	return secretbox.Seal(nonce[:], plaintext, &nonce, k), nil
@@ -84,13 +86,14 @@ func Hash(b []byte) []byte {
 }
 
 // Scramble fills a given buffer with cryptographically-secure random bytes.
-func Scramble(buf []byte) {
+func Scramble(buf []byte) error {
 	if _, err := rand.Read(buf); err != nil {
-		Panic(err)
+		return err
 	}
 
 	// See Wipe
 	runtime.KeepAlive(buf)
+	return nil
 }
 
 // Wipe takes a buffer and wipes it with zeroes.

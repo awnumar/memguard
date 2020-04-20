@@ -314,10 +314,7 @@ func (b *LockedBuffer) Scramble() {
 		return
 	}
 
-	b.Lock()
-	defer b.Unlock()
-
-	core.Scramble(b.Bytes())
+	b.Buffer.Scramble()
 }
 
 /*
@@ -404,13 +401,14 @@ Uint16 returns a slice pointing to the protected region of memory with the data 
 If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Uint16() []uint16 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Compute size of new slice representation.
 	size := b.Size() / 2
@@ -435,13 +433,14 @@ Uint32 returns a slice pointing to the protected region of memory with the data 
 If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Uint32() []uint32 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Compute size of new slice representation.
 	size := b.Size() / 4
@@ -466,13 +465,14 @@ Uint64 returns a slice pointing to the protected region of memory with the data 
 If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Uint64() []uint64 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Compute size of new slice representation.
 	size := b.Size() / 8
@@ -495,13 +495,14 @@ func (b *LockedBuffer) Uint64() []uint64 {
 Int8 returns a slice pointing to the protected region of memory with the data represented as a sequence of signed 8 bit integers. If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int8() []int8 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Construct the new slice representation.
 	var sl = struct {
@@ -520,13 +521,14 @@ Int16 returns a slice pointing to the protected region of memory with the data r
 If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int16() []int16 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Compute size of new slice representation.
 	size := b.Size() / 2
@@ -551,13 +553,14 @@ Int32 returns a slice pointing to the protected region of memory with the data r
 If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int32() []int32 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Compute size of new slice representation.
 	size := b.Size() / 4
@@ -582,13 +585,14 @@ Int64 returns a slice pointing to the protected region of memory with the data r
 If called on a destroyed LockedBuffer, a nil slice will be returned.
 */
 func (b *LockedBuffer) Int64() []int64 {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Compute size of new slice representation.
 	size := b.Size() / 8
@@ -613,13 +617,14 @@ ByteArray8 returns a pointer to some 8 byte array. Care must be taken not to der
 The length of the buffer must be at least 8 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray8() *[8]byte {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check if the length is large enough.
 	if len(b.Bytes()) < 8 {
@@ -636,13 +641,14 @@ ByteArray16 returns a pointer to some 16 byte array. Care must be taken not to d
 The length of the buffer must be at least 16 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray16() *[16]byte {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check if the length is large enough.
 	if len(b.Bytes()) < 16 {
@@ -659,13 +665,14 @@ ByteArray32 returns a pointer to some 32 byte array. Care must be taken not to d
 The length of the buffer must be at least 32 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray32() *[32]byte {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check if the length is large enough.
 	if len(b.Bytes()) < 32 {
@@ -682,13 +689,14 @@ ByteArray64 returns a pointer to some 64 byte array. Care must be taken not to d
 The length of the buffer must be at least 64 bytes in size and the LockedBuffer should not be destroyed. In either of these cases a nil value is returned.
 */
 func (b *LockedBuffer) ByteArray64() *[64]byte {
-	b.RLock()
-	defer b.RUnlock()
 
 	// Check if still alive.
 	if !b.Buffer.Alive() {
 		return nil
 	}
+
+	b.RLock()
+	defer b.RUnlock()
 
 	// Check if the length is large enough.
 	if len(b.Bytes()) < 64 {

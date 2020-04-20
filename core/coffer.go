@@ -61,13 +61,24 @@ func (s *Coffer) Initialise() error {
 		return ErrCofferExpired
 	}
 
+	if err := s.initialise(); err != nil {
+		Panic(err)
+	}
+	return nil
+}
+
+func (s *Coffer) initialise() error {
 	// Attain the mutex.
 	s.Lock()
 	defer s.Unlock()
 
 	// Overwrite the old value with fresh random bytes.
-	Scramble(s.left.Data())
-	Scramble(s.right.Data())
+	if err := Scramble(s.left.Data()); err != nil {
+		return err
+	}
+	if err := Scramble(s.right.Data()); err != nil {
+		return err
+	}
 
 	// left = left XOR hash(right)
 	hr := Hash(s.right.Data())
@@ -83,17 +94,17 @@ func (s *Coffer) Initialise() error {
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
 func (s *Coffer) View() (*Buffer, error) {
-	// Attain a read-only lock.
-	s.RLock()
-	defer s.RUnlock()
-
 	// Check if it's destroyed.
-	if s.destroyed() {
+	if s.Destroyed() {
 		return nil, ErrCofferExpired
 	}
 
 	// Create a new Buffer for the data.
 	b, _ := NewBuffer(32)
+
+	// Attain a read-only lock.
+	s.RLock()
+	defer s.RUnlock()
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
@@ -115,12 +126,21 @@ func (s *Coffer) Rekey() error {
 		return ErrCofferExpired
 	}
 
+	if err := s.rekey(); err != nil {
+		Panic(err)
+	}
+	return nil
+}
+
+func (s *Coffer) rekey() error {
 	// Attain the mutex.
 	s.Lock()
 	defer s.Unlock()
 
 	// Attain 32 bytes of fresh cryptographic buf32.
-	Scramble(s.rand.Data())
+	if err := Scramble(s.rand.Data()); err != nil {
+		return err
+	}
 
 	// Hash the current right partition for later.
 	hashRightCurrent := Hash(s.right.Data())
@@ -144,14 +164,32 @@ func (s *Coffer) Rekey() error {
 Destroy wipes and cleans up all memory related to a Coffer object. Once this method has been called, the Coffer can no longer be used and a new one should be created instead.
 */
 func (s *Coffer) Destroy() {
+	if err := s.destroy(); err != nil {
+		Panic(err)
+	}
+}
+
+func (s *Coffer) destroy() error {
 	// Attain the mutex.
 	s.Lock()
 	defer s.Unlock()
 
 	// Destroy the partitions.
-	s.left.Destroy()
-	s.right.Destroy()
-	s.rand.Destroy()
+	if err := s.left.destroy(); err != nil {
+		return err
+	}
+	buffers.remove(s.rand)
+
+	if err := s.right.destroy(); err != nil {
+		return err
+	}
+	buffers.remove(s.rand)
+
+	if err := s.rand.destroy(); err != nil {
+		return err
+	}
+	buffers.remove(s.rand)
+	return nil
 }
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.
@@ -159,9 +197,5 @@ func (s *Coffer) Destroyed() bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	return s.destroyed()
-}
-
-func (s *Coffer) destroyed() bool {
 	return (!s.left.Alive()) && (!s.right.Alive())
 }
