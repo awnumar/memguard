@@ -9,10 +9,13 @@ import (
 	"github.com/awnumar/memguard/core"
 )
 
-// StreamChunkSize is the maximum amount of data that is locked into memory at a time.
-// If you get error allocating memory, increase your system's mlock limits.
-// Use 'ulimit -l' to see mlock limit on unix systems.
-var StreamChunkSize = os.Getpagesize() * 4
+var (
+	// StreamChunkSize is the maximum amount of data that is locked into memory at a time.
+	// If you get error allocating memory, increase your system's mlock limits.
+	// Use 'ulimit -l' to see mlock limit on unix systems.
+	StreamChunkSize = c
+	c               = os.Getpagesize() * 4
+)
 
 type queue struct {
 	*list.List
@@ -57,13 +60,12 @@ func NewStream() *Stream {
 /*
 Write encrypts and writes some given data to a Stream object.
 
-The data is broken down into page-sized chunks and added to the stream in order. The last thing to be written to the stream is the last thing that will be read back.
+The data is broken down into chunks and added to the stream in order. The last thing to be written to the stream is the last thing that will be read back.
 */
 func (s *Stream) Write(data []byte) (int, error) {
 	s.Lock()
 	defer s.Unlock()
 
-	c := os.Getpagesize()
 	for i := 0; i < len(data); i += c {
 		if i+c > len(data) {
 			s.join(NewEnclave(data[len(data)-(len(data)%c):]))
