@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -94,24 +95,38 @@ func (s *Coffer) initialise() error {
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
 func (s *Coffer) View() (*Buffer, error) {
+	fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
+
 	// Check if it's destroyed.
 	if s.Destroyed() {
 		return nil, ErrCofferExpired
 	}
+	fmt.Printf("\n\n%s\n\n\n", "s is not destroyed")
 
 	// Create a new Buffer for the data.
 	b, _ := NewBuffer(32)
+
+	fmt.Printf("\n\n%s\n\n\n", "made buffer")
 
 	// Attain a read-only lock.
 	s.RLock()
 	defer s.RUnlock()
 
+	fmt.Printf("\n\n%s\n\n\n", "got lock")
+
+	fmt.Println(s.right.Data(), s.left.Data())
+
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
+
+	fmt.Printf("\n\n%s\n\n\n", "got hash")
 	for i := range b.Data() {
 		b.Data()[i] = h[i] ^ s.left.Data()[i]
 	}
+	fmt.Printf("\n\n%s\n\n\n", "computed plaintext")
 	Wipe(h)
+
+	fmt.Printf("\n\n%s\n\n\n", "got data")
 
 	// Return the view.
 	return b, nil
@@ -175,21 +190,35 @@ func (s *Coffer) destroy() error {
 	defer s.Unlock()
 
 	// Destroy the partitions.
-	if err := s.left.destroy(); err != nil {
-		return err
+	err1 := s.left.destroy()
+	if err1 == nil {
+		buffers.remove(s.left)
 	}
-	buffers.remove(s.rand)
 
-	if err := s.right.destroy(); err != nil {
-		return err
+	err2 := s.right.destroy()
+	if err2 == nil {
+		buffers.remove(s.right)
 	}
-	buffers.remove(s.rand)
 
-	if err := s.rand.destroy(); err != nil {
-		return err
+	err3 := s.rand.destroy()
+	if err3 == nil {
+		buffers.remove(s.rand)
 	}
-	buffers.remove(s.rand)
-	return nil
+
+	errS := ""
+	if err1 != nil {
+		errS = errS + err1.Error() + "\n"
+	}
+	if err2 != nil {
+		errS = errS + err2.Error() + "\n"
+	}
+	if err3 != nil {
+		errS = errS + err3.Error() + "\n"
+	}
+	if errS == "" {
+		return nil
+	}
+	return errors.New(errS)
 }
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.
@@ -197,5 +226,5 @@ func (s *Coffer) Destroyed() bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	return (!s.left.Alive()) && (!s.right.Alive())
+	return s.left.data == nil || s.right.data == nil
 }

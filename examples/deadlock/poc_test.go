@@ -1,26 +1,29 @@
 package unsound
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"testing"
 	"time"
 )
 
 const duration = 30 * time.Second
 
-// uncomment to run
-//
-// func TestPanicsPoC(t *testing.T) {
-// 	sigs := make(chan os.Signal, 1)
-// 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+func TestPanicsPoC(t *testing.T) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-// 	ctx, cancel := context.WithTimeout(context.Background(), duration)
-// 	go func() {
-// 		select {
-// 		case <-sigs:
-// 			cancel()
-// 		}
-// 	}()
-// 	OpenEnclave(ctx)
-// }
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	go func() {
+		select {
+		case <-sigs:
+			cancel()
+		}
+	}()
+	OpenEnclave(ctx)
+}
 
 // #############
 

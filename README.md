@@ -1,22 +1,21 @@
 <p align="center">
   <img src="https://cdn.rawgit.com/awnumar/memguard/master/logo.svg" height="140" />
   <h3 align="center">MemGuard</h3>
-  <p align="center">Secure software enclave for storage of sensitive information in memory.</p>
+  <p align="center">Software enclave for storage of sensitive information in memory.</p>
   <p align="center">
     <a href="https://cirrus-ci.com/github/awnumar/memguard"><img src="https://api.cirrus-ci.com/github/awnumar/memguard.svg"></a>
-    <a href="https://www.codacy.com/app/awnumar/memguard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=awnumar/memguard&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/eebb7ecd6e794890999cfcf26328e9cb"/></a>
     <a href="https://pkg.go.dev/github.com/awnumar/memguard?tab=doc"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
   </p>
 </p>
 
 ---
 
-This package attempts to reduce the likelihood of sensitive data being exposed. It supports all major operating systems and is written in pure Go.
+This package attempts to reduce the likelihood of sensitive data being exposed when in memory. It aims to support all major operating systems and is written in pure Go.
 
 ## Features
 
-* Sensitive data is encrypted and authenticated in memory using xSalsa20 and Poly1305 respectively. The scheme also defends against cold-boot attacks.
-* Memory allocation bypasses the language runtime by using system calls to query the kernel for resources directly. This avoids interference from the garbage-collector.
+* Sensitive data is encrypted and authenticated in memory with XSalsa20Poly1305. The [scheme](https://spacetime.dev/encrypting-secrets-in-memory) used also [defends against cold-boot attacks](https://spacetime.dev/memory-retention-attacks).
+* Memory allocation bypasses the language runtime by [using system calls](https://github.com/awnumar/memcall) to query the kernel for resources directly. This avoids interference from the garbage-collector.
 * Buffers that store plaintext data are fortified with guard pages and canary values to detect spurious accesses and overflows.
 * Effort is taken to prevent sensitive data from touching the disk. This includes locking memory to prevent swapping and handling core dumps.
 * Kernel-level immutability is implemented so that attempted modification of protected regions results in an access violation.

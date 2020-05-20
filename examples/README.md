@@ -34,3 +34,5 @@ You own your intellectual property and so you are free to choose any licence for
 1. [`Apache-2.0`] [casting](casting) :: Some examples of representing the data in allocated buffers as different types.
 2. [`Apache-2.0`] [stdin](stdin) :: Reading from standard input directly into a guarded memory region and then sealing it.
 3. [`Apache-2.0`] [stream](stream) :: Some examples of working with Stream objects which encrypt data in memory.
+4. [[`#132`](https://github.com/awnumar/memguard/issues/132)] [deadlock](deadlock) :: Some conditions causing crashes.
+5. [`Apache-2.0`] [streams](streams) :: Multi-threaded test of streams objects.
