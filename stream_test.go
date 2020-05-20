@@ -231,7 +231,7 @@ func BenchmarkStreamWrite(b *testing.B) {
 func BenchmarkStreamRead(b *testing.B) {
 	s := NewStream()
 	buf := make([]byte, StreamChunkSize)
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < b.N; i++ {
 		s.Write(buf)
 	}
 
