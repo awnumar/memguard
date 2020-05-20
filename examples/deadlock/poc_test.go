@@ -1,4 +1,4 @@
-package unsound
+package deadlock
 
 import (
 	"context"
