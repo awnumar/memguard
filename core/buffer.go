@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/awnumar/memcall"
@@ -270,7 +269,7 @@ func (l *bufferList) add(b ...*Buffer) {
 	l.Lock()
 	defer l.Unlock()
 
-	fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
+	// fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
 
 	l.list = append(l.list, b...)
 }
@@ -291,7 +290,7 @@ func (l *bufferList) remove(b *Buffer) {
 	l.Lock()
 	defer l.Unlock()
 
-	fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
+	// fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
 
 	for i, v := range l.list {
 		if v == b {

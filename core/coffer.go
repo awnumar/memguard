@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -95,38 +94,38 @@ func (s *Coffer) initialise() error {
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
 func (s *Coffer) View() (*Buffer, error) {
-	fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
+	//fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
 
 	// Check if it's destroyed.
 	if s.Destroyed() {
 		return nil, ErrCofferExpired
 	}
-	fmt.Printf("\n\n%s\n\n\n", "s is not destroyed")
+	//fmt.Printf("\n\n%s\n\n\n", "s is not destroyed")
 
 	// Create a new Buffer for the data.
 	b, _ := NewBuffer(32)
 
-	fmt.Printf("\n\n%s\n\n\n", "made buffer")
+	//fmt.Printf("\n\n%s\n\n\n", "made buffer")
 
 	// Attain a read-only lock.
 	s.RLock()
 	defer s.RUnlock()
 
-	fmt.Printf("\n\n%s\n\n\n", "got lock")
+	//fmt.Printf("\n\n%s\n\n\n", "got lock")
 
-	fmt.Println(s.right.Data(), s.left.Data())
+	//fmt.Println(s.right.Data(), s.left.Data())
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
 
-	fmt.Printf("\n\n%s\n\n\n", "got hash")
+	//fmt.Printf("\n\n%s\n\n\n", "got hash")
 	for i := range b.Data() {
 		b.Data()[i] = h[i] ^ s.left.Data()[i]
 	}
-	fmt.Printf("\n\n%s\n\n\n", "computed plaintext")
+	//fmt.Printf("\n\n%s\n\n\n", "computed plaintext")
 	Wipe(h)
 
-	fmt.Printf("\n\n%s\n\n\n", "got data")
+	// fmt.Printf("\n\n%s\n\n\n", "got data")
 
 	// Return the view.
 	return b, nil

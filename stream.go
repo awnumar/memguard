@@ -9,6 +9,11 @@ import (
 	"github.com/awnumar/memguard/core"
 )
 
+// StreamChunkSize is the maximum amount of data that is locked into memory at a time.
+// If you get error allocating memory, increase your system's mlock limits.
+// Use 'ulimit -l' to see mlock limit on unix systems.
+var StreamChunkSize = os.Getpagesize() * 4
+
 type queue struct {
 	*list.List
 }
@@ -58,12 +63,12 @@ func (s *Stream) Write(data []byte) (int, error) {
 	s.Lock()
 	defer s.Unlock()
 
-	ps := os.Getpagesize()
-	for i := 0; i < len(data); i += ps {
-		if i+ps > len(data) {
-			s.join(NewEnclave(data[len(data)-(len(data)%ps):]))
+	c := os.Getpagesize()
+	for i := 0; i < len(data); i += c {
+		if i+c > len(data) {
+			s.join(NewEnclave(data[len(data)-(len(data)%c):]))
 		} else {
-			s.join(NewEnclave(data[i : i+ps]))
+			s.join(NewEnclave(data[i : i+c]))
 		}
 	}
 	return len(data), nil
@@ -75,6 +80,8 @@ Read decrypts and places some data from a Stream object into a provided buffer.
 If there is no data, the call will return an io.EOF error. If the caller provides a buffer
 that is too small to hold the next chunk of data, the remaining bytes are re-encrypted and
 added to the front of the queue to be returned in the next call.
+
+To be performant, have
 */
 func (s *Stream) Read(buf []byte) (int, error) {
 	s.Lock()

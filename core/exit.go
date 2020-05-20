@@ -41,7 +41,7 @@ func Purge() {
 						// couldn't change it to mutable; we can't wipe it! (could this happen?)
 						// not sure what we can do at this point, just warn and move on
 						fmt.Fprintf(os.Stderr, "!WARNING: failed to wipe immutable data at address %p", &b.data)
-						continue
+						continue // wipe in subprocess?
 					}
 				}
 				Wipe(b.data)
