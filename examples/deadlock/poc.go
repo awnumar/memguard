@@ -36,7 +36,7 @@ func OpenEnclave(ctx context.Context) {
 					return
 				default:
 					{
-						fmt.Printf("open enclave %d \n", j)
+						//fmt.Printf("open enclave %d \n", j)
 						immediateOpen(ctx, enclaves[j], data[j])
 						j = (j + 1) % n
 					}
@@ -76,7 +76,7 @@ func immediateOpen(ctx context.Context, lock *memguard.Enclave, exp []byte) {
 		{
 			dur = time.Since(start)
 			if err != nil {
-				fmt.Printf("### open fail: %s \n", err)
+				panic(err)
 			}
 		}
 	case <-ctx.Done():
@@ -85,6 +85,6 @@ func immediateOpen(ctx context.Context, lock *memguard.Enclave, exp []byte) {
 			fmt.Printf("### timeout \n")
 		}
 	}
-	fmt.Printf("%d, %d \n", start.UnixNano(), dur.Nanoseconds())
-	//_ = dur
+	//fmt.Printf("%d, %d \n", start.UnixNano(), dur.Nanoseconds())
+	_ = dur
 }
