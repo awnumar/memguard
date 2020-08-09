@@ -30,13 +30,13 @@ func TestNewBuffer(t *testing.T) {
 	if err != nil {
 		t.Error("expected nil err; got", err)
 	}
-	if !b.alive {
+	if !b.Alive() {
 		t.Error("did not expect destroyed buffer")
 	}
 	if len(b.Data()) != 32 || cap(b.Data()) != 32 {
 		t.Errorf("buffer has invalid length (%d) or capacity (%d)", len(b.Data()), cap(b.Data()))
 	}
-	if !b.mutable {
+	if !b.Mutable() {
 		t.Error("buffer is not marked mutable")
 	}
 	if len(b.memory) != roundToPageSize(32)+(2*pageSize) {
@@ -61,7 +61,7 @@ func TestLotsOfAllocs(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if !b.alive || !b.mutable {
+		if !b.Alive() || !b.Mutable() {
 			t.Error("invalid metadata")
 		}
 		if len(b.data) != i {
@@ -187,7 +187,7 @@ func TestDestroy(t *testing.T) {
 	if b.memory != nil {
 		t.Error("expected memory to be nil; got", b.memory)
 	}
-	if b.mutable || b.alive {
+	if b.Alive() || b.Mutable() {
 		t.Error("buffer should be dead and immutable")
 	}
 	if b.preguard != nil || b.postguard != nil {
@@ -215,7 +215,7 @@ func TestDestroy(t *testing.T) {
 	if b.memory != nil {
 		t.Error("expected memory to be nil; got", b.memory)
 	}
-	if b.mutable || b.alive {
+	if b.Alive() || b.Mutable() {
 		t.Error("buffer should be dead and immutable")
 	}
 	if b.preguard != nil || b.postguard != nil {

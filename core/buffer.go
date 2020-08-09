@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 
 	"github.com/awnumar/memcall"
 )
@@ -25,8 +26,8 @@ The number of Buffers that can exist at one time is limited by how much memory y
 type Buffer struct {
 	sync.RWMutex // Local mutex lock
 
-	alive   bool // Signals that destruction has not come
-	mutable bool // Mutability state of underlying memory
+	alive   uint32 // Signals that destruction has not come
+	mutable uint32 // Mutability state of underlying memory
 
 	data   []byte // Portion of memory holding the data
 	memory []byte // Entire allocated memory region
@@ -44,45 +45,36 @@ NewBuffer is a raw constructor for the Buffer object.
 func NewBuffer(size int) (*Buffer, error) {
 	var err error
 
-	// Return an error if length < 1.
 	if size < 1 {
 		return nil, ErrNullBuffer
 	}
 
-	// Declare and allocate
 	b := new(Buffer)
 
-	// Allocate the total needed memory
 	innerLen := roundToPageSize(size)
 	b.memory, err = memcall.Alloc((2 * pageSize) + innerLen)
 	if err != nil {
 		Panic(err)
 	}
 
-	// Construct slice reference for data buffer.
 	b.data = getBytes(&b.memory[pageSize+innerLen-size], size)
 
-	// Construct slice references for page sectors.
 	b.preguard = getBytes(&b.memory[0], pageSize)
 	b.inner = getBytes(&b.memory[pageSize], innerLen)
 	b.postguard = getBytes(&b.memory[pageSize+innerLen], pageSize)
 
-	// Construct slice reference for canary portion of inner page.
 	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data))
 
-	// Lock the pages that will hold sensitive data.
 	if err := memcall.Lock(b.inner); err != nil {
 		Panic(err)
 	}
 
-	// Initialise the canary value and reference regions.
 	if err := Scramble(b.canary); err != nil {
 		Panic(err)
 	}
 	Copy(b.preguard, b.canary)
 	Copy(b.postguard, b.canary)
 
-	// Make the guard pages inaccessible.
 	if err := memcall.Protect(b.preguard, memcall.NoAccess()); err != nil {
 		Panic(err)
 	}
@@ -90,14 +82,11 @@ func NewBuffer(size int) (*Buffer, error) {
 		Panic(err)
 	}
 
-	// Set remaining properties
-	b.alive = true
-	b.mutable = true
+	atomic.StoreUint32(&b.alive, 1)
+	atomic.StoreUint32(&b.mutable, 1)
 
-	// Append the container to list of active buffers.
 	buffers.add(b)
 
-	// Return the created Buffer to the caller.
 	return b, nil
 }
 
@@ -112,73 +101,78 @@ func (b *Buffer) Inner() []byte {
 }
 
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
-func (b *Buffer) Freeze() {
-	if err := b.freeze(); err != nil {
-		Panic(err)
-	}
-}
-
-func (b *Buffer) freeze() error {
-	// Attain lock.
+func (b *Buffer) Freeze() error {
 	b.Lock()
 	defer b.Unlock()
 
-	// Check if destroyed.
-	if !b.alive {
-		return nil
+	if err := b.freeze(); err != nil {
+		Panic(err)
+	}
+
+	return nil
+}
+
+func (b *Buffer) freeze() error {
+	if atomic.LoadUint32(&b.alive) == 0 {
+		return ErrBufferExpired
 	}
 
 	// Only do anything if currently mutable.
-	if b.mutable {
+	if atomic.LoadUint32(&b.mutable) == 1 {
 		// Make the memory immutable.
 		if err := memcall.Protect(b.inner, memcall.ReadOnly()); err != nil {
 			return err
 		}
-		b.mutable = false
+		atomic.StoreUint32(&b.mutable, 0)
 	}
 
 	return nil
 }
 
 // Melt makes the underlying memory of a given buffer mutable. This will do nothing if the Buffer has been destroyed.
-func (b *Buffer) Melt() {
-	if err := b.melt(); err != nil {
-		Panic(err)
-	}
-}
-
-func (b *Buffer) melt() error {
-	// Attain lock.
+func (b *Buffer) Melt() error {
 	b.Lock()
 	defer b.Unlock()
 
-	// Check if destroyed.
-	if !b.alive {
-		return nil
+	if err := b.melt(); err != nil {
+		Panic(err)
 	}
 
-	// Only do anything if currently immutable.
-	if !b.mutable {
-		// Make the memory mutable.
+	return nil
+}
+
+func (b *Buffer) melt() error {
+	if atomic.LoadUint32(&b.alive) == 0 {
+		return ErrBufferExpired
+	}
+
+	if atomic.LoadUint32(&b.mutable) == 0 {
 		if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
 			return err
 		}
-		b.mutable = true
+		atomic.StoreUint32(&b.mutable, 1)
 	}
+
 	return nil
 }
 
 // Scramble attempts to overwrite the data with cryptographically-secure random bytes.
-func (b *Buffer) Scramble() {
+func (b *Buffer) Scramble() error {
+	b.Lock()
+	defer b.Unlock()
+
 	if err := b.scramble(); err != nil {
 		Panic(err)
 	}
+
+	return nil
 }
 
 func (b *Buffer) scramble() error {
-	// Attain lock.
-	b.Lock()
-	defer b.Unlock()
+	if atomic.LoadUint32(&b.alive) == 0 {
+		return ErrBufferExpired
+	}
+
 	return Scramble(b.Data())
 }
 
@@ -188,20 +182,16 @@ Destroy performs some security checks, securely wipes the contents of, and then 
 If the Buffer has already been destroyed, the function does nothing and returns nil.
 */
 func (b *Buffer) Destroy() {
-	if err := b.destroy(); err != nil {
-		Panic(err)
-	}
-	// Remove this one from global slice.
-	buffers.remove(b)
-}
-
-func (b *Buffer) destroy() error {
-	// Attain a mutex lock on this Buffer.
 	b.Lock()
 	defer b.Unlock()
 
-	// Return if it's already destroyed.
-	if !b.alive {
+	if err := b.destroy(); err != nil {
+		Panic(err)
+	}
+}
+
+func (b *Buffer) destroy() error {
+	if atomic.LoadUint32(&b.alive) == 0 {
 		return nil
 	}
 
@@ -209,53 +199,47 @@ func (b *Buffer) destroy() error {
 	if err := memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
 		return err
 	}
-	b.mutable = true
+	atomic.StoreUint32(&b.mutable, 1)
 
-	// Wipe data field.
 	Wipe(b.data)
 
-	// Verify the canary
 	if !Equal(b.preguard, b.postguard) || !Equal(b.preguard[:len(b.canary)], b.canary) {
 		return errors.New("<memguard::core::buffer> canary verification failed; buffer overflow detected")
 	}
 
-	// Wipe the memory.
 	Wipe(b.memory)
 
-	// Unlock pages locked into memory.
 	if err := memcall.Unlock(b.inner); err != nil {
 		return err
 	}
 
-	// Free all related memory.
 	if err := memcall.Free(b.memory); err != nil {
 		return err
 	}
 
-	// Reset the fields.
-	b.alive = false
-	b.mutable = false
+	buffers.remove(b)
+
+	atomic.StoreUint32(&b.alive, 0)
+	atomic.StoreUint32(&b.mutable, 0)
+
 	b.data = nil
 	b.memory = nil
 	b.preguard = nil
 	b.inner = nil
 	b.postguard = nil
 	b.canary = nil
+
 	return nil
 }
 
 // Alive returns true if the buffer has not been destroyed.
 func (b *Buffer) Alive() bool {
-	b.RLock()
-	defer b.RUnlock()
-	return b.alive
+	return atomic.LoadUint32(&b.alive) == 1
 }
 
 // Mutable returns true if the buffer is mutable.
 func (b *Buffer) Mutable() bool {
-	b.RLock()
-	defer b.RUnlock()
-	return b.mutable
+	return atomic.LoadUint32(&b.mutable) == 1
 }
 
 // BufferList stores a list of buffers in a thread-safe manner.

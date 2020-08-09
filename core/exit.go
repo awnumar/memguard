@@ -22,21 +22,27 @@ func Purge() {
 		key.Lock()
 		defer key.Unlock()
 
+		key.initialise()
+
 		// Get a snapshot of existing Buffers.
 		snapshot := buffers.flush()
 
 		// Destroy them, performing the usual sanity checks.
 		for _, b := range snapshot {
+			b.Lock()
+			defer b.Unlock()
+
+			if b == key.left || b == key.right || b == key.rand {
+				continue
+			}
+
 			if err := b.destroy(); err != nil {
 				if opErr == nil {
 					opErr = err
 				} else {
 					opErr = fmt.Errorf("%s; %s", opErr.Error(), err.Error())
 				}
-				// buffer destroy failed; wipe instead
-				b.Lock()
-				defer b.Unlock()
-				if !b.mutable {
+				if !b.Mutable() {
 					if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
 						// couldn't change it to mutable; we can't wipe it! (could this happen?)
 						// not sure what we can do at this point, just warn and move on
@@ -49,10 +55,6 @@ func Purge() {
 		}
 	}()
 
-	// Destroy and recreate the key.
-	key.Destroy() // should be a no-op
-	key = NewCoffer()
-
 	// If we encountered an error, panic.
 	if opErr != nil {
 		panic(opErr)
@@ -63,18 +65,14 @@ func Purge() {
 Exit terminates the process with a specified exit code but securely wipes and cleans up sensitive data before doing so.
 */
 func Exit(c int) {
-	// Wipe the encryption key used to encrypt data inside Enclaves.
 	key.Destroy()
 
-	// Get a snapshot of existing Buffers.
 	snapshot := buffers.copy() // copy ensures the buffers stay in the list until they are destroyed.
 
-	// Destroy them, performing the usual sanity checks.
 	for _, b := range snapshot {
 		b.Destroy()
 	}
 
-	// Exit with the specified exit code.
 	os.Exit(c)
 }
 
@@ -82,6 +80,6 @@ func Exit(c int) {
 Panic is identical to the builtin panic except it purges the session before calling panic.
 */
 func Panic(v interface{}) {
-	Purge() // creates a new key so it is safe to recover from this panic
+	Purge()
 	panic(v)
 }

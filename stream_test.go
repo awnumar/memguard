@@ -40,7 +40,7 @@ func read(t *testing.T, s *Stream, ref []byte, expectedErr error) {
 func TestStreamNextFlush(t *testing.T) {
 	s := NewStream()
 
-	size := 2*StreamChunkSize + 1024
+	size := 2*streamChunkSize + 1024
 	b := make([]byte, size)
 	ScrambleBytes(b)
 	ref := make([]byte, len(b))
@@ -51,10 +51,10 @@ func TestStreamNextFlush(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if c.Size() != StreamChunkSize {
+	if c.Size() != streamChunkSize {
 		t.Error(c.Size())
 	}
-	if !c.EqualTo(ref[:StreamChunkSize]) {
+	if !c.EqualTo(ref[:streamChunkSize]) {
 		t.Error("incorrect data")
 	}
 	c.Destroy()
@@ -63,10 +63,10 @@ func TestStreamNextFlush(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if c.Size() != size-StreamChunkSize {
+	if c.Size() != size-streamChunkSize {
 		t.Error("unexpected length:", c.Size())
 	}
-	if !c.EqualTo(ref[StreamChunkSize:]) {
+	if !c.EqualTo(ref[streamChunkSize:]) {
 		t.Error("incorrect data")
 	}
 	c.Destroy()
@@ -218,10 +218,10 @@ func TestStreamSize(t *testing.T) {
 
 func BenchmarkStreamWrite(b *testing.B) {
 	b.ReportAllocs()
-	b.SetBytes(int64(StreamChunkSize))
+	b.SetBytes(int64(streamChunkSize))
 
 	s := NewStream()
-	buf := make([]byte, StreamChunkSize)
+	buf := make([]byte, streamChunkSize)
 	for i := 0; i < b.N; i++ {
 		s.Write(buf)
 	}
@@ -230,13 +230,13 @@ func BenchmarkStreamWrite(b *testing.B) {
 
 func BenchmarkStreamRead(b *testing.B) {
 	s := NewStream()
-	buf := make([]byte, StreamChunkSize)
+	buf := make([]byte, streamChunkSize)
 	for i := 0; i < b.N; i++ {
 		s.Write(buf)
 	}
 
 	b.ReportAllocs()
-	b.SetBytes(int64(StreamChunkSize))
+	b.SetBytes(int64(streamChunkSize))
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

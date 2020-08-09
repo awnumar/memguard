@@ -8,7 +8,7 @@ import (
 Enclave is a sealed and encrypted container for sensitive data.
 */
 type Enclave struct {
-	*core.Enclave
+	core.Enclave
 }
 
 /*
@@ -40,7 +40,7 @@ func NewEnclaveRandom(size int) *Enclave {
 Open decrypts an Enclave object and places its contents into an immutable LockedBuffer. An error will be returned if decryption failed.
 */
 func (e *Enclave) Open() (*LockedBuffer, error) {
-	b, err := core.Open(e.Enclave)
+	b, err := e.Enclave.Open()
 	if err != nil {
 		if err != core.ErrDecryptionFailed {
 			core.Panic(err)
@@ -55,5 +55,5 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 Size returns the number of bytes of data stored within an Enclave.
 */
 func (e *Enclave) Size() int {
-	return core.EnclaveSize(e.Enclave)
+	return e.Enclave.Size()
 }

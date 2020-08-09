@@ -1,6 +1,8 @@
 package core
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// Declare a key for use in encrypting data this session.
@@ -8,14 +10,9 @@ var (
 )
 
 func init() {
-	// Initialize the key declared above with a random value.
-	if key == nil {
-		key = NewCoffer()
-	}
+	// Initialize the key declared above with a random value
+	key = NewCoffer()
 }
-
-// ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
-var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size must be greater than zero")
 
 /*
 Enclave is a sealed and encrypted container for sensitive data.
@@ -27,31 +24,25 @@ type Enclave struct {
 /*
 NewEnclave is a raw constructor for the Enclave object. The given buffer is wiped after the enclave is created.
 */
-func NewEnclave(buf []byte) (*Enclave, error) {
-	// Return an error if length < 1.
+func NewEnclave(buf []byte) (Enclave, error) {
 	if len(buf) < 1 {
-		return nil, ErrNullEnclave
+		return Enclave{}, ErrNullEnclave
 	}
 
-	// Create a new Enclave.
-	e := new(Enclave)
+	e := Enclave{}
 
-	// Get a view of the key.
 	k, err := key.View()
 	if err != nil {
-		return nil, err
+		return Enclave{}, err
 	}
 
-	// Encrypt the plaintext.
 	e.ciphertext, err = Encrypt(buf, k.Data())
 	if err != nil {
 		Panic(err) // key is not 32 bytes long
 	}
 
-	// Destroy our copy of the key.
 	k.Destroy()
 
-	// Wipe the given buffer.
 	Wipe(buf)
 
 	return e, nil
@@ -60,28 +51,27 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 /*
 Seal consumes a given Buffer object and returns its data secured and encrypted inside an Enclave. The given Buffer is destroyed after the Enclave is created.
 */
-func Seal(b *Buffer) (*Enclave, error) {
-	// Check if the Buffer has been destroyed.
+func Seal(b *Buffer) (Enclave, error) {
+	b.Lock()
+	defer b.Unlock()
+
 	if !b.Alive() {
-		return nil, ErrBufferExpired
+		return Enclave{}, ErrBufferExpired
 	}
 
-	b.Melt() // Make the buffer mutable so that we can wipe it.
+	if err := b.melt(); err != nil {
+		Panic(err)
+	}
 
-	// Construct the Enclave from the Buffer's data.
-	e, err := func() (*Enclave, error) {
-		b.RLock() // Attain a read lock.
-		defer b.RUnlock()
-		return NewEnclave(b.Data())
-	}()
+	e, err := NewEnclave(b.Data())
 	if err != nil {
-		return nil, err
+		return Enclave{}, err
 	}
 
-	// Destroy the Buffer object.
-	b.Destroy()
+	if err := b.destroy(); err != nil {
+		Panic(err)
+	}
 
-	// Return the newly created Enclave.
 	return e, nil
 }
 
@@ -90,35 +80,40 @@ Open decrypts an Enclave and puts the contents into a Buffer object. The given E
 
 The Buffer object should be destroyed after the contents are no longer needed.
 */
-func Open(e *Enclave) (*Buffer, error) {
-	// Allocate a secure Buffer to hold the decrypted data.
-	b, err := NewBuffer(len(e.ciphertext) - Overhead)
+func (e Enclave) Open() (*Buffer, error) {
+	b, err := NewBuffer(e.Size())
 	if err != nil {
 		Panic("<memguard:core> ciphertext has invalid length") // ciphertext has invalid length
 	}
 
-	// Grab a view of the key.
 	k, err := key.View()
 	if err != nil {
 		return nil, err
 	}
 
-	// Decrypt the enclave into the buffer we created.
 	_, err = Decrypt(e.ciphertext, k.Data(), b.Data())
 	if err != nil {
 		return nil, err
 	}
 
-	// Destroy our copy of the key.
 	k.Destroy()
 
-	// Return the contents of the Enclave inside a Buffer.
 	return b, nil
 }
 
 /*
-EnclaveSize returns the number of bytes of plaintext data stored inside an Enclave.
+Ciphertext returns the encrypted data in byte form.
 */
-func EnclaveSize(e *Enclave) int {
+func (e Enclave) Ciphertext() []byte {
+	return e.ciphertext
+}
+
+/*
+Size returns the number of bytes of plaintext data stored inside an Enclave.
+*/
+func (e Enclave) Size() int {
 	return len(e.ciphertext) - Overhead
 }
+
+// ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
+var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size must be greater than zero")

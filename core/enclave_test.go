@@ -42,8 +42,8 @@ func TestNewEnclave(t *testing.T) {
 	}
 
 	// Verify the length of the ciphertext is correct.
-	if len(e.ciphertext) != len(data)+Overhead {
-		t.Error("ciphertext has unexpected length;", len(e.ciphertext))
+	if len(e.Ciphertext()) != len(data)+Overhead {
+		t.Error("ciphertext has unexpected length;", len(e.Ciphertext()))
 	}
 
 	// Attempt with an empty data slice.
@@ -68,17 +68,17 @@ func TestSeal(t *testing.T) {
 	}
 
 	// Do a sanity check on the length of the ciphertext.
-	if len(e.ciphertext) != 32+Overhead {
-		t.Error("ciphertext has unexpected length:", len(e.ciphertext))
+	if len(e.Ciphertext()) != 32+Overhead {
+		t.Error("ciphertext has unexpected length:", len(e.Ciphertext()))
 	}
 
 	// Check that the buffer was destroyed.
-	if b.alive {
+	if b.Alive() {
 		t.Error("buffer was not consumed")
 	}
 
 	// Decrypt the enclave into a new buffer.
-	buf, err := Open(e)
+	buf, err := e.Open()
 	if err != nil {
 		t.Error(err)
 	}
@@ -93,7 +93,7 @@ func TestSeal(t *testing.T) {
 	if err != ErrBufferExpired {
 		t.Error("expected ErrBufferExpired; got", err)
 	}
-	if e != nil {
+	if e.ciphertext != nil {
 		t.Error("expected nil enclave in error case")
 	}
 
@@ -110,7 +110,7 @@ func TestOpen(t *testing.T) {
 	}
 
 	// Open it.
-	buf, err := Open(e)
+	buf, err := e.Open()
 	if err != nil {
 		t.Error(err)
 	}
@@ -122,12 +122,12 @@ func TestOpen(t *testing.T) {
 	buf.Destroy()
 
 	// Modify the ciphertext to trigger an error case.
-	for i := range e.ciphertext {
-		e.ciphertext[i] = 0xdb
+	for i := range e.Ciphertext() {
+		e.Ciphertext()[i] = 0xdb
 	}
 
 	// Check for the error.
-	buf, err = Open(e)
+	buf, err = e.Open()
 	if err != ErrDecryptionFailed {
 		t.Error("expected decryption error; got", err)
 	}
@@ -137,7 +137,8 @@ func TestOpen(t *testing.T) {
 }
 
 func TestEnclaveSize(t *testing.T) {
-	if EnclaveSize(&Enclave{make([]byte, 1234)}) != 1234-Overhead {
+	e := Enclave{make([]byte, 1234)}
+	if e.Size() != 1234-Overhead {
 		t.Error("invalid enclave size")
 	}
 }

@@ -49,9 +49,7 @@ func TestCofferInitialise(t *testing.T) {
 	view.Destroy()
 
 	// Re-initialise the buffer with a new value.
-	if err := s.Initialise(); err != nil {
-		t.Error("unexpected error;", err)
-	}
+	s.Initialise()
 
 	// Get the new value stored inside.
 	view, err = s.View()
@@ -70,7 +68,7 @@ func TestCofferInitialise(t *testing.T) {
 	s.Destroy()
 
 	// Check error condition.
-	if err := s.Initialise(); err != ErrCofferExpired {
+	if err := s.initialise(); err != ErrCofferExpired {
 		t.Error("expected ErrCofferExpired; got", err)
 	}
 }
@@ -114,12 +112,12 @@ func TestCofferRekey(t *testing.T) {
 	s := NewCoffer()
 
 	// Halt the rekey cycle.
-	s.RLock()
+	s.Lock()
 
 	// Remember the value stored inside.
-	view, err := s.View()
+	view, err := s.view()
 	if err != nil {
-		t.Error("unexpected error;", err)
+		t.Error(err)
 	}
 	orgValue := make([]byte, 32)
 	copy(orgValue, view.Data())
@@ -132,14 +130,12 @@ func TestCofferRekey(t *testing.T) {
 	copy(right, s.right.Data())
 
 	// Manually re-key before we continue.
-	s.RUnlock()
-	s.Rekey()
-	s.RLock()
+	s.rekey()
 
 	// Get another view of the contents.
-	view, err = s.View()
+	view, err = s.view()
 	if err != nil {
-		t.Error("unexpected error;", err)
+		t.Error(err)
 	}
 	newValue := make([]byte, 32)
 	copy(newValue, view.Data())
@@ -155,7 +151,8 @@ func TestCofferRekey(t *testing.T) {
 		t.Error("partition values did not change")
 	}
 
-	s.RUnlock() // Release lock to allow destruction.
+	s.Unlock()
+
 	s.Destroy()
 
 	if err := s.Rekey(); err != ErrCofferExpired {
@@ -173,7 +170,7 @@ func TestCofferDestroy(t *testing.T) {
 	}
 
 	// Check both partitions are destroyed.
-	if s.left.alive || s.right.alive {
+	if s.left.Alive() || s.right.Alive() {
 		t.Error("some partition not destroyed")
 	}
 }

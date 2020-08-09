@@ -38,22 +38,22 @@ func TestPurge(t *testing.T) {
 	buffers.RUnlock()
 
 	// Verify that the buffer was destroyed.
-	if buffer.alive {
+	if buffer.Alive() {
 		t.Error("buffer was not destroyed")
 	}
 
 	// Verify that the old key was destroyed.
-	if oldKey.left.alive || oldKey.right.alive {
+	if oldKey.left.Alive() || oldKey.right.Alive() {
 		t.Error("old key was not destroyed")
 	}
 
 	// Verify that the key is not destroyed.
-	if !key.left.alive || !key.right.alive {
+	if !key.left.Alive() || !key.right.Alive() {
 		t.Error("current key is destroyed")
 	}
 
 	// Verify that the key changed by decrypting the Enclave.
-	if _, err := Open(enclave); err != ErrDecryptionFailed {
+	if _, err := enclave.Open(); err != ErrDecryptionFailed {
 		t.Error("expected decryption failed; got", err)
 	}
 
