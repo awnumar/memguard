@@ -4,16 +4,6 @@ import (
 	"errors"
 )
 
-var (
-	// Declare a key for use in encrypting data this session.
-	key *Coffer
-)
-
-func init() {
-	// Initialize the key declared above with a random value
-	key = NewCoffer()
-}
-
 /*
 Enclave is a sealed and encrypted container for sensitive data.
 */
@@ -31,7 +21,7 @@ func NewEnclave(buf []byte) (Enclave, error) {
 
 	e := Enclave{}
 
-	k, err := key.View()
+	k, err := key.view()
 	if err != nil {
 		return Enclave{}, err
 	}
@@ -86,7 +76,7 @@ func (e Enclave) Open() (*Buffer, error) {
 		Panic("<memguard:core> ciphertext has invalid length") // ciphertext has invalid length
 	}
 
-	k, err := key.View()
+	k, err := key.view()
 	if err != nil {
 		return nil, err
 	}

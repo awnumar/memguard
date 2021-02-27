@@ -65,7 +65,7 @@ func Purge() {
 Exit terminates the process with a specified exit code but securely wipes and cleans up sensitive data before doing so.
 */
 func Exit(c int) {
-	key.Destroy()
+	key.destroy()
 
 	snapshot := buffers.copy() // copy ensures the buffers stay in the list until they are destroyed.
 
@@ -74,12 +74,4 @@ func Exit(c int) {
 	}
 
 	os.Exit(c)
-}
-
-/*
-Panic is identical to the builtin panic except it purges the session before calling panic.
-*/
-func Panic(v interface{}) {
-	Purge()
-	panic(v)
 }

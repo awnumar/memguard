@@ -2,7 +2,9 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -12,55 +14,78 @@ const interval = 500 * time.Millisecond
 // ErrCofferExpired is returned when a function attempts to perform an operation using a secure key container that has been wiped and destroyed.
 var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted usage of destroyed key object")
 
+var key = func() *Coffer {
+	s, err := NewCoffer()
+	if err != nil {
+		panic(err)
+	}
+	return s
+}()
+
 /*
 Coffer is a specialized container for securing highly-sensitive, 32 byte values.
 */
 type Coffer struct {
-	sync.RWMutex
+	mu sync.RWMutex // caller's responsibility to acquire
 
 	left  *Buffer // Left partition.
 	right *Buffer // Right partition.
 
 	rand *Buffer // Static allocation for fast random bytes reading.
+
+	// Setting this instructs the rekey routine to return.
+	// You must also destroy the partitions.
+	discarded uint32
 }
 
 // NewCoffer is a raw constructor for the *Coffer object.
-func NewCoffer() *Coffer {
-	s := new(Coffer)
+func NewCoffer() (s *Coffer, err error) {
+	s = &Coffer{}
 
-	s.left, _ = NewBuffer(32)
-	s.right, _ = NewBuffer(32)
-	s.rand, _ = NewBuffer(32)
+	s.left, err = NewBuffer(32)
+	if err != nil {
+		return
+	}
 
-	s.Initialise()
+	s.right, err = NewBuffer(32)
+	if err != nil {
+		return
+	}
+
+	s.rand, err = NewBuffer(32)
+	if err != nil {
+		return
+	}
+
+	err = s.init()
+	if err != nil {
+		return
+	}
 
 	go func(s *Coffer) {
+		var err error
 		for {
 			time.Sleep(interval)
 
-			// Re-key the contents, exiting the routine if object destroyed.
-			if err := s.rekey(); err != nil {
-				break
+			if atomic.LoadUint32(&s.discarded) == 1 {
+				return
+			}
+
+			s.mu.Lock()
+			err = s.rekey()
+			s.mu.Unlock()
+
+			if err != nil {
+				fmt.Println()
+				return
 			}
 		}
 	}(s)
 
-	return s
+	return
 }
 
-/*
-Initialise is used to reset the value stored inside a Coffer to a new random 32 byte value, overwriting the old.
-*/
-func (s *Coffer) Initialise() {
-	s.Lock()
-	defer s.Unlock()
-
-	if err := s.initialise(); err != nil {
-		Panic(err)
-	}
-}
-
-func (s *Coffer) initialise() error {
+func (s *Coffer) init() error {
 	if s.destroyed() {
 		return ErrCofferExpired
 	}
@@ -82,22 +107,16 @@ func (s *Coffer) initialise() error {
 	return nil
 }
 
-/*
-View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
-*/
-func (s *Coffer) View() (*Buffer, error) {
-	s.Lock()
-	defer s.Unlock()
-
-	return s.view()
-}
-
-func (s *Coffer) view() (*Buffer, error) {
+func (s *Coffer) view() (b *Buffer, err error) {
 	if s.destroyed() {
-		return nil, ErrCofferExpired
+		err = ErrCofferExpired
+		return
 	}
 
-	b, _ := NewBuffer(32)
+	b, err = NewBuffer(32)
+	if err != nil {
+		return
+	}
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
@@ -108,22 +127,7 @@ func (s *Coffer) view() (*Buffer, error) {
 
 	Wipe(h)
 
-	return b, nil
-}
-
-/*
-Rekey is used to re-key a Coffer. Ideally this should be done at short, regular intervals.
-*/
-func (s *Coffer) Rekey() error {
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
-
-	if err := s.rekey(); err != nil {
-		Panic(err)
-	}
-
-	return nil
+	return
 }
 
 func (s *Coffer) rekey() error {
@@ -153,62 +157,29 @@ func (s *Coffer) rekey() error {
 	return nil
 }
 
-/*
-Destroy wipes and cleans up all memory related to a Coffer object. Once this method has been called, the Coffer can no longer be used and a new one should be created instead.
-*/
-func (s *Coffer) Destroy() {
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
-
-	if err := s.destroy(); err != nil {
-		Panic(err)
-	}
-}
-
 func (s *Coffer) destroy() error {
 	if s.destroyed() {
 		return nil
 	}
 
-	// Destroy the partitions.
-	err1 := s.left.destroy()
-	if err1 == nil {
-		buffers.remove(s.left)
-	}
-
-	err2 := s.right.destroy()
-	if err2 == nil {
-		buffers.remove(s.right)
-	}
-
-	err3 := s.rand.destroy()
-	if err3 == nil {
-		buffers.remove(s.rand)
-	}
+	err1 := s.left.Destroy()
+	err2 := s.right.Destroy()
+	err3 := s.rand.Destroy()
 
 	errS := ""
 	if err1 != nil {
-		errS = errS + err1.Error() + "\n"
+		errS = errS + "Error destroying left partition: " + err1.Error() + "\n"
 	}
 	if err2 != nil {
-		errS = errS + err2.Error() + "\n"
+		errS = errS + "Error destroying right partition: " + err2.Error() + "\n"
 	}
 	if err3 != nil {
-		errS = errS + err3.Error() + "\n"
+		errS = errS + "Error destroying rand partition: " + err3.Error() + "\n"
 	}
 	if errS == "" {
 		return nil
 	}
 	return errors.New(errS)
-}
-
-// Destroyed returns a boolean value indicating if a Coffer has been destroyed.
-func (s *Coffer) Destroyed() bool {
-	s.RLock()
-	defer s.RUnlock()
-
-	return s.destroyed()
 }
 
 func (s *Coffer) destroyed() bool {

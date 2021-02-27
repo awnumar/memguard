@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 	"unsafe"
 )
@@ -12,7 +13,7 @@ func TestNewBuffer(t *testing.T) {
 	if err != ErrNullBuffer {
 		t.Error("expected ErrNullBuffer; got", err)
 	}
-	if b != nil {
+	if !reflect.ValueOf(b).IsZero() {
 		t.Error("expected nil buffer; got", b)
 	}
 
@@ -21,7 +22,7 @@ func TestNewBuffer(t *testing.T) {
 	if err != ErrNullBuffer {
 		t.Error("expected ErrNullBuffer; got", err)
 	}
-	if b != nil {
+	if !reflect.ValueOf(b).IsZero() {
 		t.Error("expected nil buffer; got", b)
 	}
 

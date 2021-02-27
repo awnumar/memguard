@@ -2,17 +2,21 @@ package core
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 )
 
 func TestNewCoffer(t *testing.T) {
-	s := NewCoffer()
+	s, err := NewCoffer()
+	if err != nil {
+		t.Error(err)
+	}
 
 	// Attain a lock to halt the verify & rekey cycle.
 	s.RLock()
 
 	// Verify that fields are not nil.
-	if s.left == nil || s.right == nil {
+	if reflect.ValueOf(s.left).IsZero() || reflect.ValueOf(s.right).IsZero() {
 		t.Error("one or more fields are not initialised")
 	}
 
@@ -33,14 +37,14 @@ func TestNewCoffer(t *testing.T) {
 	}
 
 	s.RUnlock() // Release mutex to allow destruction.
-	s.Destroy()
+	s.destroy()
 }
 
 func TestCofferInitialise(t *testing.T) {
 	s := NewCoffer()
 
 	// Get the value stored inside.
-	view, err := s.View()
+	view, err := s.view()
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -49,10 +53,10 @@ func TestCofferInitialise(t *testing.T) {
 	view.Destroy()
 
 	// Re-initialise the buffer with a new value.
-	s.Initialise()
+	s.initialise()
 
 	// Get the new value stored inside.
-	view, err = s.View()
+	view, err = s.view()
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -65,7 +69,7 @@ func TestCofferInitialise(t *testing.T) {
 		t.Error("value was not refreshed")
 	}
 
-	s.Destroy()
+	s.destroy()
 
 	// Check error condition.
 	if err := s.initialise(); err != ErrCofferExpired {
@@ -77,7 +81,7 @@ func TestCofferView(t *testing.T) {
 	s := NewCoffer()
 
 	// Get the value stored inside.
-	view, err := s.View()
+	view, err := s.view()
 	if err != nil {
 		t.Error("unexpected error")
 	}
@@ -96,10 +100,10 @@ func TestCofferView(t *testing.T) {
 	// Destroy our temporary view of the coffer's contents.
 	view.Destroy()
 
-	s.Destroy()
+	s.destroy()
 
 	// Check error condition.
-	view, err = s.View()
+	view, err = s.view()
 	if err != ErrCofferExpired {
 		t.Error("expected ErrCofferExpired; got", err)
 	}

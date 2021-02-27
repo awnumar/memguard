@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"os"
 	"unsafe"
 )
@@ -23,4 +24,9 @@ func getBytes(ptr *byte, len int) []byte {
 		cap  int
 	}{uintptr(unsafe.Pointer(ptr)), len, len}
 	return *(*[]byte)(unsafe.Pointer(&sl))
+}
+
+func errorThenExit(err error) {
+	fmt.Fprintln(os.Stderr, err)
+	Exit(1)
 }

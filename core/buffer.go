@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 
 	"github.com/awnumar/memcall"
 )
@@ -24,10 +23,10 @@ Buffer is a structure that holds raw sensitive data.
 The number of Buffers that can exist at one time is limited by how much memory your system's kernel allows each process to mlock/VirtualLock. Therefore you should call DestroyBuffer on Buffers that you no longer need, ideally defering a Destroy call after creating a new one.
 */
 type Buffer struct {
-	sync.RWMutex // Local mutex lock
+	mu sync.RWMutex // caller's responsibility to acquire
 
-	alive   uint32 // Signals that destruction has not come
-	mutable uint32 // Mutability state of underlying memory
+	alive   bool // Signals that destruction has not come
+	mutable bool // Mutability state of underlying memory
 
 	data   []byte // Portion of memory holding the data
 	memory []byte // Entire allocated memory region
@@ -42,19 +41,18 @@ type Buffer struct {
 /*
 NewBuffer is a raw constructor for the Buffer object.
 */
-func NewBuffer(size int) (*Buffer, error) {
-	var err error
+func NewBuffer(size int) (b *Buffer, err error) {
+	b = &Buffer{}
 
 	if size < 1 {
-		return nil, ErrNullBuffer
+		err = ErrNullBuffer
+		return
 	}
-
-	b := new(Buffer)
 
 	innerLen := roundToPageSize(size)
 	b.memory, err = memcall.Alloc((2 * pageSize) + innerLen)
 	if err != nil {
-		Panic(err)
+		return
 	}
 
 	b.data = getBytes(&b.memory[pageSize+innerLen-size], size)
@@ -65,25 +63,25 @@ func NewBuffer(size int) (*Buffer, error) {
 
 	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data))
 
-	if err := memcall.Lock(b.inner); err != nil {
-		Panic(err)
+	if err = memcall.Lock(b.inner); err != nil {
+		return
 	}
 
-	if err := Scramble(b.canary); err != nil {
-		Panic(err)
+	if err = Scramble(b.canary); err != nil {
+		return
 	}
 	Copy(b.preguard, b.canary)
 	Copy(b.postguard, b.canary)
 
-	if err := memcall.Protect(b.preguard, memcall.NoAccess()); err != nil {
-		Panic(err)
+	if err = memcall.Protect(b.preguard, memcall.NoAccess()); err != nil {
+		return
 	}
-	if err := memcall.Protect(b.postguard, memcall.NoAccess()); err != nil {
-		Panic(err)
+	if err = memcall.Protect(b.postguard, memcall.NoAccess()); err != nil {
+		return
 	}
 
-	atomic.StoreUint32(&b.alive, 1)
-	atomic.StoreUint32(&b.mutable, 1)
+	b.alive = true
+	b.mutable = true
 
 	buffers.add(b)
 
@@ -102,28 +100,17 @@ func (b *Buffer) Inner() []byte {
 
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Freeze() error {
-	b.Lock()
-	defer b.Unlock()
-
-	if err := b.freeze(); err != nil {
-		Panic(err)
-	}
-
-	return nil
-}
-
-func (b *Buffer) freeze() error {
-	if atomic.LoadUint32(&b.alive) == 0 {
+	if !b.alive {
 		return ErrBufferExpired
 	}
 
 	// Only do anything if currently mutable.
-	if atomic.LoadUint32(&b.mutable) == 1 {
+	if b.mutable {
 		// Make the memory immutable.
 		if err := memcall.Protect(b.inner, memcall.ReadOnly()); err != nil {
 			return err
 		}
-		atomic.StoreUint32(&b.mutable, 0)
+		b.mutable = false
 	}
 
 	return nil
@@ -131,26 +118,15 @@ func (b *Buffer) freeze() error {
 
 // Melt makes the underlying memory of a given buffer mutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Melt() error {
-	b.Lock()
-	defer b.Unlock()
-
-	if err := b.melt(); err != nil {
-		Panic(err)
-	}
-
-	return nil
-}
-
-func (b *Buffer) melt() error {
-	if atomic.LoadUint32(&b.alive) == 0 {
+	if !b.alive {
 		return ErrBufferExpired
 	}
 
-	if atomic.LoadUint32(&b.mutable) == 0 {
+	if !b.mutable {
 		if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
 			return err
 		}
-		atomic.StoreUint32(&b.mutable, 1)
+		b.mutable = true
 	}
 
 	return nil
@@ -158,18 +134,7 @@ func (b *Buffer) melt() error {
 
 // Scramble attempts to overwrite the data with cryptographically-secure random bytes.
 func (b *Buffer) Scramble() error {
-	b.Lock()
-	defer b.Unlock()
-
-	if err := b.scramble(); err != nil {
-		Panic(err)
-	}
-
-	return nil
-}
-
-func (b *Buffer) scramble() error {
-	if atomic.LoadUint32(&b.alive) == 0 {
+	if !b.alive {
 		return ErrBufferExpired
 	}
 
@@ -181,25 +146,16 @@ Destroy performs some security checks, securely wipes the contents of, and then 
 
 If the Buffer has already been destroyed, the function does nothing and returns nil.
 */
-func (b *Buffer) Destroy() {
-	b.Lock()
-	defer b.Unlock()
-
-	if err := b.destroy(); err != nil {
-		Panic(err)
-	}
-}
-
-func (b *Buffer) destroy() error {
-	if atomic.LoadUint32(&b.alive) == 0 {
-		return nil
+func (b *Buffer) Destroy() (err error) {
+	if !b.alive {
+		return
 	}
 
 	// Make all of the memory readable and writable.
-	if err := memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
-		return err
+	if err = memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
+		return
 	}
-	atomic.StoreUint32(&b.mutable, 1)
+	b.mutable = true
 
 	Wipe(b.data)
 
@@ -209,19 +165,18 @@ func (b *Buffer) destroy() error {
 
 	Wipe(b.memory)
 
-	if err := memcall.Unlock(b.inner); err != nil {
-		return err
+	if err = memcall.Unlock(b.inner); err != nil {
+		return
 	}
 
-	if err := memcall.Free(b.memory); err != nil {
-		return err
+	if err = memcall.Free(b.memory); err != nil {
+		return
 	}
 
 	buffers.remove(b)
 
-	atomic.StoreUint32(&b.alive, 0)
-	atomic.StoreUint32(&b.mutable, 0)
-
+	b.alive = false
+	b.mutable = false
 	b.data = nil
 	b.memory = nil
 	b.preguard = nil
@@ -233,13 +188,13 @@ func (b *Buffer) destroy() error {
 }
 
 // Alive returns true if the buffer has not been destroyed.
-func (b *Buffer) Alive() bool {
-	return atomic.LoadUint32(&b.alive) == 1
+func (b Buffer) Alive() bool {
+	return b.alive
 }
 
 // Mutable returns true if the buffer is mutable.
-func (b *Buffer) Mutable() bool {
-	return atomic.LoadUint32(&b.mutable) == 1
+func (b Buffer) Mutable() bool {
+	return b.mutable
 }
 
 // BufferList stores a list of buffers in a thread-safe manner.
@@ -252,8 +207,6 @@ type bufferList struct {
 func (l *bufferList) add(b ...*Buffer) {
 	l.Lock()
 	defer l.Unlock()
-
-	// fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
 
 	l.list = append(l.list, b...)
 }
@@ -273,8 +226,6 @@ func (l *bufferList) copy() []*Buffer {
 func (l *bufferList) remove(b *Buffer) {
 	l.Lock()
 	defer l.Unlock()
-
-	// fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
 
 	for i, v := range l.list {
 		if v == b {

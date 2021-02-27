@@ -75,15 +75,6 @@ func TestPurge(t *testing.T) {
 	buffers.remove(b)
 }
 
-func TestPanic(t *testing.T) {
-	// Call Panic and check if it panics.
-	if !panics(func() {
-		Panic("test")
-	}) {
-		t.Error("did not panic")
-	}
-}
-
 func panics(fn func()) (panicked bool) {
 	defer func() {
 		panicked = (recover() != nil)
