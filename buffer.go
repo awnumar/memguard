@@ -5,9 +5,8 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"sync"
 	"unsafe"
-
-	"github.com/awnumar/memguard/core"
 )
 
 /*
@@ -16,8 +15,28 @@ LockedBuffer is a structure that holds raw sensitive data.
 The number of LockedBuffers that you are able to create is limited by how much memory your system's kernel allows each process to mlock/VirtualLock. Therefore you should call Destroy on LockedBuffers that you no longer need or defer a Destroy call after creating a new LockedBuffer.
 */
 type LockedBuffer struct {
-	*core.Buffer
+	access sync.RWMutex
+	Buffer
 	*drop
+}
+
+/*
+Buffer is a structure that holds raw sensitive data.
+
+The number of Buffers that can exist at one time is limited by how much memory your system's kernel allows each process to mlock/VirtualLock. Therefore you should call DestroyBuffer on Buffers that you no longer need, ideally defering a Destroy call after creating a new one.
+*/
+type Buffer struct {
+	active  bool // Signals that destruction has not come
+	mutable bool // Mutability state of underlying memory
+
+	data []byte // Portion of memory holding the data
+
+	preguard  []byte // Guard page addressed before the data
+	inner     []byte // Inner region between the guard pages
+	postguard []byte // Guard page addressed after the data
+
+	memory []byte // Entire allocated memory region
+	canary []byte // Value written behind data to detect spillage
 }
 
 /*
@@ -26,8 +45,8 @@ Value monitored by a finalizer so that we can clean up LockedBuffers that have g
 type drop [16]byte
 
 // Constructs a LockedBuffer object from a core.Buffer while also setting up the finalizer for it.
-func newBuffer(buf *core.Buffer) *LockedBuffer {
-	b := &LockedBuffer{buf, new(drop)}
+func newBuffer(buf *Buffer) *LockedBuffer {
+	b := &LockedBuffer{sync.RWMutex{}, *buf, new(drop)}
 	runtime.SetFinalizer(b.drop, func(_ *drop) {
 		go buf.Destroy()
 	})
@@ -36,7 +55,7 @@ func newBuffer(buf *core.Buffer) *LockedBuffer {
 
 // Constructs a quasi-destroyed LockedBuffer with size zero.
 func newNullBuffer() *LockedBuffer {
-	return &LockedBuffer{new(core.Buffer), new(drop)}
+	return &LockedBuffer{new(Buffer), new(drop)}
 }
 
 /*
