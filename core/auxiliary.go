@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"reflect"
 	"unsafe"
 )
 
@@ -17,10 +18,6 @@ func roundToPageSize(length int) int {
 
 // Convert a pointer and length to a byte slice that describes that memory.
 func getBytes(ptr *byte, len int) []byte {
-	var sl = struct {
-		addr uintptr
-		len  int
-		cap  int
-	}{uintptr(unsafe.Pointer(ptr)), len, len}
+	var sl = reflect.SliceHeader{Data: uintptr(unsafe.Pointer(ptr)), Len: len, Cap: len}
 	return *(*[]byte)(unsafe.Pointer(&sl))
 }
