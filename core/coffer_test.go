@@ -9,7 +9,7 @@ func TestNewCoffer(t *testing.T) {
 	s := NewCoffer()
 
 	// Attain a lock to halt the verify & rekey cycle.
-	s.RLock()
+	s.Lock()
 
 	// Verify that fields are not nil.
 	if s.left == nil || s.right == nil {
@@ -32,11 +32,11 @@ func TestNewCoffer(t *testing.T) {
 		t.Error("right side is zeroed")
 	}
 
-	s.RUnlock() // Release mutex to allow destruction.
+	s.Unlock() // Release mutex to allow destruction.
 	s.Destroy()
 }
 
-func TestCofferInitialise(t *testing.T) {
+func TestCofferInit(t *testing.T) {
 	s := NewCoffer()
 
 	// Get the value stored inside.
@@ -48,8 +48,8 @@ func TestCofferInitialise(t *testing.T) {
 	copy(value, view.Data())
 	view.Destroy()
 
-	// Re-initialise the buffer with a new value.
-	if err := s.Initialise(); err != nil {
+	// Re-init the buffer with a new value.
+	if err := s.Init(); err != nil {
 		t.Error("unexpected error;", err)
 	}
 
@@ -70,7 +70,7 @@ func TestCofferInitialise(t *testing.T) {
 	s.Destroy()
 
 	// Check error condition.
-	if err := s.Initialise(); err != ErrCofferExpired {
+	if err := s.Init(); err != ErrCofferExpired {
 		t.Error("expected ErrCofferExpired; got", err)
 	}
 }
@@ -114,7 +114,7 @@ func TestCofferRekey(t *testing.T) {
 	s := NewCoffer()
 
 	// Halt the rekey cycle.
-	s.RLock()
+	s.Lock()
 
 	// Remember the value stored inside.
 	view, err := s.View()
@@ -132,9 +132,9 @@ func TestCofferRekey(t *testing.T) {
 	copy(right, s.right.Data())
 
 	// Manually re-key before we continue.
-	s.RUnlock()
+	s.Unlock()
 	s.Rekey()
-	s.RLock()
+	s.Lock()
 
 	// Get another view of the contents.
 	view, err = s.View()
@@ -155,7 +155,7 @@ func TestCofferRekey(t *testing.T) {
 		t.Error("partition values did not change")
 	}
 
-	s.RUnlock() // Release lock to allow destruction.
+	s.Unlock() // Release lock to allow destruction.
 	s.Destroy()
 
 	if err := s.Rekey(); err != ErrCofferExpired {
