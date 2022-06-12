@@ -1,17 +1,27 @@
 package core
 
-import "errors"
+import (
+	"errors"
+	"sync/atomic"
+	"unsafe"
+)
 
 var (
-	// Declare a key for use in encrypting data this session.
-	key *Coffer
+	key unsafe.Pointer // *Coffer
 )
 
 func init() {
-	// Initialize the key declared above with a random value.
-	if key == nil {
-		key = NewCoffer()
+	if swapped := atomic.CompareAndSwapPointer(&key, nil, nil); swapped {
+		setKey(NewCoffer())
 	}
+}
+
+func getKey() *Coffer {
+	return (*Coffer)(atomic.LoadPointer(&key))
+}
+
+func setKey(k *Coffer) {
+	atomic.StorePointer(&key, unsafe.Pointer(k))
 }
 
 // ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
@@ -37,7 +47,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	e := new(Enclave)
 
 	// Get a view of the key.
-	k, err := key.View()
+	k, err := getKey().View()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +108,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Grab a view of the key.
-	k, err := key.View()
+	k, err := getKey().View()
 	if err != nil {
 		return nil, err
 	}

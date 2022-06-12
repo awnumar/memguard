@@ -10,7 +10,7 @@ func TestEnclaveInit(t *testing.T) {
 		t.Error("key is nil")
 	}
 
-	view, err := key.View()
+	view, err := getKey().View()
 	if err != nil {
 		t.Error("unexpected error;", err)
 	}

@@ -16,11 +16,9 @@ func TestPurge(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Keep a reference to the old key.
-	oldKey := key
-
-	// Purge the session.
+	oldKey := getKey()
 	Purge()
+	key := getKey()
 
 	// Verify that the buffers list contains only the important buffers.
 	buffers.RLock()

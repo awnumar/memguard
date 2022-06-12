@@ -23,7 +23,7 @@ Buffer is a structure that holds raw sensitive data.
 The number of Buffers that can exist at one time is limited by how much memory your system's kernel allows each process to mlock/VirtualLock. Therefore you should call DestroyBuffer on Buffers that you no longer need, ideally defering a Destroy call after creating a new one.
 */
 type Buffer struct {
-	sync.RWMutex // Local mutex lock
+	sync.RWMutex // Local mutex lock // TODO: this does not protect 'data' field
 
 	alive   bool // Signals that destruction has not come
 	mutable bool // Mutability state of underlying memory
@@ -44,12 +44,10 @@ NewBuffer is a raw constructor for the Buffer object.
 func NewBuffer(size int) (*Buffer, error) {
 	var err error
 
-	// Return an error if length < 1.
 	if size < 1 {
 		return nil, ErrNullBuffer
 	}
 
-	// Declare and allocate
 	b := new(Buffer)
 
 	// Allocate the total needed memory
@@ -119,18 +117,14 @@ func (b *Buffer) Freeze() {
 }
 
 func (b *Buffer) freeze() error {
-	// Attain lock.
 	b.Lock()
 	defer b.Unlock()
 
-	// Check if destroyed.
 	if !b.alive {
 		return nil
 	}
 
-	// Only do anything if currently mutable.
 	if b.mutable {
-		// Make the memory immutable.
 		if err := memcall.Protect(b.inner, memcall.ReadOnly()); err != nil {
 			return err
 		}
@@ -148,18 +142,14 @@ func (b *Buffer) Melt() {
 }
 
 func (b *Buffer) melt() error {
-	// Attain lock.
 	b.Lock()
 	defer b.Unlock()
 
-	// Check if destroyed.
 	if !b.alive {
 		return nil
 	}
 
-	// Only do anything if currently immutable.
 	if !b.mutable {
-		// Make the memory mutable.
 		if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
 			return err
 		}
@@ -176,7 +166,6 @@ func (b *Buffer) Scramble() {
 }
 
 func (b *Buffer) scramble() error {
-	// Attain lock.
 	b.Lock()
 	defer b.Unlock()
 	return Scramble(b.Data())
@@ -269,8 +258,6 @@ func (l *bufferList) add(b ...*Buffer) {
 	l.Lock()
 	defer l.Unlock()
 
-	// fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
-
 	l.list = append(l.list, b...)
 }
 
@@ -289,8 +276,6 @@ func (l *bufferList) copy() []*Buffer {
 func (l *bufferList) remove(b *Buffer) {
 	l.Lock()
 	defer l.Unlock()
-
-	// fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
 
 	for i, v := range l.list {
 		if v == b {

@@ -16,33 +16,27 @@ var ErrCofferExpired = errors.New("<memguard::core::ErrCofferExpired> attempted 
 Coffer is a specialized container for securing highly-sensitive, 32 byte values.
 */
 type Coffer struct {
-	sync.RWMutex
+	sync.Mutex
 
-	left  *Buffer // Left partition.
-	right *Buffer // Right partition.
+	left  *Buffer
+	right *Buffer
 
-	rand *Buffer // Static allocation for fast random bytes reading.
+	rand *Buffer
 }
 
 // NewCoffer is a raw constructor for the *Coffer object.
 func NewCoffer() *Coffer {
-	// Create a new Coffer object.
 	s := new(Coffer)
-
-	// Allocate the partitions.
 	s.left, _ = NewBuffer(32)
 	s.right, _ = NewBuffer(32)
 	s.rand, _ = NewBuffer(32)
 
-	// Initialise with a random 32 byte value.
-	s.Initialise()
+	s.Init()
 
 	go func(s *Coffer) {
-		for {
-			// Sleep for the specified interval.
-			time.Sleep(interval)
+		ticker := time.NewTicker(interval)
 
-			// Re-key the contents, exiting the routine if object destroyed.
+		for range ticker.C {
 			if err := s.Rekey(); err != nil {
 				break
 			}
@@ -52,27 +46,15 @@ func NewCoffer() *Coffer {
 	return s
 }
 
-/*
-Initialise is used to reset the value stored inside a Coffer to a new random 32 byte value, overwriting the old.
-*/
-func (s *Coffer) Initialise() error {
-	// Check if it has been destroyed.
+// Init is used to reset the value stored inside a Coffer to a new random 32 byte value, overwriting the old.
+func (s *Coffer) Init() error {
+	s.Lock()
+	defer s.Unlock()
+
 	if s.Destroyed() {
 		return ErrCofferExpired
 	}
 
-	if err := s.initialise(); err != nil {
-		Panic(err)
-	}
-	return nil
-}
-
-func (s *Coffer) initialise() error {
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
-
-	// Overwrite the old value with fresh random bytes.
 	if err := Scramble(s.left.Data()); err != nil {
 		return err
 	}
@@ -94,40 +76,23 @@ func (s *Coffer) initialise() error {
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
 func (s *Coffer) View() (*Buffer, error) {
-	//fmt.Printf("\n\nThere are %d buffers\n\n\n", len(buffers.list))
+	s.Lock()
+	defer s.Unlock()
 
-	// Check if it's destroyed.
 	if s.Destroyed() {
 		return nil, ErrCofferExpired
 	}
-	//fmt.Printf("\n\n%s\n\n\n", "s is not destroyed")
 
-	// Create a new Buffer for the data.
 	b, _ := NewBuffer(32)
-
-	//fmt.Printf("\n\n%s\n\n\n", "made buffer")
-
-	// Attain a read-only lock.
-	s.RLock()
-	defer s.RUnlock()
-
-	//fmt.Printf("\n\n%s\n\n\n", "got lock")
-
-	//fmt.Println(s.right.Data(), s.left.Data())
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
 
-	//fmt.Printf("\n\n%s\n\n\n", "got hash")
 	for i := range b.Data() {
 		b.Data()[i] = h[i] ^ s.left.Data()[i]
 	}
-	//fmt.Printf("\n\n%s\n\n\n", "computed plaintext")
 	Wipe(h)
 
-	// fmt.Printf("\n\n%s\n\n\n", "got data")
-
-	// Return the view.
 	return b, nil
 }
 
@@ -135,23 +100,13 @@ func (s *Coffer) View() (*Buffer, error) {
 Rekey is used to re-key a Coffer. Ideally this should be done at short, regular intervals.
 */
 func (s *Coffer) Rekey() error {
-	// Check if it has been destroyed.
+	s.Lock()
+	defer s.Unlock()
+
 	if s.Destroyed() {
 		return ErrCofferExpired
 	}
 
-	if err := s.rekey(); err != nil {
-		Panic(err)
-	}
-	return nil
-}
-
-func (s *Coffer) rekey() error {
-	// Attain the mutex.
-	s.Lock()
-	defer s.Unlock()
-
-	// Attain 32 bytes of fresh cryptographic buf32.
 	if err := Scramble(s.rand.Data()); err != nil {
 		return err
 	}
@@ -177,28 +132,18 @@ func (s *Coffer) rekey() error {
 /*
 Destroy wipes and cleans up all memory related to a Coffer object. Once this method has been called, the Coffer can no longer be used and a new one should be created instead.
 */
-func (s *Coffer) Destroy() {
-	if err := s.destroy(); err != nil {
-		Panic(err)
-	}
-}
-
-func (s *Coffer) destroy() error {
-	// Attain the mutex.
+func (s *Coffer) Destroy() error {
 	s.Lock()
 	defer s.Unlock()
 
-	// Destroy the partitions.
 	err1 := s.left.destroy()
 	if err1 == nil {
 		buffers.remove(s.left)
 	}
-
 	err2 := s.right.destroy()
 	if err2 == nil {
 		buffers.remove(s.right)
 	}
-
 	err3 := s.rand.destroy()
 	if err3 == nil {
 		buffers.remove(s.rand)
@@ -222,8 +167,5 @@ func (s *Coffer) destroy() error {
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.
 func (s *Coffer) Destroyed() bool {
-	s.RLock()
-	defer s.RUnlock()
-
 	return s.left.data == nil || s.right.data == nil
 }

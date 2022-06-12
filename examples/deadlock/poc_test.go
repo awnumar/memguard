@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const duration = 2 * time.Minute
+const duration = 1 * time.Minute
 
 func TestPanicsPoC(t *testing.T) {
 	sigs := make(chan os.Signal, 1)
