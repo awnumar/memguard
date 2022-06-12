@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
+	"lukechampine.com/frand"
 )
 
-// OpenEnclave ...
 func OpenEnclave(ctx context.Context) {
 	n := 10
 	data := make([][]byte, n)
@@ -21,25 +21,23 @@ func OpenEnclave(ctx context.Context) {
 	for i := range data {
 		data[i] = make([]byte, 32)
 		buf := make([]byte, 32)
-		io.ReadFull(rand.Reader, buf)
+		if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+			panic("failed to read random data")
+		}
 		copy(data[i], buf)
 		enclaves[i] = memguard.NewEnclave(buf)
 	}
 
 	threads := 20
 	for i := 0; i < threads; i++ {
-		j := 0
 		go func(ctx context.Context) {
 			for {
 				select {
 				case <-ctx.Done():
 					return
 				default:
-					{
-						//fmt.Printf("open enclave %d \n", j)
-						immediateOpen(ctx, enclaves[j], data[j])
-						j = (j + 1) % n
-					}
+					j := frand.Intn(n)
+					immediateOpen(ctx, enclaves[j], data[j])
 				}
 			}
 		}(ctx)
@@ -65,27 +63,17 @@ func openVerify(lock *memguard.Enclave, exp []byte) error {
 }
 
 func immediateOpen(ctx context.Context, lock *memguard.Enclave, exp []byte) {
-	start := time.Now()
 	c1 := make(chan error, 1)
 	go func() {
 		err := openVerify(lock, exp)
 		c1 <- err
 	}()
-	var dur time.Duration
+
 	select {
 	case err := <-c1:
-		{
-			dur = time.Since(start)
-			if err != nil {
-				panic(err)
-			}
+		if err != nil {
+			panic(err)
 		}
 	case <-ctx.Done():
-		{
-			dur = time.Since(start)
-			fmt.Printf("### timeout \n")
-		}
 	}
-	//fmt.Printf("%d, %d \n", start.UnixNano(), dur.Nanoseconds())
-	_ = dur
 }
