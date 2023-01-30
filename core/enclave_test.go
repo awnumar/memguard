@@ -48,7 +48,7 @@ func TestNewEnclave(t *testing.T) {
 
 	// Attempt with an empty data slice.
 	data = make([]byte, 0)
-	e, err = NewEnclave(data)
+	_, err = NewEnclave(data)
 	if err != ErrNullEnclave {
 		t.Error("expected ErrNullEnclave; got", err)
 	}
