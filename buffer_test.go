@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"io"
-	"io/ioutil"
 	mrand "math/rand"
 	"os"
 	"runtime"
@@ -395,7 +394,7 @@ func TestNewBufferFromEntireReader(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	data, err = ioutil.ReadAll(f)
+	data, err = io.ReadAll(f)
 	if err != nil {
 		t.Error(err)
 	}

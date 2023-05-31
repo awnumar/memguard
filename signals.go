@@ -22,10 +22,10 @@ var (
 /*
 CatchSignal assigns a given function to be run in the event of a signal being received by the process. If no signals are provided all signals will be caught.
 
-  1. Signal is caught by the process
-  2. Interrupt handler is executed
-  3. Secure session state is wiped
-  4. Process terminates with exit code 1
+ 1. Signal is caught by the process
+ 2. Interrupt handler is executed
+ 3. Secure session state is wiped
+ 4. Process terminates with exit code 1
 
 This function can be called multiple times with the effect that only the last call will have any effect.
 */
