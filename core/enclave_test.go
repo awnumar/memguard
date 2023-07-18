@@ -42,8 +42,8 @@ func TestNewEnclave(t *testing.T) {
 	}
 
 	// Verify the length of the ciphertext is correct.
-	if len(e.ciphertext) != len(data)+Overhead {
-		t.Error("ciphertext has unexpected length;", len(e.ciphertext))
+	if len(e.Ciphertext) != len(data)+Overhead {
+		t.Error("ciphertext has unexpected length;", len(e.Ciphertext))
 	}
 
 	// Attempt with an empty data slice.
@@ -68,8 +68,8 @@ func TestSeal(t *testing.T) {
 	}
 
 	// Do a sanity check on the length of the ciphertext.
-	if len(e.ciphertext) != 32+Overhead {
-		t.Error("ciphertext has unexpected length:", len(e.ciphertext))
+	if len(e.Ciphertext) != 32+Overhead {
+		t.Error("ciphertext has unexpected length:", len(e.Ciphertext))
 	}
 
 	// Check that the buffer was destroyed.
@@ -122,8 +122,8 @@ func TestOpen(t *testing.T) {
 	buf.Destroy()
 
 	// Modify the ciphertext to trigger an error case.
-	for i := range e.ciphertext {
-		e.ciphertext[i] = 0xdb
+	for i := range e.Ciphertext {
+		e.Ciphertext[i] = 0xdb
 	}
 
 	// Check for the error.

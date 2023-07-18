@@ -31,7 +31,7 @@ var ErrNullEnclave = errors.New("<memguard::core::ErrNullEnclave> enclave size m
 Enclave is a sealed and encrypted container for sensitive data.
 */
 type Enclave struct {
-	ciphertext []byte
+	Ciphertext []byte
 }
 
 /*
@@ -53,7 +53,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	}
 
 	// Encrypt the plaintext.
-	e.ciphertext, err = Encrypt(buf, k.Data())
+	e.Ciphertext, err = Encrypt(buf, k.Data())
 	if err != nil {
 		Panic(err) // key is not 32 bytes long
 	}
@@ -102,7 +102,7 @@ The Buffer object should be destroyed after the contents are no longer needed.
 */
 func Open(e *Enclave) (*Buffer, error) {
 	// Allocate a secure Buffer to hold the decrypted data.
-	b, err := NewBuffer(len(e.ciphertext) - Overhead)
+	b, err := NewBuffer(len(e.Ciphertext) - Overhead)
 	if err != nil {
 		Panic("<memguard:core> ciphertext has invalid length") // ciphertext has invalid length
 	}
@@ -114,7 +114,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Decrypt the enclave into the buffer we created.
-	_, err = Decrypt(e.ciphertext, k.Data(), b.Data())
+	_, err = Decrypt(e.Ciphertext, k.Data(), b.Data())
 	if err != nil {
 		return nil, err
 	}
@@ -130,5 +130,5 @@ func Open(e *Enclave) (*Buffer, error) {
 EnclaveSize returns the number of bytes of plaintext data stored inside an Enclave.
 */
 func EnclaveSize(e *Enclave) int {
-	return len(e.ciphertext) - Overhead
+	return len(e.Ciphertext) - Overhead
 }
