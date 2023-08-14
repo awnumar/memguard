@@ -38,10 +38,6 @@ func TestPageAllocAlloc(t *testing.T) {
 }
 
 func TestPageAllocLotsOfAllocs(t *testing.T) {
-	// Attain a lock to halt the verify & rekey cycle.
-	s := NewCoffer()
-	s.Lock()
-
 	// Create a local allocator instance
 	alloc := NewPageAllocator()
 	palloc := alloc.(*pageAllocator)
