@@ -162,14 +162,14 @@ func newPageObject(size int) (*pageObject, error) {
 	o := &pageObject{
 		memory: memory,
 		// Construct slice reference for data buffer.
-		data: getBytes(&memory[pageSize+innerLen-size], size),
+		data: getBufferPart(memory, pageSize+innerLen-size, size),
 		// Construct slice references for page sectors.
-		preguard:  getBytes(&memory[0], pageSize),
-		inner:     getBytes(&memory[pageSize], innerLen),
-		postguard: getBytes(&memory[pageSize+innerLen], pageSize),
+		preguard:  getBufferPart(memory, 0, pageSize),
+		inner:     getBufferPart(memory, pageSize, innerLen),
+		postguard: getBufferPart(memory, pageSize+innerLen, pageSize),
 	}
 	// Construct slice reference for canary portion of inner page.
-	o.canary = getBytes(&memory[pageSize], len(o.inner)-len(o.data))
+	o.canary = getBufferPart(memory, pageSize, len(o.inner)-len(o.data))
 
 	// Lock the pages that will hold sensitive data.
 	if err := memcall.Lock(o.inner); err != nil {
