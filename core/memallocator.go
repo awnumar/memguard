@@ -11,10 +11,11 @@ type MemAllocator interface {
 	Inner(buf []byte) []byte
 	Protect(buf []byte, readonly bool) error
 	Free(buf []byte) error
+	Stats() *MemStats
 }
 
 // AllocatorStatistics statistics about memory allocations and errors
-type AllocatorStatistics struct {
+type MemStats struct {
 	PageAllocs        atomic.Uint64
 	PageAllocErrors   atomic.Uint64
 	PageFrees         atomic.Uint64
@@ -25,9 +26,6 @@ type AllocatorStatistics struct {
 	ObjectFreeErrors  atomic.Uint64
 	Slabs             atomic.Uint64
 }
-
-// MemStats statistics about memory allocations and errors
-var MemStats = AllocatorStatistics{}
 
 var (
 	// ErrBufferNotOwnedByAllocator indicating that the memory region is not owned by this allocator

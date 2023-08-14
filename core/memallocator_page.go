@@ -8,6 +8,7 @@ import (
 )
 
 type pageAllocator struct {
+	stats   *MemStats
 	objects map[int]*pageObject
 	sync.Mutex
 }
@@ -15,18 +16,19 @@ type pageAllocator struct {
 func NewPageAllocator() MemAllocator {
 	a := &pageAllocator{
 		objects: make(map[int]*pageObject),
+		stats:   &MemStats{},
 	}
 	return a
 }
 
 func (a *pageAllocator) Alloc(size int) ([]byte, error) {
-	MemStats.ObjectAllocs.Add(1)
+	a.stats.ObjectAllocs.Add(1)
 	if size < 1 {
 		return nil, ErrNullAlloc
 	}
-	o, err := newPageObject(size)
+	o, err := a.newPageObject(size)
 	if err != nil {
-		MemStats.ObjectAllocErrors.Add(1)
+		a.stats.ObjectAllocErrors.Add(1)
 		return nil, err
 	}
 
@@ -77,12 +79,12 @@ func (a *pageAllocator) Inner(buf []byte) []byte {
 }
 
 func (a *pageAllocator) Free(buf []byte) error {
-	MemStats.ObjectFrees.Add(1)
+	a.stats.ObjectFrees.Add(1)
 
 	// Determine the address of the buffer we should free
 	o, found := a.pop(buf)
 	if !found {
-		MemStats.ObjectFreeErrors.Add(1)
+		a.stats.ObjectFreeErrors.Add(1)
 		return ErrBufferNotOwnedByAllocator
 	}
 
@@ -92,13 +94,17 @@ func (a *pageAllocator) Free(buf []byte) error {
 	}
 
 	// Free the related memory
-	MemStats.PageFrees.Add(uint64(len(o.memory) / pageSize))
+	a.stats.PageFrees.Add(uint64(len(o.memory) / pageSize))
 	if err := memcall.Free(o.memory); err != nil {
-		MemStats.PageFreeErrors.Add(1)
+		a.stats.PageFreeErrors.Add(1)
 		return err
 	}
 
 	return nil
+}
+
+func (a *pageAllocator) Stats() *MemStats {
+	return a.stats
 }
 
 // *** INTERNAL FUNCTIONS *** //
@@ -146,16 +152,16 @@ type pageObject struct {
 	canary []byte // Value written behind data to detect spillage
 }
 
-func newPageObject(size int) (*pageObject, error) {
+func (a *pageAllocator) newPageObject(size int) (*pageObject, error) {
 	// Round a length to a multiple of the system page size for page locking
 	// and protection
 	innerLen := roundToPageSize(size)
 
 	// Allocate the total needed memory
-	MemStats.PageAllocs.Add(uint64(2 + innerLen/pageSize))
+	a.stats.PageAllocs.Add(uint64(2 + innerLen/pageSize))
 	memory, err := memcall.Alloc((2 * pageSize) + innerLen)
 	if err != nil {
-		MemStats.PageAllocErrors.Add(1)
+		a.stats.PageAllocErrors.Add(1)
 		return nil, err
 	}
 
@@ -205,7 +211,7 @@ func (o *pageObject) wipe() error {
 	Wipe(o.data)
 	o.data = nil
 
-	// Verify the canary
+	// Verify the guards and canary
 	if !Equal(o.preguard, o.postguard) || !Equal(o.preguard[:len(o.canary)], o.canary) {
 		return ErrBufferOverflow
 	}
