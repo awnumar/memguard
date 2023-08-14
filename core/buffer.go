@@ -3,19 +3,15 @@ package core
 import (
 	"errors"
 	"sync"
-
-	"github.com/awnumar/memcall"
 )
 
 var (
-	buffers = new(bufferList)
+	allocator = NewPageAllocator()
+	buffers   = new(bufferList)
 )
 
 // ErrNullBuffer is returned when attempting to construct a buffer of size less than one.
 var ErrNullBuffer = errors.New("<memguard::core::ErrNullBuffer> buffer size must be greater than zero")
-
-// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
-var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")
 
 /*
 Buffer is a structure that holds raw sensitive data.
@@ -28,22 +24,13 @@ type Buffer struct {
 	alive   bool // Signals that destruction has not come
 	mutable bool // Mutability state of underlying memory
 
-	data   []byte // Portion of memory holding the data
-	memory []byte // Entire allocated memory region
-
-	preguard  []byte // Guard page addressed before the data
-	inner     []byte // Inner region between the guard pages
-	postguard []byte // Guard page addressed after the data
-
-	canary []byte // Value written behind data to detect spillage
+	data []byte // Portion of memory holding the data
 }
 
 /*
 NewBuffer is a raw constructor for the Buffer object.
 */
 func NewBuffer(size int) (*Buffer, error) {
-	var err error
-
 	if size < 1 {
 		return nil, ErrNullBuffer
 	}
@@ -51,40 +38,9 @@ func NewBuffer(size int) (*Buffer, error) {
 	b := new(Buffer)
 
 	// Allocate the total needed memory
-	innerLen := roundToPageSize(size)
-	b.memory, err = memcall.Alloc((2 * pageSize) + innerLen)
+	var err error
+	b.data, err = allocator.Alloc(size)
 	if err != nil {
-		Panic(err)
-	}
-
-	// Construct slice reference for data buffer.
-	b.data = getBytes(&b.memory[pageSize+innerLen-size], size)
-
-	// Construct slice references for page sectors.
-	b.preguard = getBytes(&b.memory[0], pageSize)
-	b.inner = getBytes(&b.memory[pageSize], innerLen)
-	b.postguard = getBytes(&b.memory[pageSize+innerLen], pageSize)
-
-	// Construct slice reference for canary portion of inner page.
-	b.canary = getBytes(&b.memory[pageSize], len(b.inner)-len(b.data))
-
-	// Lock the pages that will hold sensitive data.
-	if err := memcall.Lock(b.inner); err != nil {
-		Panic(err)
-	}
-
-	// Initialise the canary value and reference regions.
-	if err := Scramble(b.canary); err != nil {
-		Panic(err)
-	}
-	Copy(b.preguard, b.canary)
-	Copy(b.postguard, b.canary)
-
-	// Make the guard pages inaccessible.
-	if err := memcall.Protect(b.preguard, memcall.NoAccess()); err != nil {
-		Panic(err)
-	}
-	if err := memcall.Protect(b.postguard, memcall.NoAccess()); err != nil {
 		Panic(err)
 	}
 
@@ -106,7 +62,7 @@ func (b *Buffer) Data() []byte {
 
 // Inner returns a byte slice representing the entire inner memory pages. This should NOT be used unless you have a specific need.
 func (b *Buffer) Inner() []byte {
-	return b.inner
+	return allocator.Inner(b.data)
 }
 
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
@@ -125,7 +81,7 @@ func (b *Buffer) freeze() error {
 	}
 
 	if b.mutable {
-		if err := memcall.Protect(b.inner, memcall.ReadOnly()); err != nil {
+		if err := allocator.Protect(b.data, true); err != nil {
 			return err
 		}
 		b.mutable = false
@@ -150,7 +106,7 @@ func (b *Buffer) melt() error {
 	}
 
 	if !b.mutable {
-		if err := memcall.Protect(b.inner, memcall.ReadWrite()); err != nil {
+		if err := allocator.Protect(b.data, false); err != nil {
 			return err
 		}
 		b.mutable = true
@@ -198,42 +154,17 @@ func (b *Buffer) destroy() error {
 		return nil
 	}
 
-	// Make all of the memory readable and writable.
-	if err := memcall.Protect(b.memory, memcall.ReadWrite()); err != nil {
-		return err
-	}
-	b.mutable = true
-
-	// Wipe data field.
-	Wipe(b.data)
-
-	// Verify the canary
-	if !Equal(b.preguard, b.postguard) || !Equal(b.preguard[:len(b.canary)], b.canary) {
-		return errors.New("<memguard::core::buffer> canary verification failed; buffer overflow detected")
-	}
-
-	// Wipe the memory.
-	Wipe(b.memory)
-
-	// Unlock pages locked into memory.
-	if err := memcall.Unlock(b.inner); err != nil {
-		return err
-	}
-
-	// Free all related memory.
-	if err := memcall.Free(b.memory); err != nil {
-		return err
+	// Destroy the memory content and free the space
+	if b.data != nil {
+		if err := allocator.Free(b.data); err != nil {
+			return err
+		}
 	}
 
 	// Reset the fields.
 	b.alive = false
 	b.mutable = false
 	b.data = nil
-	b.memory = nil
-	b.preguard = nil
-	b.inner = nil
-	b.postguard = nil
-	b.canary = nil
 	return nil
 }
 

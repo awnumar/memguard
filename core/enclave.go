@@ -5,6 +5,9 @@ import (
 	"sync"
 )
 
+// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
+var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")
+
 var (
 	key    = &Coffer{}
 	keyMtx = sync.Mutex{}
