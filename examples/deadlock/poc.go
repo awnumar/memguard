@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime"
 	"time"
 
 	"github.com/awnumar/memguard"
@@ -45,8 +44,8 @@ func OpenEnclave(ctx context.Context) {
 	<-ctx.Done()
 	time.Sleep(time.Second)
 
-	buf := make([]byte, 1<<20)
-	fmt.Println(string(buf[:runtime.Stack(buf, true)]))
+	// buf := make([]byte, 1<<20)
+	// fmt.Println(string(buf[:runtime.Stack(buf, true)]))
 }
 
 func openVerify(lock *memguard.Enclave, exp []byte) error {
