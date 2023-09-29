@@ -38,7 +38,6 @@ func WithMinCanarySize(size int) SlabOption {
 // Memory allocator implementation
 type slabAllocator struct {
 	maxSlabSize int
-	stats       *MemStats
 	cfg         *SlabAllocatorConfig
 	allocator   *pageAllocator
 	slabs       []*slab
@@ -61,18 +60,15 @@ func NewSlabAllocator(options ...SlabOption) MemAllocator {
 	// Setup the allocator and initialize the slabs
 	a := &slabAllocator{
 		maxSlabSize: cfg.Sizes[len(cfg.Sizes)-1],
-		stats:       &MemStats{},
 		cfg:         cfg,
 		slabs:       make([]*slab, 0, len(cfg.Sizes)),
 		allocator: &pageAllocator{
 			objects: make(map[int]*pageObject),
-			stats:   &MemStats{},
 		},
 	}
 	for _, size := range cfg.Sizes {
 		s := &slab{
 			objSize:   size,
-			stats:     a.stats,
 			allocator: a.allocator,
 		}
 		a.slabs = append(a.slabs, s)
@@ -177,10 +173,6 @@ func (a *slabAllocator) Free(buf []byte) error {
 	return s.free(buf)
 }
 
-func (a *slabAllocator) Stats() *MemStats {
-	return a.stats
-}
-
 // *** INTERNAL FUNCTIONS *** //
 
 // Page implementation
@@ -232,7 +224,6 @@ func newPage(page []byte, size int) *slabPage {
 // Slab is a container for all Pages serving the same size
 type slab struct {
 	objSize   int
-	stats     *MemStats
 	allocator *pageAllocator
 	pages     []*slabPage
 	sync.Mutex
@@ -255,10 +246,8 @@ func (s *slab) alloc(size int) ([]byte, error) {
 		// Use the page allocator to get a new guarded memory page
 		page, err := s.allocator.Alloc(pageSize - s.objSize)
 		if err != nil {
-			s.stats.PageAllocErrors.Add(1)
 			return nil, err
 		}
-		s.stats.PageAllocs.Store(s.allocator.stats.PageAllocs.Load())
 		c = newPage(page, s.objSize)
 		s.pages = append(s.pages, c)
 	}
@@ -268,7 +257,6 @@ func (s *slab) alloc(size int) ([]byte, error) {
 	c.head = c.head.next
 	c.used++
 
-	s.stats.ObjectAllocs.Add(1)
 	data := getBufferPart(c.buffer, obj.offset, size)
 	canary := getBufferPart(c.buffer, obj.offset+size, s.objSize-size)
 
@@ -309,11 +297,8 @@ func (s *slab) free(buf []byte) error {
 		return ErrBufferNotOwnedByAllocator
 	}
 
-	s.stats.ObjectFrees.Add(1)
-
 	// Wipe the buffer including the canary check
 	if err := s.wipe(c, offset, len(buf)); err != nil {
-		s.stats.ObjectFreeErrors.Add(1)
 		return err
 	}
 	obj := &slabObject{
@@ -327,9 +312,7 @@ func (s *slab) free(buf []byte) error {
 	// free the underlying memory
 	if c.used == 0 {
 		err := s.allocator.Free(c.buffer)
-		s.stats.PageFrees.Store(s.allocator.stats.PageFrees.Load())
 		if err != nil {
-			s.stats.PageFreeErrors.Add(1)
 			return err
 		}
 

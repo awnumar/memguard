@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"sync/atomic"
 )
 
 // Define a memory allocator
@@ -11,20 +10,6 @@ type MemAllocator interface {
 	Inner(buf []byte) []byte
 	Protect(buf []byte, readonly bool) error
 	Free(buf []byte) error
-	Stats() *MemStats
-}
-
-// AllocatorStatistics statistics about memory allocations and errors
-type MemStats struct {
-	PageAllocs        atomic.Uint64
-	PageAllocErrors   atomic.Uint64
-	PageFrees         atomic.Uint64
-	PageFreeErrors    atomic.Uint64
-	ObjectAllocs      atomic.Uint64
-	ObjectAllocErrors atomic.Uint64
-	ObjectFrees       atomic.Uint64
-	ObjectFreeErrors  atomic.Uint64
-	Slabs             atomic.Uint64
 }
 
 var (

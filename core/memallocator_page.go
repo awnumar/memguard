@@ -8,7 +8,6 @@ import (
 )
 
 type pageAllocator struct {
-	stats   *MemStats
 	objects map[int]*pageObject
 	sync.Mutex
 }
@@ -16,19 +15,16 @@ type pageAllocator struct {
 func NewPageAllocator() MemAllocator {
 	a := &pageAllocator{
 		objects: make(map[int]*pageObject),
-		stats:   &MemStats{},
 	}
 	return a
 }
 
 func (a *pageAllocator) Alloc(size int) ([]byte, error) {
-	a.stats.ObjectAllocs.Add(1)
 	if size < 1 {
 		return nil, ErrNullAlloc
 	}
 	o, err := a.newPageObject(size)
 	if err != nil {
-		a.stats.ObjectAllocErrors.Add(1)
 		return nil, err
 	}
 
@@ -79,12 +75,9 @@ func (a *pageAllocator) Inner(buf []byte) []byte {
 }
 
 func (a *pageAllocator) Free(buf []byte) error {
-	a.stats.ObjectFrees.Add(1)
-
 	// Determine the address of the buffer we should free
 	o, found := a.pop(buf)
 	if !found {
-		a.stats.ObjectFreeErrors.Add(1)
 		return ErrBufferNotOwnedByAllocator
 	}
 
@@ -94,17 +87,11 @@ func (a *pageAllocator) Free(buf []byte) error {
 	}
 
 	// Free the related memory
-	a.stats.PageFrees.Add(uint64(len(o.memory) / pageSize))
 	if err := memcall.Free(o.memory); err != nil {
-		a.stats.PageFreeErrors.Add(1)
 		return err
 	}
 
 	return nil
-}
-
-func (a *pageAllocator) Stats() *MemStats {
-	return a.stats
 }
 
 // *** INTERNAL FUNCTIONS *** //
@@ -158,10 +145,8 @@ func (a *pageAllocator) newPageObject(size int) (*pageObject, error) {
 	innerLen := roundToPageSize(size)
 
 	// Allocate the total needed memory
-	a.stats.PageAllocs.Add(uint64(2 + innerLen/pageSize))
-	memory, err := memcall.Alloc((2 * pageSize) + innerLen)
+	memory, err := memcall.Alloc(2*pageSize + innerLen)
 	if err != nil {
-		a.stats.PageAllocErrors.Add(1)
 		return nil, err
 	}
 
