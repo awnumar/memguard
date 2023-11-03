@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"unsafe"
 
@@ -188,8 +190,13 @@ func (a *pageAllocator) newPageObject(size int) (*pageObject, error) {
 
 func (o *pageObject) wipe() error {
 	// Make all of the memory readable and writable.
+	var partialUnprotect bool
 	if err := memcall.Protect(o.memory, memcall.ReadWrite()); err != nil {
-		return err
+		partialUnprotect = true
+		if partialErr := memcall.Protect(o.inner, memcall.ReadWrite()); partialErr != nil {
+			fmt.Fprintf(os.Stderr, "!WARNING: failed to wipe immutable data at address %p: %v", &o.data, partialErr)
+			return err
+		}
 	}
 
 	// Wipe data field.
@@ -201,8 +208,10 @@ func (o *pageObject) wipe() error {
 		return ErrBufferOverflow
 	}
 
-	// Wipe the memory.
-	Wipe(o.memory)
+	// Wipe the whole memory region if we were able to switch it to mutable.
+	if !partialUnprotect {
+		Wipe(o.memory)
+	}
 
 	// Unlock pages locked into memory.
 	if err := memcall.Unlock(o.inner); err != nil {
