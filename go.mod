@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/awnumar/memcall v0.2.0
-	golang.org/x/crypto v0.13.0
+	golang.org/x/crypto v0.16.0
 	lukechampine.com/frand v1.4.2
 )
 
