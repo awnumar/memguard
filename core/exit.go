@@ -50,9 +50,6 @@ func Purge() {
 		}
 	}()
 
-	// Create a new key.
-	setKey(NewCoffer())
-
 	// If we encountered an error, panic.
 	if opErr != nil {
 		panic(opErr)
