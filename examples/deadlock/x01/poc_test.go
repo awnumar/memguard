@@ -1,4 +1,4 @@
-package deadlock
+package x01
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const duration = 1 * time.Minute
+const duration = 10 * time.Second
 
 func TestPanicsPoC(t *testing.T) {
 	sigs := make(chan os.Signal, 1)
