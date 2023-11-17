@@ -19,7 +19,7 @@ func Purge() {
 
 	func() {
 		// Halt the re-key cycle and prevent new enclaves.
-		k := getKey()
+		k := getKey(false)
 		k.Lock()
 		defer k.Unlock()
 
@@ -64,7 +64,7 @@ Exit terminates the process with a specified exit code but securely wipes and cl
 */
 func Exit(c int) {
 	// Wipe the encryption key used to encrypt data inside Enclaves.
-	getKey().Destroy()
+	getKey(false).Destroy()
 
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.copy() // copy ensures the buffers stay in the list until they are destroyed.

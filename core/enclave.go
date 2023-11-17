@@ -2,26 +2,23 @@ package core
 
 import (
 	"errors"
-	"sync/atomic"
-	"unsafe"
+	"sync"
 )
 
 var (
-	key unsafe.Pointer // *Coffer
+	key    = &Coffer{}
+	keyMtx = sync.Mutex{}
 )
 
-func init() {
-	if swapped := atomic.CompareAndSwapPointer(&key, nil, nil); swapped {
-		setKey(NewCoffer())
+func getKey(create bool) *Coffer {
+	keyMtx.Lock()
+	defer keyMtx.Unlock()
+
+	if key.Destroyed() && create {
+		key = NewCoffer()
 	}
-}
 
-func getKey() *Coffer {
-	return (*Coffer)(atomic.LoadPointer(&key))
-}
-
-func setKey(k *Coffer) {
-	atomic.StorePointer(&key, unsafe.Pointer(k))
+	return key
 }
 
 // ErrNullEnclave is returned when attempting to construct an enclave of size less than one.
@@ -47,7 +44,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	e := new(Enclave)
 
 	// Get a view of the key.
-	k, err := getKey().View()
+	k, err := getKey(true).View()
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +105,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Grab a view of the key.
-	k, err := getKey().View()
+	k, err := getKey(true).View()
 	if err != nil {
 		return nil, err
 	}

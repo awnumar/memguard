@@ -16,9 +16,9 @@ func TestPurge(t *testing.T) {
 		t.Error(err)
 	}
 
-	oldKey := getKey()
+	oldKey := getKey(true)
 	Purge()
-	key := getKey()
+	key := getKey(true)
 
 	// Verify that the buffers list contains only the important buffers.
 	buffers.RLock()
