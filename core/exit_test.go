@@ -45,7 +45,7 @@ func TestPurge(t *testing.T) {
 		t.Error("old key was not destroyed")
 	}
 
-	// Verify that the key is not destroyed.
+	// Verify that the new key is not destroyed.
 	if !key.left.alive || !key.right.alive {
 		t.Error("current key is destroyed")
 	}
