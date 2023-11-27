@@ -133,10 +133,6 @@ func (s *Coffer) Rekey() error {
 Destroy wipes and cleans up all memory related to a Coffer object. Once this method has been called, the Coffer can no longer be used and a new one should be created instead.
 */
 func (s *Coffer) Destroy() error {
-	if s.Destroyed() {
-		return nil
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
