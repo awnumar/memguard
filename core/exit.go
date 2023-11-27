@@ -19,7 +19,7 @@ func Purge() {
 
 	func() {
 		// Halt the re-key cycle and prevent new enclaves.
-		k := getKey(false)
+		k := getOrCreateKey() // if key was destroyed, we create a new one so that we can successfully attain its mutex and halt re-keys
 		k.Lock()
 		defer k.Unlock()
 
@@ -61,7 +61,7 @@ Exit terminates the process with a specified exit code but securely wipes and cl
 */
 func Exit(c int) {
 	// Wipe the encryption key used to encrypt data inside Enclaves.
-	getKey(false).Destroy()
+	getKey().Destroy()
 
 	// Get a snapshot of existing Buffers.
 	snapshot := buffers.copy() // copy ensures the buffers stay in the list until they are destroyed.

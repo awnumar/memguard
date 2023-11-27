@@ -10,13 +10,20 @@ var (
 	keyMtx = sync.Mutex{}
 )
 
-func getKey(create bool) *Coffer {
+func getOrCreateKey() *Coffer {
 	keyMtx.Lock()
 	defer keyMtx.Unlock()
 
-	if key.Destroyed() && create {
+	if key.Destroyed() {
 		key = NewCoffer()
 	}
+
+	return key
+}
+
+func getKey() *Coffer {
+	keyMtx.Lock()
+	defer keyMtx.Unlock()
 
 	return key
 }
@@ -44,7 +51,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	e := new(Enclave)
 
 	// Get a view of the key.
-	k, err := getKey(true).View()
+	k, err := getOrCreateKey().View()
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +112,7 @@ func Open(e *Enclave) (*Buffer, error) {
 	}
 
 	// Grab a view of the key.
-	k, err := getKey(true).View()
+	k, err := getOrCreateKey().View()
 	if err != nil {
 		return nil, err
 	}
