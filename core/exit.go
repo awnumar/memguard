@@ -18,10 +18,13 @@ func Purge() {
 	var opErr error
 
 	func() {
-		// Halt the re-key cycle and prevent new enclaves.
-		k := getOrCreateKey() // if key was destroyed, we create a new one so that we can successfully attain its mutex and halt re-keys
-		k.Lock()
-		defer k.Unlock()
+		// Halt the re-key cycle and prevent new enclaves or keys being created.
+		keyMtx.Lock()
+		defer keyMtx.Unlock()
+		if !key.Destroyed() {
+			key.Lock()
+			defer key.Unlock()
+		}
 
 		// Get a snapshot of existing Buffers.
 		snapshot := buffers.flush()
