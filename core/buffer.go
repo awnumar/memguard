@@ -185,6 +185,10 @@ func (b *Buffer) Destroy() {
 }
 
 func (b *Buffer) destroy() error {
+	if b == nil {
+		return nil
+	}
+
 	// Attain a mutex lock on this Buffer.
 	b.Lock()
 	defer b.Unlock()
