@@ -21,7 +21,7 @@ var ErrInvalidKeyLength = errors.New("<memguard::core::ErrInvalidKeyLength> key 
 var ErrBufferTooSmall = errors.New("<memguard::core::ErrBufferTooSmall> the given buffer is too small to hold the plaintext")
 
 // ErrDecryptionFailed is returned when the attempted decryption fails. This can occur if the given key is incorrect or if the ciphertext is invalid.
-var ErrDecryptionFailed = errors.New("<memguard::core::ErrDecryptionFailed> decryption failed")
+var ErrDecryptionFailed = errors.New("<memguard::core::ErrDecryptionFailed> decryption failed: key is wrong or ciphertext is corrupt")
 
 // Encrypt takes a plaintext message and a 32 byte key and returns an authenticated ciphertext.
 func Encrypt(plaintext, key []byte) ([]byte, error) {

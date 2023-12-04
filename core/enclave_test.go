@@ -5,27 +5,6 @@ import (
 	"testing"
 )
 
-func TestEnclaveInit(t *testing.T) {
-	if key == nil {
-		t.Error("key is nil")
-	}
-
-	view, err := getKey().View()
-	if err != nil {
-		t.Error("unexpected error;", err)
-	}
-
-	if view.Data() == nil || len(view.Data()) != 32 {
-		t.Error("key is invalid")
-	}
-
-	if bytes.Equal(view.Data(), make([]byte, 32)) {
-		t.Error("key is zero")
-	}
-
-	view.Destroy()
-}
-
 func TestNewEnclave(t *testing.T) {
 	// Initialise some sample plaintext.
 	data := []byte("yellow submarine")

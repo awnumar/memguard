@@ -18,10 +18,13 @@ func Purge() {
 	var opErr error
 
 	func() {
-		// Halt the re-key cycle and prevent new enclaves.
-		k := getKey()
-		k.Lock()
-		defer k.Unlock()
+		// Halt the re-key cycle and prevent new enclaves or keys being created.
+		keyMtx.Lock()
+		defer keyMtx.Unlock()
+		if !key.Destroyed() {
+			key.Lock()
+			defer key.Unlock()
+		}
 
 		// Get a snapshot of existing Buffers.
 		snapshot := buffers.flush()
@@ -49,9 +52,6 @@ func Purge() {
 			}
 		}
 	}()
-
-	// Create a new key.
-	setKey(NewCoffer())
 
 	// If we encountered an error, panic.
 	if opErr != nil {

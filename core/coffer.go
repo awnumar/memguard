@@ -48,12 +48,12 @@ func NewCoffer() *Coffer {
 
 // Init is used to reset the value stored inside a Coffer to a new random 32 byte value, overwriting the old.
 func (s *Coffer) Init() error {
-	s.Lock()
-	defer s.Unlock()
-
 	if s.Destroyed() {
 		return ErrCofferExpired
 	}
+
+	s.Lock()
+	defer s.Unlock()
 
 	if err := Scramble(s.left.Data()); err != nil {
 		return err
@@ -76,14 +76,14 @@ func (s *Coffer) Init() error {
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
 func (s *Coffer) View() (*Buffer, error) {
-	s.Lock()
-	defer s.Unlock()
-
 	if s.Destroyed() {
 		return nil, ErrCofferExpired
 	}
 
 	b, _ := NewBuffer(32)
+
+	s.Lock()
+	defer s.Unlock()
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
@@ -100,12 +100,12 @@ func (s *Coffer) View() (*Buffer, error) {
 Rekey is used to re-key a Coffer. Ideally this should be done at short, regular intervals.
 */
 func (s *Coffer) Rekey() error {
-	s.Lock()
-	defer s.Unlock()
-
 	if s.Destroyed() {
 		return ErrCofferExpired
 	}
+
+	s.Lock()
+	defer s.Unlock()
 
 	if err := Scramble(s.rand.Data()); err != nil {
 		return err
@@ -167,5 +167,16 @@ func (s *Coffer) Destroy() error {
 
 // Destroyed returns a boolean value indicating if a Coffer has been destroyed.
 func (s *Coffer) Destroyed() bool {
+	if s == nil {
+		return true
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if s.left == nil || s.right == nil {
+		return true
+	}
+
 	return s.left.data == nil || s.right.data == nil
 }
