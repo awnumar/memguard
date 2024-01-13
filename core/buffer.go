@@ -13,6 +13,9 @@ var (
 // ErrNullBuffer is returned when attempting to construct a buffer of size less than one.
 var ErrNullBuffer = errors.New("<memguard::core::ErrNullBuffer> buffer size must be greater than zero")
 
+// ErrBufferExpired is returned when attempting to perform an operation on or with a buffer that has been destroyed.
+var ErrBufferExpired = errors.New("<memguard::core::ErrBufferExpired> buffer has been purged from memory and can no longer be used")
+
 /*
 Buffer is a structure that holds raw sensitive data.
 
