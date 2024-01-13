@@ -5,8 +5,8 @@ go 1.18
 require (
 	github.com/awnumar/memcall v0.2.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.16.0
-	golang.org/x/sys v0.15.0
+	golang.org/x/crypto v0.18.0
+	golang.org/x/sys v0.16.0
 	lukechampine.com/frand v1.4.2
 )
 
