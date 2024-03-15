@@ -28,6 +28,28 @@ func TestFinalizer(t *testing.T) {
 	}
 }
 
+func TestPtrSafetyWithGC(t *testing.T) {
+	dataToLock := []byte(`abcdefgh`)
+	b := NewBufferFromBytes(dataToLock)
+	dataPtr := b.Bytes()
+
+	ib := b.Buffer
+	// b is now unreachable
+
+	runtime.GC()
+	for {
+		if !ib.Alive() {
+			break
+		}
+		runtime.Gosched() // should collect b
+	}
+
+	// Check that data hasn't been garbage collected
+	if !bytes.Equal(dataPtr, []byte(`abcdefgh`)) {
+		t.Error("data does not have the value we set")
+	}
+}
+
 func TestNewBuffer(t *testing.T) {
 	b := NewBuffer(32)
 	if b == nil {

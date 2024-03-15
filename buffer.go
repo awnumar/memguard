@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"runtime"
 	"unsafe"
 
 	"github.com/awnumar/memguard/core"
@@ -17,26 +16,27 @@ The number of LockedBuffers that you are able to create is limited by how much m
 */
 type LockedBuffer struct {
 	*core.Buffer
-	*drop
+	// *drop
 }
 
-/*
-Value monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
-*/
-type drop [16]byte
+// /*
+// Value monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
+// */
+// type drop [16]byte
 
 // Constructs a LockedBuffer object from a core.Buffer while also setting up the finalizer for it.
 func newBuffer(buf *core.Buffer) *LockedBuffer {
-	b := &LockedBuffer{buf, new(drop)}
-	runtime.SetFinalizer(b.drop, func(_ *drop) {
-		go buf.Destroy()
-	})
-	return b
+	// b := &LockedBuffer{buf, new(drop)}
+	// runtime.SetFinalizer(b.drop, func(_ *drop) {
+	// 	go buf.Destroy()
+	// })
+	// return b
+	return &LockedBuffer{buf}
 }
 
 // Constructs a quasi-destroyed LockedBuffer with size zero.
 func newNullBuffer() *LockedBuffer {
-	return &LockedBuffer{new(core.Buffer), new(drop)}
+	return &LockedBuffer{new(core.Buffer)}
 }
 
 /*
