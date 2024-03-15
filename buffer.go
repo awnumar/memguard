@@ -16,21 +16,10 @@ The number of LockedBuffers that you are able to create is limited by how much m
 */
 type LockedBuffer struct {
 	*core.Buffer
-	// *drop
 }
-
-// /*
-// Value monitored by a finalizer so that we can clean up LockedBuffers that have gone out of scope.
-// */
-// type drop [16]byte
 
 // Constructs a LockedBuffer object from a core.Buffer while also setting up the finalizer for it.
 func newBuffer(buf *core.Buffer) *LockedBuffer {
-	// b := &LockedBuffer{buf, new(drop)}
-	// runtime.SetFinalizer(b.drop, func(_ *drop) {
-	// 	go buf.Destroy()
-	// })
-	// return b
 	return &LockedBuffer{buf}
 }
 

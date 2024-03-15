@@ -12,33 +12,20 @@ import (
 	"unsafe"
 )
 
-func TestFinalizer(t *testing.T) {
-	b := NewBuffer(32)
-	ib := b.Buffer
-
-	runtime.KeepAlive(b)
-	// b is now unreachable
-
-	runtime.GC()
-	for {
-		if !ib.Alive() {
-			break
-		}
-		runtime.Gosched() // should collect b
-	}
-}
-
 func TestPtrSafetyWithGC(t *testing.T) {
 	dataToLock := []byte(`abcdefgh`)
 	b := NewBufferFromBytes(dataToLock)
 	dataPtr := b.Bytes()
 
-	ib := b.Buffer
+	finalizerCalled := false
+	runtime.SetFinalizer(b, func(_ *LockedBuffer) {
+		finalizerCalled = true
+	})
 	// b is now unreachable
 
 	runtime.GC()
 	for {
-		if !ib.Alive() {
+		if finalizerCalled {
 			break
 		}
 		runtime.Gosched() // should collect b
