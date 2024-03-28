@@ -44,6 +44,8 @@ windows_task:
   install_script:
     - choco install -y golang
     - choco install -y mingw  # This installs MinGW which includes gcc
+    - Set PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
+    - gcc --version
   build_script:
     - go version
     - go get ./...
