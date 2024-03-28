@@ -58,7 +58,7 @@ windows_task:
 
 freebsd_task:
   freebsd_instance:
-    image: image: freebsd-14-0-release-amd64
+    image: freebsd-14-0-release-amd64
   env:
     GO111MODULE: on
     GOPATH: /tmp/go
