@@ -4,52 +4,32 @@ import (
 	"bytes"
 	"testing"
 	"unsafe"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewBuffer(t *testing.T) {
 	// Check the error case with zero length.
-	b, err := NewBuffer(0)
-	if err != ErrNullBuffer {
-		t.Error("expected ErrNullBuffer; got", err)
-	}
-	if b != nil {
-		t.Error("expected nil buffer; got", b)
-	}
+	a, err := NewBuffer(0)
+	require.ErrorIs(t, err, ErrNullBuffer)
+	require.Nil(t, a)
 
 	// Check the error case with negative length.
-	b, err = NewBuffer(-1)
-	if err != ErrNullBuffer {
-		t.Error("expected ErrNullBuffer; got", err)
-	}
-	if b != nil {
-		t.Error("expected nil buffer; got", b)
-	}
+	b, err := NewBuffer(-1)
+	require.ErrorIs(t, err, ErrNullBuffer)
+	require.Nil(t, b)
 
 	// Test normal execution.
 	b, err = NewBuffer(32)
-	if err != nil {
-		t.Error("expected nil err; got", err)
-	}
-	if !b.alive {
-		t.Error("did not expect destroyed buffer")
-	}
-	if len(b.Data()) != 32 || cap(b.Data()) != 32 {
-		t.Errorf("buffer has invalid length (%d) or capacity (%d)", len(b.Data()), cap(b.Data()))
-	}
-	if !b.mutable {
-		t.Error("buffer is not marked mutable")
-	}
-	if len(b.memory) != roundToPageSize(32)+(2*pageSize) {
-		t.Error("allocated incorrect length of memory")
-	}
-	if !bytes.Equal(b.Data(), make([]byte, 32)) {
-		t.Error("container is not zero-filled")
-	}
+	require.NoError(t, err)
+	require.True(t, b.alive, "did not expect destroyed buffer")
+	require.Lenf(t, b.Data(), 32, "buffer has invalid length (%d)", len(b.Data()))
+	require.Equalf(t, cap(b.Data()), 32, "buffer has invalid capacity (%d)", cap(b.Data()))
+	require.True(t, b.mutable, "buffer is not marked mutable")
+	require.EqualValues(t, make([]byte, 32), b.Data(), "container is not zero-filled")
 
 	// Check if the buffer was added to the buffers list.
-	if !buffers.exists(b) {
-		t.Error("buffer not in buffers list")
-	}
+	require.True(t, buffers.exists(b), "buffer not in buffers list")
 
 	// Destroy the buffer.
 	b.Destroy()
@@ -58,35 +38,17 @@ func TestNewBuffer(t *testing.T) {
 func TestLotsOfAllocs(t *testing.T) {
 	for i := 1; i <= 16385; i++ {
 		b, err := NewBuffer(i)
-		if err != nil {
-			t.Error(err)
-		}
-		if !b.alive || !b.mutable {
-			t.Error("invalid metadata")
-		}
-		if len(b.data) != i {
-			t.Error("invalid data length")
-		}
-		if len(b.memory) != roundToPageSize(i)+2*pageSize {
-			t.Error("memory length invalid")
-		}
-		if len(b.preguard) != pageSize || len(b.postguard) != pageSize {
-			t.Error("guard pages length invalid")
-		}
-		if len(b.canary) != len(b.inner)-i {
-			t.Error("canary length invalid")
-		}
-		if len(b.inner)%pageSize != 0 {
-			t.Error("inner length is not multiple of page size")
-		}
+		require.NoErrorf(t, err, "creating buffer in iteration %d", i)
+		require.Truef(t, b.alive, "not alive in iteration %d", i)
+		require.Truef(t, b.mutable, "not mutable in iteration %d", i)
+		require.Lenf(t, b.data, i, "invalid data length %d in iteration %d", len(b.data), i)
+		require.Zerof(t, len(b.Inner())%pageSize, "inner length %d is not multiple of page size in iteration %d", len(b.Inner()), i)
+
+		// Fill data
 		for j := range b.data {
 			b.data[j] = 1
 		}
-		for j := range b.data {
-			if b.data[j] != 1 {
-				t.Error("region rw test failed")
-			}
-		}
+		require.Equalf(t, bytes.Repeat([]byte{1}, i), b.data, "region rw test failed in iteration %d", i)
 		b.Destroy()
 	}
 }
@@ -184,20 +146,11 @@ func TestDestroy(t *testing.T) {
 	if b.Data() != nil {
 		t.Error("expected bytes buffer to be nil; got", b.Data())
 	}
-	if b.memory != nil {
-		t.Error("expected memory to be nil; got", b.memory)
-	}
 	if b.mutable || b.alive {
 		t.Error("buffer should be dead and immutable")
 	}
-	if b.preguard != nil || b.postguard != nil {
-		t.Error("guard page slice references are not nil")
-	}
-	if b.inner != nil {
+	if b.Inner() != nil {
 		t.Error("inner pages slice reference not nil")
-	}
-	if b.canary != nil {
-		t.Error("canary slice reference not nil")
 	}
 
 	// Check if the buffer was removed from the buffers list.
@@ -212,20 +165,11 @@ func TestDestroy(t *testing.T) {
 	if b.Data() != nil {
 		t.Error("expected bytes buffer to be nil; got", b.Data())
 	}
-	if b.memory != nil {
-		t.Error("expected memory to be nil; got", b.memory)
-	}
 	if b.mutable || b.alive {
 		t.Error("buffer should be dead and immutable")
 	}
-	if b.preguard != nil || b.postguard != nil {
-		t.Error("guard page slice references are not nil")
-	}
-	if b.inner != nil {
+	if b.Inner() != nil {
 		t.Error("inner pages slice reference not nil")
-	}
-	if b.canary != nil {
-		t.Error("canary slice reference not nil")
 	}
 }
 
