@@ -44,6 +44,7 @@ windows_task:
   install_script:
     - choco install -y golang
     - choco install -y mingw  # This installs MinGW which includes gcc
+    - refreshenv
     - gcc --version
   build_script:
     - go version
@@ -57,7 +58,7 @@ windows_task:
 
 freebsd_task:
   freebsd_instance:
-    image: freebsd-12-2-release-amd64
+    image: image: freebsd-14-0-release-amd64
   env:
     GO111MODULE: on
     GOPATH: /tmp/go
