@@ -43,6 +43,7 @@ windows_task:
     CIRRUS_WORKING_DIR: C:\golang\src\github.com\${CIRRUS_REPO_FULL_NAME}
   install_script:
     - choco install -y golang
+    - choco install -y mingw  # This installs MinGW which includes gcc
   build_script:
     - go version
     - go get ./...
