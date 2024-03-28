@@ -17,18 +17,16 @@ func TestPtrSafetyWithGC(t *testing.T) {
 	b := NewBufferFromBytes(dataToLock)
 	dataPtr := b.Bytes()
 
-	finalizerCalled := false
+	finalizerCalledChan := make(chan bool)
 	runtime.SetFinalizer(b, func(_ *LockedBuffer) {
-		finalizerCalled = true
+		finalizerCalledChan <- true
 	})
 	// b is now unreachable
 
 	runtime.GC()
-	for {
-		if finalizerCalled {
-			break
-		}
-		runtime.Gosched() // should collect b
+	finalizerCalled := <-finalizerCalledChan
+	if finalizerCalled == false {
+		t.Error("this should never occur")
 	}
 
 	// Check that data hasn't been garbage collected
