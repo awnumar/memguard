@@ -12,19 +12,26 @@ import (
 	"unsafe"
 )
 
-func TestFinalizer(t *testing.T) {
-	b := NewBuffer(32)
-	ib := b.Buffer
+func TestPtrSafetyWithGC(t *testing.T) {
+	dataToLock := []byte(`abcdefgh`)
+	b := NewBufferFromBytes(dataToLock)
+	dataPtr := b.Bytes()
 
-	runtime.KeepAlive(b)
+	finalizerCalledChan := make(chan bool)
+	runtime.SetFinalizer(b, func(_ *LockedBuffer) {
+		finalizerCalledChan <- true
+	})
 	// b is now unreachable
 
 	runtime.GC()
-	for {
-		if !ib.Alive() {
-			break
-		}
-		runtime.Gosched() // should collect b
+	finalizerCalled := <-finalizerCalledChan
+	if finalizerCalled == false {
+		t.Error("this should never occur")
+	}
+
+	// Check that data hasn't been garbage collected
+	if !bytes.Equal(dataPtr, []byte(`abcdefgh`)) {
+		t.Error("data does not have the value we set")
 	}
 }
 
