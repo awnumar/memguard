@@ -21,7 +21,6 @@ This package attempts to reduce the likelihood of sensitive data being exposed w
 * Kernel-level immutability is implemented so that attempted modification of protected regions results in an access violation.
 * Multiple endpoints provide session purging and safe termination capabilities as well as signal handling to prevent remnant data being left behind.
 * Side-channel attacks are mitigated against by making sure that the copying and comparison of data is done in constant-time.
-* Accidental memory leaks are mitigated against by harnessing the garbage-collector to automatically destroy containers that have become unreachable.
 
 Some features were inspired by [libsodium](https://github.com/jedisct1/libsodium), so credits to them.
 
