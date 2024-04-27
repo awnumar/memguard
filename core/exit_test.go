@@ -60,7 +60,7 @@ func TestPurge(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	Scramble(b.inner)
+	Scramble(allocator.Inner(b.data))
 	b.Freeze()
 	if !panics(func() {
 		Purge()
