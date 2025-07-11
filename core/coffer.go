@@ -74,14 +74,13 @@ func (s *Coffer) Init() error {
 /*
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
-func (s *Coffer) View() (*Buffer, error) {
-	b, _ := NewBuffer(32)
-
+func (s *Coffer) View() (*Buffer, error) {	
 	s.Lock()
 	defer s.Unlock()
 	if s.destroyed() {
 		return nil, ErrCofferExpired
 	}
+	b, _ := NewBuffer(32)
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())
