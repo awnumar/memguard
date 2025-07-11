@@ -206,13 +206,12 @@ func TestCofferConcurrent(t *testing.T) {
 								return
 							}
 							t.Fatalf("unexpected error: %v", err)
-						}					
+						}
 					case <-ctx.Done():
 						return
 					}
 				}
 			}(ctx, wg, s, fn)
-
 
 			wg.Add(1)
 			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int) {
@@ -220,7 +219,7 @@ func TestCofferConcurrent(t *testing.T) {
 				select {
 				case <-time.After(time.Duration(i) * time.Millisecond):
 				case <-ctx.Done():
-				}				
+				}
 				s.Destroy()
 			}(ctx, wg, s, i)
 		}
