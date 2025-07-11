@@ -193,8 +193,9 @@ func TestCofferConcurrent(t *testing.T) {
 	for _, fn := range funcs {
 		for i := 0; i != 100; i++ {
 			s := NewCoffer()
+			done := make(chan struct{})
 			wg.Add(1)
-			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer) {
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, done <-chan struct{}) {
 				defer wg.Done()
 				for {
 					select {
@@ -206,22 +207,24 @@ func TestCofferConcurrent(t *testing.T) {
 							}
 							t.Fatalf("unexpected error: %v", err)
 						}
+					case <-done:
+						return
 					case <-ctx.Done():
+						return
 					}
-
 				}
-			}(ctx, wg, s)
+			}(ctx, wg, s, done)
 
 			wg.Add(1)
-			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int) {
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int, done chan<- struct{}) {
 				defer wg.Done()
 				select {
 				case <-time.After(time.Duration(i) * time.Millisecond):
-
 				case <-ctx.Done():
 				}
+				close(done)
 				s.Destroy()
-			}(ctx, wg, s, i)
+			}(ctx, wg, s, i, done)
 		}
 	}
 	wg.Wait()
