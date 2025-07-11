@@ -2,7 +2,10 @@ package core
 
 import (
 	"bytes"
+	"context"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestNewCoffer(t *testing.T) {
@@ -168,4 +171,58 @@ func TestCofferDestroy(t *testing.T) {
 	if s.left.alive || s.right.alive {
 		t.Error("some partition not destroyed")
 	}
+}
+
+func TestCofferConcurrent(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	funcs := []func(s *Coffer) error{
+		func(s *Coffer) error {
+			return s.Init()
+		},
+		func(s *Coffer) error {
+			return s.Rekey()
+		},
+		func(s *Coffer) error {
+			_, err := s.View()
+			return err
+		},
+	}
+	wg := &sync.WaitGroup{}
+	for _, fn := range funcs {
+		for i := 0; i != 100; i++ {
+			s := NewCoffer()
+			wg.Add(1)
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer) {
+				defer wg.Done()
+				for {
+					select {
+					case <-time.After(time.Millisecond):
+						err := fn(s)
+						if err != nil {
+							if err == ErrCofferExpired {
+								return
+							}
+							t.Fatalf("unexpected error: %v", err)
+						}
+					case <-ctx.Done():
+					}
+
+				}
+			}(ctx, wg, s)
+
+			wg.Add(1)
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int) {
+				defer wg.Done()
+				select {
+				case <-time.After(time.Duration(i) * time.Millisecond):
+
+				case <-ctx.Done():
+				}
+				s.Destroy()
+			}(ctx, wg, s, i)
+		}
+	}
+	wg.Wait()
 }
