@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Build
+        run: |
+          go version
+          go get ./...
+          go build -race -v ./...
+      - name: Test
+        run: go test -race -v ./...
+      - name: Bench
+        run: go test -run=XXX -bench=. ./...
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Build
+        run: |
+          go version
+          go get ./...
+          go build -race -v ./...
+      - name: Test
+        run: go test -race -v ./...
+      - name: Bench
+        run: go test -run=XXX -bench=. ./...
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Install MinGW (for gcc)
+        run: choco install -y mingw
+      - name: Build
+        run: |
+          go version
+          go get ./...
+          $env:CGO_ENABLED=1; go build -race -v ./...
+      - name: Test
+        run: |
+          $env:CGO_ENABLED=1; go test -race -v ./...
+      - name: Bench
+        run: go test -run=XXX -bench=. ./...
