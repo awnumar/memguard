@@ -194,12 +194,12 @@ func TestCofferConcurrent(t *testing.T) {
 		for i := 0; i != 100; i++ {
 			s := NewCoffer()
 			wg.Add(1)
-			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer) {
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, target func(s *Coffer) error) {
 				defer wg.Done()
 				for {
 					select {
 					case <-time.After(time.Millisecond):
-						err := fn(s)
+						err := target(s)
 						if err != nil {
 							if err == ErrCofferExpired {
 								return
@@ -207,10 +207,11 @@ func TestCofferConcurrent(t *testing.T) {
 							t.Fatalf("unexpected error: %v", err)
 						}
 					case <-ctx.Done():
+						return
 					}
 
 				}
-			}(ctx, wg, s)
+			}(ctx, wg, s, fn)
 
 			wg.Add(1)
 			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int) {
