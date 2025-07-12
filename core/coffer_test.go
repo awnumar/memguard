@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"context"
+	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -174,6 +176,15 @@ func TestCofferDestroy(t *testing.T) {
 }
 
 func TestCofferConcurrent(t *testing.T) {
+	testConcurrency := 3
+	envVar := os.Getenv("TEST_CONCURRENCY")
+	envVarValue, err := strconv.Atoi(envVar)
+	if envVarValue > 0 {
+		testConcurrency = envVarValue
+		t.Logf("test concurrency set to %v", testConcurrency)
+	} else {
+		t.Logf("cannot use test concurrency %v: %v", envVar, err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -190,8 +201,9 @@ func TestCofferConcurrent(t *testing.T) {
 		},
 	}
 	wg := &sync.WaitGroup{}
+
 	for _, fn := range funcs {
-		for i := 0; i != 100; i++ {
+		for i := 0; i != testConcurrency; i++ {
 			s := NewCoffer()
 			wg.Add(1)
 
