@@ -178,12 +178,14 @@ func TestCofferDestroy(t *testing.T) {
 func TestCofferConcurrent(t *testing.T) {
 	testConcurrency := 3
 	envVar := os.Getenv("TEST_CONCURRENCY")
-	envVarValue, err := strconv.Atoi(envVar)
-	if envVarValue > 0 {
-		testConcurrency = envVarValue
-		t.Logf("test concurrency set to %v", testConcurrency)
-	} else {
-		t.Logf("cannot use test concurrency %v: %v", envVar, err)
+	if len(envVar) > 0 {
+		envVarValue, err := strconv.Atoi(envVar)
+		if envVarValue > 0 {
+			testConcurrency = envVarValue
+			t.Logf("test concurrency set to %v", testConcurrency)
+		} else {
+			t.Logf("cannot use test concurrency %v: %v", envVar, err)
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -74,7 +74,7 @@ func (s *Coffer) Init() error {
 /*
 View returns a snapshot of the contents of a Coffer inside a Buffer. As usual the Buffer should be destroyed as soon as possible after use by calling the Destroy method.
 */
-func (s *Coffer) View() (*Buffer, error) {	
+func (s *Coffer) View() (*Buffer, error) {
 	s.Lock()
 	defer s.Unlock()
 	if s.destroyed() {
@@ -178,5 +178,5 @@ func (s *Coffer) destroyed() bool {
 		return true
 	}
 
-	return s.left.data == nil || s.right.data == nil
+	return s.left.IsDestroyed() || s.right.IsDestroyed()
 }
