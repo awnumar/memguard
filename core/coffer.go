@@ -178,5 +178,5 @@ func (s *Coffer) destroyed() bool {
 		return true
 	}
 
-	return s.left.IsDestroyed() || s.right.IsDestroyed()
+	return s.left.isDestroyed() || s.right.isDestroyed()
 }

@@ -251,7 +251,8 @@ func (b *Buffer) Mutable() bool {
 	return b.mutable
 }
 
-func (b *Buffer) IsDestroyed() bool {
+// isDestroyed returns true if the buffer is destroyed
+func (b *Buffer) isDestroyed() bool {
 	b.RLock()
 	defer b.RUnlock()
 	return b.data == nil
