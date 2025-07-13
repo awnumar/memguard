@@ -3,7 +3,7 @@
   <h3 align="center">MemGuard</h3>
   <p align="center">Software enclave for storage of sensitive information in memory.</p>
   <p align="center">
-    <a href="https://cirrus-ci.com/github/awnumar/memguard"><img src="https://api.cirrus-ci.com/github/awnumar/memguard.svg"></a>
+    <a href="https://github.com/awnumar/memguard/actions/workflows/ci.yml"><img src="https://github.com/awnumar/memguard/actions/workflows/ci.yml/badge.svg?branch=master"></a>
     <a href="https://pkg.go.dev/github.com/awnumar/memguard?tab=doc"><img src="https://godoc.org/github.com/awnumar/memguard?status.svg"></a>
   </p>
 </p>
