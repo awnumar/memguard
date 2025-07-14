@@ -2,7 +2,12 @@ package core
 
 import (
 	"bytes"
+	"context"
+	"os"
+	"strconv"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestNewCoffer(t *testing.T) {
@@ -168,4 +173,70 @@ func TestCofferDestroy(t *testing.T) {
 	if s.left.alive || s.right.alive {
 		t.Error("some partition not destroyed")
 	}
+}
+
+func TestCofferConcurrent(t *testing.T) {
+	testConcurrency := 3
+	envVar := os.Getenv("TEST_CONCURRENCY")
+	if len(envVar) > 0 {
+		envVarValue, err := strconv.Atoi(envVar)
+		if envVarValue > 0 {
+			testConcurrency = envVarValue
+			t.Logf("test concurrency set to %v", testConcurrency)
+		} else {
+			t.Logf("cannot use test concurrency %v: %v", envVar, err)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	funcs := []func(s *Coffer) error{
+		func(s *Coffer) error {
+			return s.Init()
+		},
+		func(s *Coffer) error {
+			return s.Rekey()
+		},
+		func(s *Coffer) error {
+			_, err := s.View()
+			return err
+		},
+	}
+	wg := &sync.WaitGroup{}
+
+	for _, fn := range funcs {
+		for i := 0; i != testConcurrency; i++ {
+			s := NewCoffer()
+			wg.Add(1)
+
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, target func(s *Coffer) error) {
+				defer wg.Done()
+				for {
+					select {
+					case <-time.After(time.Millisecond):
+						err := target(s)
+						if err != nil {
+							if err == ErrCofferExpired {
+								return
+							}
+							t.Fatalf("unexpected error: %v", err)
+						}
+					case <-ctx.Done():
+						return
+					}
+				}
+			}(ctx, wg, s, fn)
+
+			wg.Add(1)
+			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int) {
+				defer wg.Done()
+				select {
+				case <-time.After(time.Duration(i) * time.Millisecond):
+				case <-ctx.Done():
+				}
+				s.Destroy()
+			}(ctx, wg, s, i)
+		}
+	}
+	wg.Wait()
 }

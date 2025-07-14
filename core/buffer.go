@@ -251,6 +251,13 @@ func (b *Buffer) Mutable() bool {
 	return b.mutable
 }
 
+// isDestroyed returns true if the buffer is destroyed
+func (b *Buffer) isDestroyed() bool {
+	b.RLock()
+	defer b.RUnlock()
+	return b.data == nil
+}
+
 // BufferList stores a list of buffers in a thread-safe manner.
 type bufferList struct {
 	sync.RWMutex
