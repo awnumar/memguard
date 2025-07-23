@@ -29,7 +29,7 @@ func TestGetBytes(t *testing.T) {
 	buffer := make([]byte, 32)
 
 	// Get am alternate reference to it using our slice builder.
-	derived := getBytes(&buffer[0], len(buffer))
+	derived := getBufferPart(buffer, 0, len(buffer))
 
 	// Check for naive equality.
 	if !bytes.Equal(buffer, derived) {
