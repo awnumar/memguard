@@ -2,7 +2,6 @@ package core
 
 import (
 	"os"
-	"unsafe"
 )
 
 var (
@@ -13,9 +12,4 @@ var (
 // Round a length to a multiple of the system page size.
 func roundToPageSize(length int) int {
 	return (length + (pageSize - 1)) & (^(pageSize - 1))
-}
-
-// Convert a pointer and length to a byte slice that describes that memory.
-func getBytes(ptr *byte, len int) []byte {
-	return unsafe.Slice(ptr, len)
 }
