@@ -1,6 +1,6 @@
 module github.com/awnumar/memguard
 
-go 1.24.0
+go 1.23.1
 
 require (
 	github.com/awnumar/memcall v0.4.0
