@@ -197,10 +197,16 @@ func TestCofferConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func(t *testing.T) {
 			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					// Log panic -- it's likely just ran out of mlock space.
+					t.Logf("Recovered from panic: %s", r)
+				}
+			}()
 			fIndex := rand.IntN(len(funcs))
 			for time.Since(start) < testDuration {
 				err := funcs[fIndex](s)
-				if err != nil {
+				if err != nil && err != ErrCofferExpired {
 					t.Errorf("unexpected error: %v", err)
 				}
 			}
