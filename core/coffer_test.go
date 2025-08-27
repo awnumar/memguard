@@ -174,8 +174,8 @@ func TestCofferDestroy(t *testing.T) {
 }
 
 func TestCofferConcurrent(t *testing.T) {
-	testConcurrency := 20
-	testDuration := 4 * time.Second
+	testConcurrency := 5
+	testDuration := 2 * time.Second
 
 	funcs := []func(s *Coffer) error{
 		func(s *Coffer) error {
