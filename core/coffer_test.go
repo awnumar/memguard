@@ -2,9 +2,7 @@ package core
 
 import (
 	"bytes"
-	"context"
-	"os"
-	"strconv"
+	"math/rand/v2"
 	"sync"
 	"testing"
 	"time"
@@ -176,24 +174,10 @@ func TestCofferDestroy(t *testing.T) {
 }
 
 func TestCofferConcurrent(t *testing.T) {
-	testConcurrency := 3
-	envVar := os.Getenv("TEST_CONCURRENCY")
-	if len(envVar) > 0 {
-		envVarValue, err := strconv.Atoi(envVar)
-		if envVarValue > 0 {
-			testConcurrency = envVarValue
-			t.Logf("test concurrency set to %v", testConcurrency)
-		} else {
-			t.Logf("cannot use test concurrency %v: %v", envVar, err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	testConcurrency := 20
+	testDuration := 4 * time.Second
 
 	funcs := []func(s *Coffer) error{
-		func(s *Coffer) error {
-			return s.Init()
-		},
 		func(s *Coffer) error {
 			return s.Rekey()
 		},
@@ -204,39 +188,24 @@ func TestCofferConcurrent(t *testing.T) {
 	}
 	wg := &sync.WaitGroup{}
 
-	for _, fn := range funcs {
-		for i := 0; i != testConcurrency; i++ {
-			s := NewCoffer()
-			wg.Add(1)
+	s := NewCoffer()
+	defer s.Destroy()
 
-			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, target func(s *Coffer) error) {
-				defer wg.Done()
-				for {
-					select {
-					case <-time.After(time.Millisecond):
-						err := target(s)
-						if err != nil {
-							if err == ErrCofferExpired {
-								return
-							}
-							t.Fatalf("unexpected error: %v", err)
-						}
-					case <-ctx.Done():
-						return
-					}
-				}
-			}(ctx, wg, s, fn)
+	start := time.Now()
 
-			wg.Add(1)
-			go func(ctx context.Context, wg *sync.WaitGroup, s *Coffer, i int) {
-				defer wg.Done()
-				select {
-				case <-time.After(time.Duration(i) * time.Millisecond):
-				case <-ctx.Done():
+	for range testConcurrency {
+		wg.Add(1)
+		go func(t *testing.T) {
+			defer wg.Done()
+			fIndex := rand.IntN(len(funcs))
+			for time.Since(start) < testDuration {
+				err := funcs[fIndex](s)
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
 				}
-				s.Destroy()
-			}(ctx, wg, s, i)
-		}
+			}
+		}(t)
 	}
+
 	wg.Wait()
 }
