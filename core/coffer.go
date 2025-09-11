@@ -25,11 +25,11 @@ type Coffer struct {
 }
 
 // NewCoffer is a raw constructor for the *Coffer object.
-func NewCoffer() *Coffer {
+func NewCoffer(keyMtxLocked bool) *Coffer {
 	s := new(Coffer)
-	s.left, _ = NewBuffer(32)
-	s.right, _ = NewBuffer(32)
-	s.rand, _ = NewBuffer(32)
+	s.left, _ = NewBuffer(32, keyMtxLocked)
+	s.right, _ = NewBuffer(32, keyMtxLocked)
+	s.rand, _ = NewBuffer(32, keyMtxLocked)
 
 	s.Init()
 
@@ -80,7 +80,7 @@ func (s *Coffer) View() (*Buffer, error) {
 	if s.destroyed() {
 		return nil, ErrCofferExpired
 	}
-	b, _ := NewBuffer(32)
+	b, _ := NewBuffer(32, false)
 
 	// data = hash(right) XOR left
 	h := Hash(s.right.Data())

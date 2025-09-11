@@ -42,7 +42,7 @@ type Buffer struct {
 /*
 NewBuffer is a raw constructor for the Buffer object.
 */
-func NewBuffer(size int) (*Buffer, error) {
+func NewBuffer(size int, keyMtxLocked bool) (*Buffer, error) {
 	var err error
 
 	if size < 1 {
@@ -55,7 +55,7 @@ func NewBuffer(size int) (*Buffer, error) {
 	innerLen := roundToPageSize(size)
 	b.memory, err = memcall.Alloc((2 * pageSize) + innerLen)
 	if err != nil {
-		Panic(err)
+		Panic(err, keyMtxLocked)
 	}
 
 	// Construct slice reference for data buffer.
@@ -71,22 +71,22 @@ func NewBuffer(size int) (*Buffer, error) {
 
 	// Lock the pages that will hold sensitive data.
 	if err := memcall.Lock(b.inner); err != nil {
-		Panic(err)
+		Panic(err, keyMtxLocked)
 	}
 
 	// Initialise the canary value and reference regions.
 	if err := Scramble(b.canary); err != nil {
-		Panic(err)
+		Panic(err, keyMtxLocked)
 	}
 	Copy(b.preguard, b.canary)
 	Copy(b.postguard, b.canary)
 
 	// Make the guard pages inaccessible.
 	if err := memcall.Protect(b.preguard, memcall.NoAccess()); err != nil {
-		Panic(err)
+		Panic(err, keyMtxLocked)
 	}
 	if err := memcall.Protect(b.postguard, memcall.NoAccess()); err != nil {
-		Panic(err)
+		Panic(err, keyMtxLocked)
 	}
 
 	// Set remaining properties
@@ -113,7 +113,7 @@ func (b *Buffer) Inner() []byte {
 // Freeze makes the underlying memory of a given buffer immutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Freeze() {
 	if err := b.freeze(); err != nil {
-		Panic(err)
+		Panic(err, false)
 	}
 }
 
@@ -138,7 +138,7 @@ func (b *Buffer) freeze() error {
 // Melt makes the underlying memory of a given buffer mutable. This will do nothing if the Buffer has been destroyed.
 func (b *Buffer) Melt() {
 	if err := b.melt(); err != nil {
-		Panic(err)
+		Panic(err, false)
 	}
 }
 
@@ -162,7 +162,7 @@ func (b *Buffer) melt() error {
 // Scramble attempts to overwrite the data with cryptographically-secure random bytes.
 func (b *Buffer) Scramble() {
 	if err := b.scramble(); err != nil {
-		Panic(err)
+		Panic(err, false)
 	}
 }
 
@@ -179,7 +179,7 @@ If the Buffer has already been destroyed, the function does nothing and returns 
 */
 func (b *Buffer) Destroy() {
 	if err := b.destroy(); err != nil {
-		Panic(err)
+		Panic(err, false)
 	}
 	// Remove this one from global slice.
 	buffers.remove(b)

@@ -11,7 +11,7 @@ ScrambleBytes overwrites an arbitrary buffer with cryptographically-secure rando
 */
 func ScrambleBytes(buf []byte) {
 	if err := core.Scramble(buf); err != nil {
-		core.Panic(err)
+		core.Panic(err, false)
 	}
 }
 
@@ -26,14 +26,14 @@ func WipeBytes(buf []byte) {
 Purge resets the session key to a fresh value and destroys all existing LockedBuffers. Existing Enclave objects will no longer be decryptable.
 */
 func Purge() {
-	core.Purge()
+	core.Purge(false)
 }
 
 /*
 SafePanic wipes all it can before calling panic(v).
 */
 func SafePanic(v interface{}) {
-	core.Panic(v)
+	core.Panic(v, false)
 }
 
 /*

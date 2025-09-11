@@ -22,7 +22,7 @@ func NewEnclave(src []byte) *Enclave {
 		if err == core.ErrNullEnclave {
 			return nil
 		}
-		core.Panic(err)
+		core.Panic(err, false)
 	}
 	return &Enclave{e}
 }
@@ -43,7 +43,7 @@ func (e *Enclave) Open() (*LockedBuffer, error) {
 	b, err := core.Open(e.Enclave)
 	if err != nil {
 		if err != core.ErrDecryptionFailed {
-			core.Panic(err)
+			core.Panic(err, false)
 		}
 		return nil, err
 	}

@@ -36,7 +36,7 @@ func Encrypt(plaintext, key []byte) ([]byte, error) {
 	// Allocate space for and generate a nonce value.
 	var nonce [24]byte
 	if err := Scramble(nonce[:]); err != nil {
-		Panic(err)
+		Panic(err, false)
 	}
 
 	// Encrypt m and return the result.

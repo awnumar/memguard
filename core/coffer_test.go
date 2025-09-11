@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewCoffer(t *testing.T) {
-	s := NewCoffer()
+	s := NewCoffer(false)
 
 	// Attain a lock to halt the verify & rekey cycle.
 	s.Lock()
@@ -40,7 +40,7 @@ func TestNewCoffer(t *testing.T) {
 }
 
 func TestCofferInit(t *testing.T) {
-	s := NewCoffer()
+	s := NewCoffer(false)
 
 	// Get the value stored inside.
 	view, err := s.View()
@@ -79,7 +79,7 @@ func TestCofferInit(t *testing.T) {
 }
 
 func TestCofferView(t *testing.T) {
-	s := NewCoffer()
+	s := NewCoffer(false)
 
 	// Get the value stored inside.
 	view, err := s.View()
@@ -114,7 +114,7 @@ func TestCofferView(t *testing.T) {
 }
 
 func TestCofferRekey(t *testing.T) {
-	s := NewCoffer()
+	s := NewCoffer(false)
 
 	// remember the value stored inside
 	view, err := s.View()
@@ -159,7 +159,7 @@ func TestCofferRekey(t *testing.T) {
 }
 
 func TestCofferDestroy(t *testing.T) {
-	s := NewCoffer()
+	s := NewCoffer(false)
 	s.Destroy()
 
 	// Check metadata flags.
@@ -188,7 +188,7 @@ func TestCofferConcurrent(t *testing.T) {
 	}
 	wg := &sync.WaitGroup{}
 
-	s := NewCoffer()
+	s := NewCoffer(false)
 	defer s.Destroy()
 
 	start := time.Now()
