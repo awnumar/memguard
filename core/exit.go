@@ -14,13 +14,15 @@ The creation of new Enclave objects should wait for this function to return sinc
 
 This function should be called before the program terminates, or else the provided Exit or Panic functions should be used to terminate.
 */
-func Purge() {
+func Purge(keyMtxLocked bool) {
 	var opErr error
 
 	func() {
 		// Halt the re-key cycle and prevent new enclaves or keys being created.
-		keyMtx.Lock()
-		defer keyMtx.Unlock()
+		if !keyMtxLocked {
+			keyMtx.Lock()
+			defer keyMtx.Unlock()
+		}
 		if !key.Destroyed() {
 			key.Lock()
 			defer key.Unlock()
@@ -81,7 +83,7 @@ func Exit(c int) {
 /*
 Panic is identical to the builtin panic except it purges the session before calling panic.
 */
-func Panic(v interface{}) {
-	Purge() // creates a new key so it is safe to recover from this panic
+func Panic(v interface{}, keyMtxLocked bool) {
+	Purge(keyMtxLocked) // creates a new key so it is safe to recover from this panic
 	panic(v)
 }

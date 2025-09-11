@@ -11,13 +11,13 @@ func TestPurge(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	buffer, err := NewBuffer(32)
+	buffer, err := NewBuffer(32, false)
 	if err != nil {
 		t.Error(err)
 	}
 
 	oldKey := getOrCreateKey()
-	Purge()
+	Purge(false)
 	key := getOrCreateKey()
 
 	// Verify that the buffers list contains only the important buffers.
@@ -56,14 +56,14 @@ func TestPurge(t *testing.T) {
 	}
 
 	// Create a buffer with invalid canary.
-	b, err := NewBuffer(32)
+	b, err := NewBuffer(32, false)
 	if err != nil {
 		t.Error(err)
 	}
 	Scramble(b.inner)
 	b.Freeze()
 	if !panics(func() {
-		Purge()
+		Purge(false)
 	}) {
 		t.Error("did not panic")
 	}
@@ -76,7 +76,7 @@ func TestPurge(t *testing.T) {
 func TestPanic(t *testing.T) {
 	// Call Panic and check if it panics.
 	if !panics(func() {
-		Panic("test")
+		Panic("test", false)
 	}) {
 		t.Error("did not panic")
 	}

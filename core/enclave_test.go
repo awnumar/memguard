@@ -35,7 +35,7 @@ func TestNewEnclave(t *testing.T) {
 
 func TestSeal(t *testing.T) {
 	// Create a new buffer for testing with.
-	b, err := NewBuffer(32)
+	b, err := NewBuffer(32, false)
 	if err != nil {
 		t.Error(err)
 	}

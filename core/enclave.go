@@ -15,7 +15,7 @@ func getOrCreateKey() *Coffer {
 	defer keyMtx.Unlock()
 
 	if key.Destroyed() {
-		key = NewCoffer()
+		key = NewCoffer(true)
 	}
 
 	return key
@@ -59,7 +59,7 @@ func NewEnclave(buf []byte) (*Enclave, error) {
 	// Encrypt the plaintext.
 	e.ciphertext, err = Encrypt(buf, k.Data())
 	if err != nil {
-		Panic(err) // key is not 32 bytes long
+		Panic(err, false) // key is not 32 bytes long
 	}
 
 	// Destroy our copy of the key.
@@ -106,9 +106,9 @@ The Buffer object should be destroyed after the contents are no longer needed.
 */
 func Open(e *Enclave) (*Buffer, error) {
 	// Allocate a secure Buffer to hold the decrypted data.
-	b, err := NewBuffer(len(e.ciphertext) - Overhead)
+	b, err := NewBuffer(len(e.ciphertext)-Overhead, false)
 	if err != nil {
-		Panic("<memguard:core> ciphertext has invalid length") // ciphertext has invalid length
+		Panic("<memguard:core> ciphertext has invalid length", false) // ciphertext has invalid length
 	}
 
 	// Grab a view of the key.

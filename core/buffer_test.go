@@ -8,7 +8,7 @@ import (
 
 func TestNewBuffer(t *testing.T) {
 	// Check the error case with zero length.
-	b, err := NewBuffer(0)
+	b, err := NewBuffer(0, false)
 	if err != ErrNullBuffer {
 		t.Error("expected ErrNullBuffer; got", err)
 	}
@@ -17,7 +17,7 @@ func TestNewBuffer(t *testing.T) {
 	}
 
 	// Check the error case with negative length.
-	b, err = NewBuffer(-1)
+	b, err = NewBuffer(-1, false)
 	if err != ErrNullBuffer {
 		t.Error("expected ErrNullBuffer; got", err)
 	}
@@ -26,7 +26,7 @@ func TestNewBuffer(t *testing.T) {
 	}
 
 	// Test normal execution.
-	b, err = NewBuffer(32)
+	b, err = NewBuffer(32, false)
 	if err != nil {
 		t.Error("expected nil err; got", err)
 	}
@@ -57,7 +57,7 @@ func TestNewBuffer(t *testing.T) {
 
 func TestLotsOfAllocs(t *testing.T) {
 	for i := 1; i <= 16385; i++ {
-		b, err := NewBuffer(i)
+		b, err := NewBuffer(i, false)
 		if err != nil {
 			t.Error(err)
 		}
@@ -92,7 +92,7 @@ func TestLotsOfAllocs(t *testing.T) {
 }
 
 func TestData(t *testing.T) {
-	b, err := NewBuffer(32)
+	b, err := NewBuffer(32, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -126,7 +126,7 @@ func TestData(t *testing.T) {
 }
 
 func TestBufferState(t *testing.T) {
-	b, err := NewBuffer(32)
+	b, err := NewBuffer(32, false)
 	if err != nil {
 		t.Error("expected nil err; got", err)
 	}
@@ -172,7 +172,7 @@ func TestBufferState(t *testing.T) {
 
 func TestDestroy(t *testing.T) {
 	// Allocate a new buffer.
-	b, err := NewBuffer(32)
+	b, err := NewBuffer(32, false)
 	if err != nil {
 		t.Error("expected nil err; got", err)
 	}

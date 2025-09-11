@@ -33,7 +33,7 @@ NewBuffer creates a mutable data container of the specified size.
 */
 func NewBuffer(size int) *LockedBuffer {
 	// Construct a Buffer of the specified size.
-	buf, err := core.NewBuffer(size)
+	buf, err := core.NewBuffer(size, false)
 	if err != nil {
 		return newNullBuffer()
 	}
@@ -248,7 +248,7 @@ func (b *LockedBuffer) Seal() *Enclave {
 		if err == core.ErrBufferExpired {
 			return nil
 		}
-		core.Panic(err)
+		core.Panic(err, false)
 	}
 	return &Enclave{e}
 }
