@@ -81,7 +81,7 @@ func Exit(c int) {
 /*
 Panic is identical to the builtin panic except it purges the session before calling panic.
 */
-func Panic(v interface{}) {
+func Panic(v any) {
 	Purge() // creates a new key so it is safe to recover from this panic
 	panic(v)
 }

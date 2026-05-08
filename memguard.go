@@ -32,7 +32,7 @@ func Purge() {
 /*
 SafePanic wipes all it can before calling panic(v).
 */
-func SafePanic(v interface{}) {
+func SafePanic(v any) {
 	core.Panic(v)
 }
 

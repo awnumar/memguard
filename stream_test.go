@@ -100,7 +100,7 @@ func TestStreamReadWrite(t *testing.T) {
 	write(t, s, b)
 
 	// Read back four pages
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		read(t, s, ref[i*os.Getpagesize():(i+1)*os.Getpagesize()], nil)
 	}
 

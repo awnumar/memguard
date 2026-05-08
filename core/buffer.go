@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"slices"
 	"sync"
 	"unsafe"
 
@@ -302,13 +303,7 @@ func (l *bufferList) exists(b *Buffer) bool {
 	l.RLock()
 	defer l.RUnlock()
 
-	for _, v := range l.list {
-		if b == v {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(l.list, b)
 }
 
 // Flush clears the list and returns its previous contents.

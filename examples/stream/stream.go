@@ -54,7 +54,7 @@ func SlowRandByte() byte {
 		}
 
 		// Do some example computation on this data.
-		for i := 0; i < n; i++ {
+		for i := range n {
 			parity = parity ^ buf.Bytes()[i]
 		}
 	}

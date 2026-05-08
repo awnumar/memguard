@@ -28,7 +28,7 @@ func OpenEnclave(ctx context.Context) {
 	}
 
 	threads := 20
-	for i := 0; i < threads; i++ {
+	for range threads {
 		go func(ctx context.Context) {
 			for {
 				select {
